@@ -5,13 +5,6 @@ import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useFieldMode } from '@/hooks/useDevice';
 import { 
-  Smartphone, 
-  Monitor, 
-  MapPin, 
-  Clock, 
-  Battery,
-  Signal,
-  Wifi,
   Menu,
   X,
   Home,
@@ -43,30 +36,6 @@ export function MobileHeader({ title, subtitle }: MobileHeaderProps) {
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg relative"
       >
-        {/* Status bar móvil */}
-        <div className="flex items-center justify-between text-xs mb-3">
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1">
-              <Signal className="h-3 w-3" />
-              <span>4G</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Wifi className="h-3 w-3" />
-              <span>WiFi</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Clock className="h-3 w-3" />
-            <span>{new Date().toLocaleTimeString('es-PY', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })}</span>
-            <Battery className="h-3 w-3" />
-            <span>85%</span>
-          </div>
-        </div>
-
         {/* Header principal */}
         <div className="flex items-center justify-between">
           {/* Botón hamburger */}
@@ -81,18 +50,6 @@ export function MobileHeader({ title, subtitle }: MobileHeaderProps) {
 
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
-              <motion.div
-                className="p-2 bg-white/20 rounded-lg"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {isMobile ? (
-                  <Smartphone className="h-5 w-5" />
-                ) : (
-                  <Monitor className="h-5 w-5" />
-                )}
-              </motion.div>
-              
               <div>
                 <h1 className="text-lg font-bold">{title}</h1>
                 {subtitle && (
@@ -100,17 +57,6 @@ export function MobileHeader({ title, subtitle }: MobileHeaderProps) {
                 )}
               </div>
             </div>
-
-            {/* Indicador de modo campo */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="inline-flex items-center space-x-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium"
-            >
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <span>Modo Campo</span>
-              <MapPin className="h-3 w-3" />
-            </motion.div>
           </div>
         </div>
       </motion.div>
@@ -284,33 +230,6 @@ export function MobileNavDrawer({ isOpen, onClose }: MobileNavDrawerProps) {
         </>
       )}
     </AnimatePresence>
-  );
-}
-
-// Componente para mostrar información de conectividad
-export function ConnectivityStatus() {
-  const { isFieldMode } = useFieldMode();
-
-  if (!isFieldMode) {
-    return null;
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="fixed top-4 right-4 z-50"
-    >
-      <div className="bg-white shadow-lg rounded-lg p-3 border">
-        <div className="flex items-center space-x-2 text-sm">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-gray-700 font-medium">Online</span>
-        </div>
-        <div className="text-xs text-gray-500 mt-1">
-          Sincronizado hace 2 min
-        </div>
-      </div>
-    </motion.div>
   );
 }
 

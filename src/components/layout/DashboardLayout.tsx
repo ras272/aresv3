@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
-import { MobileHeader, ConnectivityStatus } from '@/components/ui/mobile-header';
+import { MobileHeader } from '@/components/ui/mobile-header';
 import { useFieldMode } from '@/hooks/useDevice';
 
 interface DashboardLayoutProps {
@@ -60,13 +60,6 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
           </main>
         </div>
       </div>
-
-      {/* Componentes móviles flotantes */}
-      {isFieldMode && (
-        <>
-          <ConnectivityStatus />
-        </>
-      )}
     </>
   );
 }
