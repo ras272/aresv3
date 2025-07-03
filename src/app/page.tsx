@@ -121,9 +121,9 @@ export default function Dashboard() {
         title="Dashboard"
         subtitle="Bienvenido al sistema de gestión de equipos médicos"
       >
-        <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="space-y-4 sm:space-y-6">
+        {/* Stats Cards - Mobile Optimized */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {isInitialLoading ? (
             // Mostrar skeletons mientras carga
             Array.from({ length: 4 }).map((_, index) => (
@@ -254,8 +254,8 @@ export default function Dashboard() {
           )}
         </motion.div> */}
 
-        {/* Panel de Tareas del Ingeniero */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Panel de Tareas del Ingeniero - Mobile Optimized */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Tareas Pendientes */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MobileTable, MobileEquipoCard } from '@/components/ui/mobile-table';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useAppStore } from '@/store/useAppStore';
 import { 
@@ -115,50 +116,53 @@ export default function EquiposPage() {
       title="Gestión de Equipos" 
       subtitle="Administra todos los equipos médicos y sus componentes registrados en el sistema"
     >
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
+      <div className="space-y-4 sm:space-y-6">
+        {/* Header Actions - Mobile Optimized */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Buscar equipos por cliente, ubicación, marca, modelo, serie..."
+                placeholder="Buscar equipos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-80"
+                className="pl-10 w-full"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={exportarCSV}
-              className="flex items-center space-x-2"
-            >
-              <Download className="h-4 w-4" />
-              <span>Exportar CSV</span>
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={exportarCSV}
+                className="flex items-center space-x-2 flex-1 sm:flex-none"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Exportar CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              <Link href="/equipos/nuevo" className="flex-1 sm:flex-none">
+                <Button className="w-full flex items-center justify-center space-x-2">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Nuevo Equipo</span>
+                  <span className="sm:hidden">Nuevo</span>
+                </Button>
+              </Link>
+            </div>
           </div>
-          
-          <Link href="/equipos/nuevo">
-            <Button className="flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Nuevo Equipo</span>
-            </Button>
-          </Link>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* Stats - Mobile Optimized */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Card className="p-4">
+            <Card className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Equipos</p>
-                  <p className="text-2xl font-bold text-gray-900">{equiposFiltrados.length}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">Total Equipos</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">{equiposFiltrados.length}</p>
                 </div>
-                <Heart className="h-8 w-8 text-blue-500" />
+                <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0 ml-2" />
               </div>
             </Card>
           </motion.div>
@@ -168,15 +172,15 @@ export default function EquiposPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="p-4">
+            <Card className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Operativos</p>
-                  <p className="text-2xl font-bold text-green-600">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">Operativos</p>
+                  <p className="text-lg sm:text-2xl font-bold text-green-600">
                     {equiposFiltrados.filter(e => getEstadoGeneralEquipo(e.id) === 'OPERATIVO').length}
                   </p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
+                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0 ml-2" />
               </div>
             </Card>
           </motion.div>
@@ -186,15 +190,15 @@ export default function EquiposPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="p-4 bg-yellow-50 border-yellow-200">
+            <Card className="p-3 sm:p-4 bg-yellow-50 border-yellow-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-yellow-700">En Reparación</p>
-                  <p className="text-2xl font-bold text-yellow-800">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-yellow-700 truncate">En Reparación</p>
+                  <p className="text-lg sm:text-2xl font-bold text-yellow-800">
                     {equiposFiltrados.filter(e => getEstadoGeneralEquipo(e.id) === 'REPARACION').length}
                   </p>
                 </div>
-                <Wrench className="h-8 w-8 text-yellow-600" />
+                <Wrench className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0 ml-2" />
               </div>
             </Card>
           </motion.div>
@@ -204,15 +208,15 @@ export default function EquiposPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="p-4 bg-red-50 border-red-200">
+            <Card className="p-3 sm:p-4 bg-red-50 border-red-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-red-700">Críticos</p>
-                  <p className="text-2xl font-bold text-red-800">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-red-700 truncate">Críticos</p>
+                  <p className="text-lg sm:text-2xl font-bold text-red-800">
                     {equiposFiltrados.filter(e => getEstadoGeneralEquipo(e.id) === 'CRITICO').length}
                   </p>
                 </div>
-                <Heart className="h-8 w-8 text-red-600" />
+                <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 flex-shrink-0 ml-2" />
               </div>
             </Card>
           </motion.div>
@@ -222,21 +226,21 @@ export default function EquiposPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Card className="p-4">
+            <Card className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Ubicaciones</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">Ubicaciones</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
                     {new Set(equiposFiltrados.map(e => e.ubicacion)).size}
                   </p>
                 </div>
-                <Building className="h-8 w-8 text-purple-500" />
+                <Building className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0 ml-2" />
               </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Tabla de Equipos */}
+        {/* Tabla de Equipos - Responsive */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -248,187 +252,182 @@ export default function EquiposPage() {
                 Lista de Equipos ({equiposFiltrados.length})
               </h3>
               
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente & Ubicación</TableHead>
-                      <TableHead>Equipo</TableHead>
-                      <TableHead>Marca/Modelo</TableHead>
-                      <TableHead>Serie Base</TableHead>
-                      <TableHead>Estado General</TableHead>
-                      <TableHead>Componentes</TableHead>
-                      <TableHead>Fecha Entrega</TableHead>
-                      <TableHead>Mantenimientos</TableHead>
-                      <TableHead>Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {equiposFiltrados.map((equipo, index) => {
-                      const mantenimientosCount = getMantenimientosCount(equipo.id);
-                      const ultimoMantenimiento = getUltimoMantenimiento(equipo.id);
-                      const { operativos, total, enReparacion, fueraServicio } = getComponentesOperativos(equipo.id);
-                      const estadoGeneral = getEstadoGeneralEquipo(equipo.id);
+              <MobileTable
+                data={equiposFiltrados}
+                columns={[
+                  { key: 'cliente', label: 'Cliente & Ubicación' },
+                  { key: 'equipo', label: 'Equipo' },
+                  { key: 'marca', label: 'Marca/Modelo' },
+                  { key: 'serie', label: 'Serie Base' },
+                  { key: 'estado', label: 'Estado General' },
+                  { key: 'componentes', label: 'Componentes' },
+                  { key: 'fecha', label: 'Fecha Entrega' },
+                  { key: 'mantenimientos', label: 'Mantenimientos' },
+                  { key: 'acciones', label: 'Acciones' },
+                ]}
+                renderMobileCard={(equipo, index) => {
+                  const mantenimientosCount = getMantenimientosCount(equipo.id);
+                  const ultimoMantenimiento = getUltimoMantenimiento(equipo.id);
+                  const componentes = getComponentesOperativos(equipo.id);
+                  const estadoGeneral = getEstadoGeneralEquipo(equipo.id);
+                  
+                  return (
+                    <MobileEquipoCard
+                      equipo={equipo}
+                      estadoGeneral={estadoGeneral}
+                      componentes={componentes}
+                      mantenimientosCount={mantenimientosCount}
+                      ultimoMantenimiento={ultimoMantenimiento}
+                      onVer={(id) => window.location.href = `/equipo/${id}`}
+                      onEliminar={setEquipoAEliminar}
+                    />
+                  );
+                }}
+                renderDesktopRow={(equipo, index) => {
+                  const mantenimientosCount = getMantenimientosCount(equipo.id);
+                  const ultimoMantenimiento = getUltimoMantenimiento(equipo.id);
+                  const { operativos, total, enReparacion, fueraServicio } = getComponentesOperativos(equipo.id);
+                  const estadoGeneral = getEstadoGeneralEquipo(equipo.id);
+                  
+                  return (
+                    <>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-gray-900">{equipo.cliente}</p>
+                          <div className="flex items-center text-sm text-gray-500 mt-1">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {equipo.ubicacion}
+                          </div>
+                        </div>
+                      </TableCell>
                       
-                      return (
-                        <motion.tr
-                          key={equipo.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className={
-                            estadoGeneral === 'CRITICO' ? 'bg-red-50 hover:bg-red-100' :
-                            estadoGeneral === 'REPARACION' ? 'bg-yellow-50 hover:bg-yellow-100' :
-                            estadoGeneral === 'OPERATIVO' ? 'bg-green-50 hover:bg-green-100' :
-                            'hover:bg-gray-50'
-                          }
-                        >
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-gray-900">{equipo.cliente}</p>
-                              <div className="flex items-center text-sm text-gray-500 mt-1">
-                                <MapPin className="h-3 w-3 mr-1" />
-                                {equipo.ubicacion}
-                              </div>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-gray-900">{equipo.nombreEquipo}</p>
-                              <p className="text-sm text-gray-500">{equipo.tipoEquipo}</p>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{equipo.marca}</p>
-                              <p className="text-sm text-gray-500">{equipo.modelo}</p>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                              {equipo.numeroSerieBase}
-                            </code>
-                          </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-gray-900">{equipo.nombreEquipo}</p>
+                          <p className="text-sm text-gray-500">{equipo.tipoEquipo}</p>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{equipo.marca}</p>
+                          <p className="text-sm text-gray-500">{equipo.modelo}</p>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                          {equipo.numeroSerieBase}
+                        </code>
+                      </TableCell>
 
-                          <TableCell>
-                            <div className="flex flex-col space-y-1">
-                              {estadoGeneral === 'CRITICO' && (
-                                <Badge variant="destructive" className="w-fit flex items-center space-x-1">
-                                  <span className="w-2 h-2 bg-white rounded-full"></span>
-                                  <span>CRÍTICO</span>
-                                </Badge>
-                              )}
-                              {estadoGeneral === 'REPARACION' && (
-                                <Badge variant="secondary" className="w-fit flex items-center space-x-1 bg-yellow-600 text-white">
-                                  <Wrench className="w-3 h-3" />
-                                  <span>EN REPARACIÓN</span>
-                                </Badge>
-                              )}
-                              {estadoGeneral === 'OPERATIVO' && (
-                                <Badge variant="default" className="w-fit flex items-center space-x-1 bg-green-600">
-                                  <CheckCircle className="w-3 h-3" />
-                                  <span>OPERATIVO</span>
-                                </Badge>
-                              )}
-                              {estadoGeneral === 'SIN_DATOS' && (
-                                <Badge variant="outline" className="w-fit">
-                                  Sin datos
-                                </Badge>
-                              )}
-                              <div className="text-xs text-gray-500 mt-1">
-                                {fueraServicio > 0 && `${fueraServicio} fuera de servicio`}
-                                {enReparacion > 0 && `${enReparacion} en reparación`}
-                              </div>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div className="flex flex-col space-y-1">
-                              <Badge variant="outline" className="w-fit">
-                                {total} total
+                      <TableCell>
+                        <div className="flex flex-col space-y-1">
+                          {estadoGeneral === 'CRITICO' && (
+                            <Badge variant="destructive" className="w-fit flex items-center space-x-1">
+                              <span className="w-2 h-2 bg-white rounded-full"></span>
+                              <span>CRÍTICO</span>
+                            </Badge>
+                          )}
+                          {estadoGeneral === 'REPARACION' && (
+                            <Badge variant="secondary" className="w-fit flex items-center space-x-1 bg-yellow-600 text-white">
+                              <Wrench className="w-3 h-3" />
+                              <span>EN REPARACIÓN</span>
+                            </Badge>
+                          )}
+                          {estadoGeneral === 'OPERATIVO' && (
+                            <Badge variant="default" className="w-fit flex items-center space-x-1 bg-green-600">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>OPERATIVO</span>
+                            </Badge>
+                          )}
+                          {estadoGeneral === 'SIN_DATOS' && (
+                            <Badge variant="outline" className="w-fit">
+                              Sin datos
+                            </Badge>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {fueraServicio > 0 && `${fueraServicio} fuera de servicio`}
+                            {enReparacion > 0 && `${enReparacion} en reparación`}
+                          </div>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex flex-col space-y-1">
+                          <Badge variant="outline" className="w-fit">
+                            {total} total
+                          </Badge>
+                          <div className="flex space-x-1">
+                            {operativos > 0 && (
+                              <Badge variant="default" className="w-fit text-xs">
+                                {operativos} ✓
                               </Badge>
-                              <div className="flex space-x-1">
-                                {operativos > 0 && (
-                                  <Badge variant="default" className="w-fit text-xs">
-                                    {operativos} ✓
-                                  </Badge>
-                                )}
-                                {enReparacion > 0 && (
-                                  <Badge variant="secondary" className="w-fit text-xs bg-yellow-100 text-yellow-800">
-                                    {enReparacion} 🔧
-                                  </Badge>
-                                )}
-                                {fueraServicio > 0 && (
-                                  <Badge variant="destructive" className="w-fit text-xs">
-                                    {fueraServicio} ❌
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            {new Date(equipo.fechaEntrega).toLocaleDateString('es-ES')}
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant={mantenimientosCount > 0 ? 'default' : 'secondary'}>
-                                {mantenimientosCount}
+                            )}
+                            {enReparacion > 0 && (
+                              <Badge variant="secondary" className="w-fit text-xs bg-yellow-100 text-yellow-800">
+                                {enReparacion} 🔧
                               </Badge>
-                              {ultimoMantenimiento && (
-                                <Badge 
-                                  variant={
-                                    ultimoMantenimiento.estado === 'Finalizado' ? 'default' :
-                                    ultimoMantenimiento.estado === 'En proceso' ? 'secondary' : 'destructive'
-                                  }
-                                >
-                                  {ultimoMantenimiento.estado}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Link href={`/equipo/${equipo.id}`}>
-                                <Button variant="outline" size="sm" className="flex items-center space-x-1">
-                                  <Eye className="h-4 w-4" />
-                                  <span>Ver</span>
-                                </Button>
-                              </Link>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setEquipoAEliminar({ id: equipo.id, nombre: equipo.nombreEquipo })}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </motion.tr>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {equiposFiltrados.length === 0 && (
-                <div className="text-center py-8">
-                  <Heart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron equipos</h3>
-                  <p className="text-gray-500">
-                    {searchTerm 
-                      ? 'Intenta con otros términos de búsqueda' 
-                      : 'Comienza registrando tu primer equipo'
-                    }
-                  </p>
-                </div>
-              )}
+                            )}
+                            {fueraServicio > 0 && (
+                              <Badge variant="destructive" className="w-fit text-xs">
+                                {fueraServicio} ❌
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        {new Date(equipo.fechaEntrega).toLocaleDateString('es-ES')}
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant={mantenimientosCount > 0 ? 'default' : 'secondary'}>
+                            {mantenimientosCount}
+                          </Badge>
+                          {ultimoMantenimiento && (
+                            <Badge 
+                              variant={
+                                ultimoMantenimiento.estado === 'Finalizado' ? 'default' :
+                                ultimoMantenimiento.estado === 'En proceso' ? 'secondary' : 'destructive'
+                              }
+                            >
+                              {ultimoMantenimiento.estado}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Link href={`/equipo/${equipo.id}`}>
+                            <Button variant="outline" size="sm" className="flex items-center space-x-1">
+                              <Eye className="h-4 w-4" />
+                              <span>Ver</span>
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEquipoAEliminar({ id: equipo.id, nombre: equipo.nombreEquipo })}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </>
+                  );
+                }}
+                emptyStateIcon={Heart}
+                emptyStateTitle="No se encontraron equipos"
+                emptyStateMessage={searchTerm 
+                  ? 'Intenta con otros términos de búsqueda' 
+                  : 'Comienza registrando tu primer equipo'
+                }
+              />
             </div>
           </Card>
         </motion.div>

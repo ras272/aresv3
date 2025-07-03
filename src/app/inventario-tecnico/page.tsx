@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { MobileTable, MobileComponenteCard } from '@/components/ui/mobile-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, Package, Calendar, MapPin, Plus, History, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -242,8 +243,8 @@ export default function InventarioTecnicoPage() {
   return (
     <DashboardLayout title="Inventario Técnico" subtitle="Gestión de componentes y repuestos para servicio técnico">
       <div className="space-y-6">
-        {/* Resumen */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Resumen - Mobile Optimized */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Componentes</CardTitle>
@@ -288,13 +289,13 @@ export default function InventarioTecnicoPage() {
           </Card>
         </div>
 
-        {/* Filtros */}
+        {/* Filtros - Mobile Optimized */}
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="busqueda">Buscar</Label>
                 <div className="relative">
@@ -340,251 +341,262 @@ export default function InventarioTecnicoPage() {
           </CardContent>
         </Card>
 
-        {/* Tabla de componentes */}
+        {/* Tabla de componentes - Responsive */}
         <Card>
           <CardHeader>
             <CardTitle>Componentes ({componentesFiltrados.length})</CardTitle>
           </CardHeader>
           <CardContent className="px-2 sm:px-6">
-            <div className="rounded-md border overflow-hidden">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[250px]">Componente</TableHead>
-                    <TableHead className="min-w-[180px]">Marca/Modelo/Tipo</TableHead>
-                    <TableHead className="hidden sm:table-cell">N° Serie</TableHead>
-                    <TableHead className="min-w-[100px]">Stock & Estado</TableHead>
-                    <TableHead className="hidden lg:table-cell">Ubicación</TableHead>
-                    <TableHead className="hidden xl:table-cell">Fecha</TableHead>
-                                         <TableHead className="w-[120px]">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {componentesFiltrados.map((componente) => (
-                    <TableRow key={componente.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{componente.nombre}</p>
-                          {/* 🎯 MOSTRAR INFO DEL EQUIPO PADRE */}
-                          {(() => {
-                                                         // Priorizar información directa del equipo padre
-                             if (componente.equipoPadre) {
-                               // Limpiar el nombre del equipo quitando el código de entrada
-                               const nombreLimpio = componente.equipoPadre.nombreEquipo
-                                 .replace(/-ENTRADA-\d{8}-\d{3}/, '') // Quitar -ENTRADA-YYYYMMDD-XXX
-                                 .replace(/-\d{8}-\d{3}/, ''); // Quitar -YYYYMMDD-XXX como fallback
-                               
-                               return (
-                                 <div className="mt-1">
-                                   <p className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                                     🏥 PARTE DEL EQUIPO {nombreLimpio}/{componente.equipoPadre.cliente.toUpperCase()}
-                                   </p>
-                                   <p className="text-xs text-gray-500 mt-1">
-                                     Serie base: {componente.equipoPadre.numeroSerieBase}
-                                   </p>
-                                 </div>
-                               );
-                             }
-                            
-                            // Buscar el equipo padre usando MISMA LÓGICA que la función de asignación
-                            let equipoPadre = null;
-                            if (componente.codigoCargaOrigen) {
-                              // Usar búsqueda por código de carga exacto (no por marca)
-                              equipoPadre = equipos.find(equipo => 
-                                equipo.nombreEquipo.includes(componente.codigoCargaOrigen!)
-                              );
-                              
-                              if (equipoPadre) {
-                                console.log('📝 Display - Equipo encontrado:', equipoPadre.nombreEquipo, '- Cliente:', equipoPadre.cliente);
-                              }
-                            }
-                            
-                                                         if (equipoPadre) {
-                               // Limpiar el nombre del equipo quitando el código de entrada
-                               const nombreLimpio = equipoPadre.nombreEquipo
-                                 .replace(/-ENTRADA-\d{8}-\d{3}/, '') // Quitar -ENTRADA-YYYYMMDD-XXX
-                                 .replace(/-\d{8}-\d{3}/, ''); // Quitar -YYYYMMDD-XXX como fallback
-                               
-                               return (
-                                 <div className="mt-1">
-                                   <p className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                                     🏥 PARTE DEL EQUIPO {nombreLimpio}/{equipoPadre.cliente.toUpperCase()}
-                                   </p>
-                                 </div>
-                               );
-                             }
-                            
-                            // Si no encuentra equipo específico, mostrar info de la carga
-                            if (componente.codigoCargaOrigen) {
-                              return (
-                                <p className="text-xs text-blue-600 mt-1">
-                                  📦 Ingresado desde {componente.codigoCargaOrigen}
-                                </p>
-                              );
-                            }
-                            
-                            return componente.observaciones && (
-                              <p className="text-xs text-gray-600 truncate max-w-[200px]">
-                                {componente.observaciones}
-                              </p>
-                            );
-                          })()}
-                        </div>
-                      </TableCell>
-                      {/* Columna combinada: Marca/Modelo/Tipo */}
-                      <TableCell className="min-w-[180px]">
-                        <div>
-                          <p className="font-medium text-sm">{componente.marca}</p>
-                          <p className="text-xs text-gray-600">{componente.modelo}</p>
-                          <Badge 
-                            className={`${tipoComponenteColores[componente.tipoComponente as keyof typeof tipoComponenteColores] || 'bg-gray-100 text-gray-800'} mt-1`}
-                            variant="secondary"
-                          >
-                            {componente.tipoComponente}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      
-                      {/* N° Serie - Oculto en móviles */}
-                      <TableCell className="hidden sm:table-cell">
-                        <span className="font-mono text-xs">
-                          {componente.numeroSerie || 'N/A'}
-                        </span>
-                      </TableCell>
-                      
-                      {/* Columna combinada: Stock & Estado */}
-                      <TableCell className="min-w-[100px]">
-                        <div className="text-center">
-                          <div className="mb-1">
-                            <span className="text-sm font-bold text-blue-600">
-                              {componente.cantidadDisponible}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              /{componente.cantidadOriginal}
-                            </span>
-                          </div>
-                          <Badge 
-                            className={`${estadoColores[componente.estado as keyof typeof estadoColores]} text-xs`}
-                            variant="secondary"
-                          >
-                            {componente.estado}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      
-                      {/* Ubicación - Oculto en tablets */}
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          <span className="text-xs truncate">{componente.ubicacionFisica || 'N/A'}</span>
-                        </div>
-                      </TableCell>
-                      
-                      {/* Fecha - Solo en pantallas grandes */}
-                      <TableCell className="hidden xl:table-cell">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs">{formatearFecha(componente.fechaIngreso)}</span>
-                        </div>
-                      </TableCell>
-                      {/* Acciones - Con asignación inteligente */}
-                      <TableCell className="w-[120px]">
-                        <div className="flex flex-col space-y-1">
-                          {componente.cantidadDisponible > 0 && (() => {
-                            // 🎯 DETECTAR EQUIPO POR CÓDIGO DE CARGA
-                            let equipoPadreUnico = null;
-                            let tieneEquipoPadre = false;
-                            
-                            // 1️⃣ Verificar equipo padre directo
-                            if (componente.equipoPadre) {
-                              equipoPadreUnico = equipos.find(e => e.id === componente.equipoPadre!.equipoId);
-                              tieneEquipoPadre = !!equipoPadreUnico;
-                            }
-                            
-                            // 2️⃣ Buscar por código de carga exacto (MISMA LÓGICA que la función)
-                            if (!tieneEquipoPadre && componente.codigoCargaOrigen) {
-                              const codigoComponente = componente.codigoCargaOrigen;
-                              equipoPadreUnico = equipos.find(equipo => 
-                                equipo.nombreEquipo.includes(codigoComponente)
-                              );
-                              tieneEquipoPadre = !!equipoPadreUnico;
-                              
-                              // Debug para UI
-                              if (equipoPadreUnico) {
-                                console.log('🎯 UI detectó equipo padre:', equipoPadreUnico.nombreEquipo, '- Cliente:', equipoPadreUnico.cliente);
-                              }
-                            }
-                            
-                                                         if (tieneEquipoPadre && equipoPadreUnico) {
-                               // Obtener nombre limpio del equipo único identificado
-                               const nombreLimpio = equipoPadreUnico.nombreEquipo
-                                 .replace(/-ENTRADA-\d{8}-\d{3}/, '')
-                                 .replace(/-\d{8}-\d{3}/, '') || 'Equipo';
-                              
-                              return (
-                                <div className="flex flex-col space-y-1">
-                                  {/* Botón de asignación directa */}
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => asignarDirectamenteAlEquipoPadre(componente)}
-                                    className="h-7 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
-                                    title={`Asignar directamente a ${nombreLimpio}/${equipoPadreUnico.cliente}`}
-                                    disabled={asignando}
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                    <span className="hidden lg:inline ml-1 truncate max-w-[60px]">
-                                      → {nombreLimpio.substring(0, 8)}...
-                                    </span>
-                                  </Button>
-                                  
-                                  {/* Botón manual como alternativa */}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => abrirModalAsignacion(componente)}
-                                    className="h-6 px-1 text-xs"
-                                    title="Asignar a otro equipo"
-                                  >
-                                    <Plus className="w-2 h-2" />
-                                    <span className="hidden xl:inline ml-1">Otro</span>
-                                  </Button>
-                                </div>
-                              );
-                                                         } else {
-                               // Sin código de carga o equipo padre, asignación manual
-                               return (
-                                 <Button
-                                   variant="outline"
-                                   size="sm"
-                                   onClick={() => abrirModalAsignacion(componente)}
-                                   className="h-8 px-2"
-                                   title="Asignar componente manualmente"
-                                 >
-                                   <Plus className="w-3 h-3" />
-                                   <span className="hidden md:inline ml-1">Asignar</span>
-                                 </Button>
-                               );
-                             }
-                          })()}
+            <MobileTable
+              data={componentesFiltrados}
+              columns={[
+                { key: 'componente', label: 'Componente' },
+                { key: 'marca', label: 'Marca/Modelo/Tipo' },
+                { key: 'serie', label: 'N° Serie' },
+                { key: 'stock', label: 'Stock & Estado' },
+                { key: 'ubicacion', label: 'Ubicación' },
+                { key: 'fecha', label: 'Fecha' },
+                { key: 'acciones', label: 'Acciones' },
+              ]}
+              renderMobileCard={(componente, index) => (
+                <MobileComponenteCard
+                  componente={componente}
+                  tipoColores={tipoComponenteColores}
+                  estadoColores={estadoColores}
+                  equipos={equipos}
+                  formatearFecha={formatearFecha}
+                  onAsignar={abrirModalAsignacion}
+                  onAsignarDirecto={asignarDirectamenteAlEquipoPadre}
+                  onHistorial={abrirModalHistorial}
+                  asignando={asignando}
+                />
+              )}
+              renderDesktopRow={(componente, index) => (
+                <>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{componente.nombre}</p>
+                      {/* 🎯 MOSTRAR INFO DEL EQUIPO PADRE */}
+                      {(() => {
+                        // Priorizar información directa del equipo padre
+                        if (componente.equipoPadre) {
+                          // Limpiar el nombre del equipo quitando el código de entrada
+                          const nombreLimpio = componente.equipoPadre.nombreEquipo
+                            .replace(/-ENTRADA-\d{8}-\d{3}/, '') // Quitar -ENTRADA-YYYYMMDD-XXX
+                            .replace(/-\d{8}-\d{3}/, ''); // Quitar -YYYYMMDD-XXX como fallback
                           
-                          {/* Botón de historial */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => abrirModalHistorial(componente)}
-                            className="h-6 w-full p-0"
-                            title="Ver historial"
-                          >
-                            <History className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                          return (
+                            <div className="mt-1">
+                              <p className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                                🏥 PARTE DEL EQUIPO {nombreLimpio}/{componente.equipoPadre.cliente.toUpperCase()}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Serie base: {componente.equipoPadre.numeroSerieBase}
+                              </p>
+                            </div>
+                          );
+                        }
+                       
+                       // Buscar el equipo padre usando MISMA LÓGICA que la función de asignación
+                       let equipoPadre = null;
+                       if (componente.codigoCargaOrigen) {
+                         // Usar búsqueda por código de carga exacto (no por marca)
+                         equipoPadre = equipos.find(equipo => 
+                           equipo.nombreEquipo.includes(componente.codigoCargaOrigen!)
+                         );
+                         
+                         if (equipoPadre) {
+                           console.log('📝 Display - Equipo encontrado:', equipoPadre.nombreEquipo, '- Cliente:', equipoPadre.cliente);
+                         }
+                       }
+                       
+                       if (equipoPadre) {
+                          // Limpiar el nombre del equipo quitando el código de entrada
+                          const nombreLimpio = equipoPadre.nombreEquipo
+                            .replace(/-ENTRADA-\d{8}-\d{3}/, '') // Quitar -ENTRADA-YYYYMMDD-XXX
+                            .replace(/-\d{8}-\d{3}/, ''); // Quitar -YYYYMMDD-XXX como fallback
+                          
+                          return (
+                            <div className="mt-1">
+                              <p className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                                🏥 PARTE DEL EQUIPO {nombreLimpio}/{equipoPadre.cliente.toUpperCase()}
+                              </p>
+                            </div>
+                          );
+                        }
+                       
+                       // Si no encuentra equipo específico, mostrar info de la carga
+                       if (componente.codigoCargaOrigen) {
+                         return (
+                           <p className="text-xs text-blue-600 mt-1">
+                             📦 Ingresado desde {componente.codigoCargaOrigen}
+                           </p>
+                         );
+                       }
+                       
+                       return componente.observaciones && (
+                         <p className="text-xs text-gray-600 truncate max-w-[200px]">
+                           {componente.observaciones}
+                         </p>
+                       );
+                      })()}
+                    </div>
+                  </TableCell>
+                  {/* Columna combinada: Marca/Modelo/Tipo */}
+                  <TableCell className="min-w-[180px]">
+                    <div>
+                      <p className="font-medium text-sm">{componente.marca}</p>
+                      <p className="text-xs text-gray-600">{componente.modelo}</p>
+                      <Badge 
+                        className={`${tipoComponenteColores[componente.tipoComponente as keyof typeof tipoComponenteColores] || 'bg-gray-100 text-gray-800'} mt-1`}
+                        variant="secondary"
+                      >
+                        {componente.tipoComponente}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  
+                  {/* N° Serie - Oculto en móviles */}
+                  <TableCell className="hidden sm:table-cell">
+                    <span className="font-mono text-xs">
+                      {componente.numeroSerie || 'N/A'}
+                    </span>
+                  </TableCell>
+                  
+                  {/* Columna combinada: Stock & Estado */}
+                  <TableCell className="min-w-[100px]">
+                    <div className="text-center">
+                      <div className="mb-1">
+                        <span className="text-sm font-bold text-blue-600">
+                          {componente.cantidadDisponible}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          /{componente.cantidadOriginal}
+                        </span>
+                      </div>
+                      <Badge 
+                        className={`${estadoColores[componente.estado as keyof typeof estadoColores]} text-xs`}
+                        variant="secondary"
+                      >
+                        {componente.estado}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  
+                  {/* Ubicación - Oculto en tablets */}
+                  <TableCell className="hidden lg:table-cell">
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs truncate">{componente.ubicacionFisica || 'N/A'}</span>
+                    </div>
+                  </TableCell>
+                  
+                  {/* Fecha - Solo en pantallas grandes */}
+                  <TableCell className="hidden xl:table-cell">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs">{formatearFecha(componente.fechaIngreso)}</span>
+                    </div>
+                  </TableCell>
+                  {/* Acciones - Con asignación inteligente */}
+                  <TableCell className="w-[120px]">
+                    <div className="flex flex-col space-y-1">
+                      {componente.cantidadDisponible > 0 && (() => {
+                        // 🎯 DETECTAR EQUIPO POR CÓDIGO DE CARGA
+                        let equipoPadreUnico = null;
+                        let tieneEquipoPadre = false;
+                        
+                        // 1️⃣ Verificar equipo padre directo
+                        if (componente.equipoPadre) {
+                          equipoPadreUnico = equipos.find(e => e.id === componente.equipoPadre!.equipoId);
+                          tieneEquipoPadre = !!equipoPadreUnico;
+                        }
+                        
+                        // 2️⃣ Buscar por código de carga exacto (MISMA LÓGICA que la función)
+                        if (!tieneEquipoPadre && componente.codigoCargaOrigen) {
+                          const codigoComponente = componente.codigoCargaOrigen;
+                          equipoPadreUnico = equipos.find(equipo => 
+                            equipo.nombreEquipo.includes(codigoComponente)
+                          );
+                          tieneEquipoPadre = !!equipoPadreUnico;
+                          
+                          // Debug para UI
+                          if (equipoPadreUnico) {
+                            console.log('🎯 UI detectó equipo padre:', equipoPadreUnico.nombreEquipo, '- Cliente:', equipoPadreUnico.cliente);
+                          }
+                        }
+                        
+                        if (tieneEquipoPadre && equipoPadreUnico) {
+                          // Obtener nombre limpio del equipo único identificado
+                          const nombreLimpio = equipoPadreUnico.nombreEquipo
+                            .replace(/-ENTRADA-\d{8}-\d{3}/, '')
+                            .replace(/-\d{8}-\d{3}/, '') || 'Equipo';
+                         
+                         return (
+                           <div className="flex flex-col space-y-1">
+                             {/* Botón de asignación directa */}
+                             <Button
+                               variant="default"
+                               size="sm"
+                               onClick={() => asignarDirectamenteAlEquipoPadre(componente)}
+                               className="h-7 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
+                               title={`Asignar directamente a ${nombreLimpio}/${equipoPadreUnico.cliente}`}
+                               disabled={asignando}
+                             >
+                               <Plus className="w-3 h-3" />
+                               <span className="hidden lg:inline ml-1 truncate max-w-[60px]">
+                                 → {nombreLimpio.substring(0, 8)}...
+                               </span>
+                             </Button>
+                             
+                             {/* Botón manual como alternativa */}
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => abrirModalAsignacion(componente)}
+                               className="h-6 px-1 text-xs"
+                               title="Asignar a otro equipo"
+                             >
+                               <Plus className="w-2 h-2" />
+                               <span className="hidden xl:inline ml-1">Otro</span>
+                             </Button>
+                           </div>
+                         );
+                        } else {
+                          // Sin código de carga o equipo padre, asignación manual
+                          return (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => abrirModalAsignacion(componente)}
+                              className="h-8 px-2"
+                              title="Asignar componente manualmente"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span className="hidden md:inline ml-1">Asignar</span>
+                            </Button>
+                          );
+                        }
+                      })()}
+                      
+                      {/* Botón de historial */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => abrirModalHistorial(componente)}
+                        className="h-6 w-full p-0"
+                        title="Ver historial"
+                      >
+                        <History className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </>
+              )}
+              emptyStateIcon={Package}
+              emptyStateTitle="No hay componentes"
+              emptyStateMessage="No se encontraron componentes que coincidan con los filtros"
+            />
           </CardContent>
         </Card>
 
