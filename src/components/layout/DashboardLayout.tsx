@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
-import { MobileHeader, ConnectivityStatus, MobileFloatingNav } from '@/components/ui/mobile-header';
+import { MobileHeader, ConnectivityStatus } from '@/components/ui/mobile-header';
 import { useFieldMode } from '@/hooks/useDevice';
 
 interface DashboardLayoutProps {
@@ -51,8 +51,8 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
               transition={{ delay: 0.1 }}
               className={`${
                 isFieldMode
-                  ? 'py-4 px-4 min-h-full'
-                  : 'max-w-7xl mx-auto py-6 px-6 min-h-full'
+                  ? 'py-4 px-2 min-h-full' // Reducido padding en móvil
+                  : 'max-w-7xl mx-auto py-6 px-4 lg:px-6 min-h-full' // Responsive padding
               }`}
             >
               {children}
@@ -65,7 +65,6 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
       {isFieldMode && (
         <>
           <ConnectivityStatus />
-          <MobileFloatingNav />
         </>
       )}
     </>

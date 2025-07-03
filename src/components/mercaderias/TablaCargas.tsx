@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useFieldMode } from '@/hooks/useDevice';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Search, Eye, Package, Calendar, ShoppingCart, Box, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,13 +19,36 @@ const tipoProductoColores = {
 
 export function TablaCargas() {
   const { getCargasMercaderia, deleteCarga, loadAllData } = useAppStore();
+  const { isFieldMode } = useFieldMode();
   const [busqueda, setBusqueda] = useState('');
   const [cargaSeleccionada, setCargaSeleccionada] = useState<string | null>(null);
   const [cargaAEliminar, setCargaAEliminar] = useState<{ id: string; codigo: string } | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
+  
+  // Ref para hacer scroll automático al detalle
+  const detalleRef = useRef<HTMLDivElement>(null);
 
   const cargas = getCargasMercaderia();
+  
+  // Función para seleccionar carga y hacer scroll automático
+  const seleccionarCarga = (cargaId: string | null) => {
+    setCargaSeleccionada(cargaId);
+  };
+
+  // useEffect para hacer scroll automático cuando se selecciona una carga
+  useEffect(() => {
+    if (cargaSeleccionada && detalleRef.current) {
+      // Delay más largo para asegurar que el DOM se actualice
+      setTimeout(() => {
+        detalleRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }, 300);
+    }
+  }, [cargaSeleccionada]);
 
   // 🔥 FUNCIÓN PARA REFRESCAR MANUALMENTE
   const refrescarDatos = async () => {
@@ -106,7 +130,7 @@ export function TablaCargas() {
         description: `La carga ${cargaAEliminar.codigo} ha sido eliminada permanentemente.`
       });
       setCargaAEliminar(null);
-      setCargaSeleccionada(null); // Cerrar detalle si estaba abierto
+      seleccionarCarga(null); // Cerrar detalle si estaba abierto
     } catch (error) {
       toast.error('Error al eliminar la carga', {
         description: 'Por favor, intenta nuevamente.'
@@ -279,16 +303,16 @@ export function TablaCargas() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Buscador mejorado */}
-      <div className="flex items-center space-x-2">
+    <div className="space-y-3">
+      {/* Buscador móvil optimizado */}
+      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="🔍 Buscar por código, destino, producto, marca, modelo, serie, voltaje, frecuencia..."
+            placeholder="🔍 Buscar por código, destino, producto..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-10"
+            className="pl-10 text-sm"
           />
         </div>
         <Button
@@ -296,136 +320,247 @@ export function TablaCargas() {
           size="sm"
           onClick={refrescarDatos}
           disabled={refrescando}
-          className="flex items-center space-x-2"
+          className="flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <RefreshCw className={`h-4 w-4 ${refrescando ? 'animate-spin' : ''}`} />
-          <span>{refrescando ? 'Actualizando...' : 'Actualizar'}</span>
+          <span className="hidden sm:inline">{refrescando ? 'Actualizando...' : 'Actualizar'}</span>
+          <span className="sm:hidden">{refrescando ? 'Actualizando...' : 'Actualizar'}</span>
         </Button>
       </div>
 
-      {/* Tabla */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Código de Carga</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Destino</TableHead>
-              <TableHead>Productos</TableHead>
-              <TableHead>Tipos</TableHead>
-              <TableHead>Equipos Médicos</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {cargasFiltradas.map((carga) => {
-              const tiposProductos = contarTiposProductos(carga.productos);
-              const equiposMedicos = carga.productos.filter(p => p.tipoProducto === 'Equipo Médico').length;
-              
-              return (
-                <TableRow key={carga.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">
-                    <div>
-                      <span className="font-medium">{obtenerCodigoCarga(carga)}</span>
-                      {carga.numeroCargaPersonalizado && carga.numeroCargaPersonalizado !== carga.codigoCarga && (
-                        <p className="text-xs text-gray-500">Auto: {carga.codigoCarga}</p>
-                      )}
+      {/* Vista Móvil: Cards */}
+      {isFieldMode ? (
+        <div className="space-y-2 w-full max-w-full overflow-hidden">
+          {cargasFiltradas.map((carga) => {
+            const tiposProductos = contarTiposProductos(carga.productos);
+            const equiposMedicos = carga.productos.filter((p: any) => p.tipoProducto === 'Equipo Médico').length;
+            
+            return (
+              <div key={carga.id} className="bg-white border rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-all w-full max-w-full overflow-hidden">
+                                  {/* Header Compacto */}
+                  <div className="mb-2">
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className="font-bold text-sm text-gray-900 truncate flex-1 pr-1 min-w-0">
+                        {obtenerCodigoCarga(carga)}
+                      </h3>
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        <Package className="w-3 h-3 text-gray-400" />
+                        <span className="font-bold text-blue-600 text-xs">{carga.productos.length}</span>
+                        {equiposMedicos > 0 && (
+                          <>
+                            <Box className="w-3 h-3 text-blue-600" />
+                            <span className="text-blue-600 font-medium text-xs">{equiposMedicos}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span>{formatearFecha(carga.fechaIngreso)}</span>
+                    
+                    {carga.numeroCargaPersonalizado && carga.numeroCargaPersonalizado !== carga.codigoCarga && (
+                      <p className="text-xs text-gray-500 mb-1 truncate">Auto: {carga.codigoCarga}</p>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-1 min-w-0 flex-1">
+                        <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        <span className="text-xs text-gray-600 truncate">{formatearFecha(carga.fechaIngreso)}</span>
+                      </div>
+                      
+                      {/* Tipo */}
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        {carga.tipoCarga === 'stock' ? (
+                          <>
+                            <span className="text-xs">📦</span>
+                            <span className="text-xs font-medium text-green-700">Stock</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs">🏥</span>
+                            <span className="text-xs font-medium text-blue-700">Cliente</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {carga.tipoCarga === 'stock' ? (
-                        <>
-                          <span className="text-xl">📦</span>
-                          <span className="text-sm font-medium text-green-700">Stock</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-xl">🏥</span>
-                          <span className="text-sm font-medium text-blue-700">Cliente</span>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-xs">
-                      <p className="truncate font-medium">
-                        {carga.tipoCarga === 'stock' ? 'Stock/Inventario' : carga.destino}
-                      </p>
-                      {carga.tipoCarga === 'cliente' && carga.cliente && (
-                        <p className="text-xs text-gray-500 truncate">{carga.cliente}</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Package className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium">{carga.productos.length}</span>
-                      <span className="text-gray-600 text-sm">productos</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                  </div>
+
+                                  {/* Destino Compacto */}
+                  <div className="mb-2 min-w-0">
+                    <p className="text-xs text-gray-500 mb-1">DESTINO</p>
+                    <p className="font-medium text-xs truncate overflow-hidden">
+                      {carga.tipoCarga === 'stock' ? 'Stock/Inventario' : carga.destino}
+                    </p>
+                    {carga.tipoCarga === 'cliente' && carga.cliente && (
+                      <p className="text-xs text-gray-600 truncate overflow-hidden">{carga.cliente}</p>
+                    )}
+                  </div>
+
+                  {/* Tipos de productos Compacto */}
+                  <div className="mb-2 min-w-0">
+                    <div className="flex flex-wrap gap-1 overflow-hidden">
                       {Object.entries(tiposProductos).map(([tipo, cantidad]) => (
                         <Badge 
                           key={tipo}
-                          className={`${tipoProductoColores[tipo as keyof typeof tipoProductoColores]} text-xs`}
+                          className={`${tipoProductoColores[tipo as keyof typeof tipoProductoColores]} text-xs px-1 py-0.5 whitespace-nowrap`}
                           variant="secondary"
                         >
                           {cantidad}x {tipo === 'Equipo Médico' ? 'Equipo' : tipo}
                         </Badge>
                       ))}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    {equiposMedicos > 0 ? (
-                      <div className="flex items-center space-x-2">
-                        <Box className="w-4 h-4 text-blue-600" />
-                        <span className="text-blue-600 font-medium">{equiposMedicos}</span>
-                        <span className="text-xs text-blue-600">enviado(s)</span>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setCargaSeleccionada(
-                          cargaSeleccionada === carga.id ? null : carga.id
+                  </div>
+
+                                  {/* Acciones Compactas */}
+                  <div className="flex items-center space-x-1 pt-2 border-t border-gray-200 min-w-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => seleccionarCarga(
+                        cargaSeleccionada === carga.id ? null : carga.id
+                      )}
+                      className="flex items-center space-x-1 flex-1 h-7 text-xs min-w-0"
+                    >
+                      <Eye className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">Ver</span>
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCargaAEliminar({ id: carga.id, codigo: obtenerCodigoCarga(carga) })}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center space-x-1 flex-1 h-7 text-xs min-w-0"
+                    >
+                      <Trash2 className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">Eliminar</span>
+                    </Button>
+                  </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Vista Desktop: Tabla */
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Código de Carga</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Destino</TableHead>
+                <TableHead>Productos</TableHead>
+                <TableHead>Tipos</TableHead>
+                <TableHead>Equipos Médicos</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cargasFiltradas.map((carga) => {
+                const tiposProductos = contarTiposProductos(carga.productos);
+                const equiposMedicos = carga.productos.filter((p: any) => p.tipoProducto === 'Equipo Médico').length;
+                
+                return (
+                  <TableRow key={carga.id} className="hover:bg-gray-50">
+                    <TableCell className="font-medium">
+                      <div>
+                        <span className="font-medium">{obtenerCodigoCarga(carga)}</span>
+                        {carga.numeroCargaPersonalizado && carga.numeroCargaPersonalizado !== carga.codigoCarga && (
+                          <p className="text-xs text-gray-500">Auto: {carga.codigoCarga}</p>
                         )}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setCargaAEliminar({ id: carga.id, codigo: obtenerCodigoCarga(carga) })}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span>{formatearFecha(carga.fechaIngreso)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        {carga.tipoCarga === 'stock' ? (
+                          <>
+                            <span className="text-xl">📦</span>
+                            <span className="text-sm font-medium text-green-700">Stock</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xl">🏥</span>
+                            <span className="text-sm font-medium text-blue-700">Cliente</span>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-xs">
+                        <p className="truncate font-medium">
+                          {carga.tipoCarga === 'stock' ? 'Stock/Inventario' : carga.destino}
+                        </p>
+                        {carga.tipoCarga === 'cliente' && carga.cliente && (
+                          <p className="text-xs text-gray-500 truncate">{carga.cliente}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Package className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium">{carga.productos.length}</span>
+                        <span className="text-gray-600 text-sm">productos</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(tiposProductos).map(([tipo, cantidad]) => (
+                          <Badge 
+                            key={tipo}
+                            className={`${tipoProductoColores[tipo as keyof typeof tipoProductoColores]} text-xs`}
+                            variant="secondary"
+                          >
+                            {cantidad}x {tipo === 'Equipo Médico' ? 'Equipo' : tipo}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {equiposMedicos > 0 ? (
+                        <div className="flex items-center space-x-2">
+                          <Box className="w-4 h-4 text-blue-600" />
+                          <span className="text-blue-600 font-medium">{equiposMedicos}</span>
+                          <span className="text-xs text-blue-600">enviado(s)</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-1">
+                                            <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => seleccionarCarga(
+                        cargaSeleccionada === carga.id ? null : carga.id
+                      )}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCargaAEliminar({ id: carga.id, codigo: obtenerCodigoCarga(carga) })}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Detalle de carga - MEJORADO */}
       {cargaSeleccionada && cargas.find(c => c.id === cargaSeleccionada) && (
-        <div className="border rounded-lg p-6 bg-gray-50 space-y-6">
+        <div ref={detalleRef} className="border rounded-lg p-3 sm:p-6 bg-gray-50 space-y-4 sm:space-y-6">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h3 className="font-semibold text-xl">
@@ -439,7 +574,7 @@ export function TablaCargas() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCargaSeleccionada(null)}
+              onClick={() => seleccionarCarga(null)}
             >
               ✕
             </Button>
@@ -467,8 +602,8 @@ export function TablaCargas() {
         </div>
       )}
 
-      {/* Información de resultados */}
-      <div className="text-sm text-gray-600">
+      {/* Información de resultados - Mobile Optimized */}
+      <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
         Mostrando {cargasFiltradas.length} de {cargas.length} cargas
       </div>
 

@@ -31,29 +31,34 @@ export default function MercaderiasPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
+      <div className="space-y-4 sm:space-y-6">
+        {/* Header - Mobile Optimized */}
+        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               Ingreso de Mercaderías
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
               Gestión de cargas múltiples para Ares Paraguay
             </p>
           </div>
-          <div className="flex items-center space-x-3">
+          
+          {/* Botones optimizados para móvil */}
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
             <Button
               onClick={() => setMostrarVerificador(!mostrarVerificador)}
               variant="outline"
-              className="text-green-600 border-green-600 hover:bg-green-50"
+              className="text-green-600 border-green-600 hover:bg-green-50 w-full sm:w-auto"
+              size="sm"
             >
               <TrendingUp className="w-4 h-4 mr-2" />
-              {mostrarVerificador ? 'Ocultar' : 'Verificar'} Sistema
+              <span className="hidden sm:inline">{mostrarVerificador ? 'Ocultar' : 'Verificar'} Sistema</span>
+              <span className="sm:hidden">{mostrarVerificador ? 'Ocultar' : 'Verificar'}</span>
             </Button>
             <Button
               onClick={() => router.push('/mercaderias/nueva')}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+              size="sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Nueva Carga
@@ -69,12 +74,12 @@ export default function MercaderiasPage() {
         {/* 🚀 Estadísticas de Carga Masiva 2025 */}
         <EstadisticasCargaMasiva />
 
-        {/* Tabla de cargas */}
+        {/* Tabla de cargas - Mobile Optimized */}
         <Card>
-          <CardHeader>
-            <CardTitle>Últimas Cargas</CardTitle>
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-lg sm:text-xl">Últimas Cargas</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-1 sm:px-6">
             <TablaCargas />
           </CardContent>
         </Card>
