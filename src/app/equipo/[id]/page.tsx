@@ -681,22 +681,22 @@ export default function EquipoDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
+              <Card className="p-3 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4">
                   <div className="flex items-center space-x-2">
-                    <Wrench className="h-5 w-5 text-blue-500" />
-                    <h3 className="text-lg font-semibold text-gray-900">Historial de Mantenimientos</h3>
+                    <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Historial de Mantenimientos</h3>
                   </div>
                   <Button
                     onClick={() => setShowNewMantenimiento(true)}
-                    className="flex items-center space-x-2"
+                    className="w-full sm:w-auto flex items-center justify-center space-x-2 h-8 sm:h-9 text-xs sm:text-sm"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Nuevo Reclamo</span>
                   </Button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   {mantenimientos.length === 0 ? (
                     <div className="text-center py-8">
                       <Wrench className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -717,52 +717,55 @@ export default function EquipoDetailPage() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                            className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <Badge variant={getEstadoColor(mantenimiento.estado) as any}>
-                                    {getEstadoIcon(mantenimiento.estado)}
-                                    <span className="ml-1">{mantenimiento.estado}</span>
+                                                            <div className="flex flex-col space-y-3">
+                              {/* Header con estado y fecha */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant={getEstadoColor(mantenimiento.estado) as any}>
+                                  {getEstadoIcon(mantenimiento.estado)}
+                                  <span className="ml-1">{mantenimiento.estado}</span>
+                                </Badge>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(mantenimiento.fecha).toLocaleDateString('es-ES')}
+                                </span>
+                                {componente && (
+                                  <Badge variant="outline" className="text-blue-700 text-xs">
+                                    {componente.nombre}
                                   </Badge>
-                                  <span className="text-sm text-gray-500">
-                                    {new Date(mantenimiento.fecha).toLocaleDateString('es-ES')}
-                                  </span>
-                                  {componente && (
-                                    <Badge variant="outline" className="text-blue-700">
-                                      {componente.nombre}
-                                    </Badge>
-                                  )}
-                                </div>
-                                
-                                <p className="text-gray-900 mb-2">{mantenimiento.descripcion}</p>
-                                
-                                {mantenimiento.comentarios && (
-                                  <div className="bg-gray-50 p-3 rounded-lg">
-                                    <Label className="text-sm font-medium text-gray-500">Comentarios del Ingeniero</Label>
-                                    <p className="text-sm text-gray-700">{mantenimiento.comentarios}</p>
-                                  </div>
-                                )}
-                                
-                                {mantenimiento.archivo && (
-                                  <div className="mt-2 flex items-center space-x-2 text-sm text-blue-600">
-                                    <FileText className="h-4 w-4" />
-                                    <span>{mantenimiento.archivo.nombre}</span>
-                                    <span className="text-gray-500">
-                                      ({(mantenimiento.archivo.tamaño / 1024).toFixed(1)} KB)
-                                    </span>
-                                  </div>
                                 )}
                               </div>
                               
-                              <div className="flex items-center space-x-2">
+                              {/* Descripción */}
+                              <p className="text-sm text-gray-900">{mantenimiento.descripcion}</p>
+                              
+                              {/* Comentarios */}
+                              {mantenimiento.comentarios && (
+                                <div className="bg-gray-50 p-2 rounded-lg">
+                                  <Label className="text-xs font-medium text-gray-500">Comentarios del Ingeniero</Label>
+                                  <p className="text-xs text-gray-700 mt-1">{mantenimiento.comentarios}</p>
+                                </div>
+                              )}
+                              
+                              {/* Archivo adjunto */}
+                              {mantenimiento.archivo && (
+                                <div className="flex items-center space-x-2 text-xs text-blue-600">
+                                  <FileText className="h-3 w-3" />
+                                  <span className="truncate">{mantenimiento.archivo.nombre}</span>
+                                  <span className="text-gray-500">
+                                    ({(mantenimiento.archivo.tamaño / 1024).toFixed(1)} KB)
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Acciones */}
+                              <div className="flex flex-wrap items-center gap-2 pt-2">
                                 {mantenimiento.estado !== 'Finalizado' && (
                                   <Select
                                     value={mantenimiento.estado}
                                     onValueChange={(value) => updateEstadoMantenimiento(mantenimiento.id, value as any)}
                                   >
-                                    <SelectTrigger className="w-32">
+                                    <SelectTrigger className="h-8 text-xs">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -779,10 +782,10 @@ export default function EquipoDetailPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => abrirReporteModal(mantenimiento)}
-                                    className="flex items-center space-x-1 text-gray-700 border-gray-300 hover:bg-gray-50"
+                                    className="h-8 text-xs text-gray-700 border-gray-300 hover:bg-gray-50"
                                   >
-                                    <Brain className="h-4 w-4" />
-                                    <span>{mantenimiento.reporteGenerado ? 'Ver Reporte' : 'Generar Reporte'}</span>
+                                    <Brain className="h-3 w-3 mr-1" />
+                                    <span>{mantenimiento.reporteGenerado ? 'Ver' : 'Generar'}</span>
                                   </Button>
                                 )}
 
@@ -791,9 +794,9 @@ export default function EquipoDetailPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => abrirModalEliminarMantenimiento(mantenimiento)}
-                                  className="flex items-center space-x-1 text-red-600 border-red-200 hover:bg-red-50"
+                                  className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
                                 >
-                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                   </svg>
                                   <span>Eliminar</span>
