@@ -36,6 +36,17 @@ export interface Mantenimiento {
     tipo: string;
   };
   reporteGenerado?: boolean;
+  precioServicio?: number; // 💰 Precio del servicio en guaraníes (se completa al generar reporte)
+  
+  // 📋 TRACKING DE FACTURACIÓN EXTERNA
+  estadoFacturacion?: 'Pendiente' | 'Facturado' | 'Enviado'; // Estado del proceso de facturación
+  numeroFacturaExterna?: string; // Número de factura del sistema externo
+  fechaFacturacion?: string; // Fecha cuando se facturó externamente
+  archivoFacturaPDF?: {
+    nombre: string;
+    url: string;
+    tamaño: number;
+  }; // PDF de la factura del sistema externo
   
   // 🗓️ NUEVOS CAMPOS PARA CALENDARIO DE MANTENIMIENTOS
   tipo: 'Correctivo' | 'Preventivo'; // Tipo de mantenimiento
@@ -153,6 +164,7 @@ export interface ComponenteDisponible {
   observaciones?: string;
   fechaIngreso: string;
   codigoCargaOrigen?: string;
+  imagen?: string; // 🆕 URL de la imagen del producto
   cargaInfo?: {
     codigoCarga: string;
     fechaIngreso: string;
@@ -190,12 +202,170 @@ export interface AsignacionComponente {
   createdAt: string;
 }
 
+// 🆕 TIPOS PARA CLÍNICAS
+export interface Clinica {
+  id: string;
+  nombre: string;
+  direccion: string;
+  ciudad: string;
+  telefono?: string;
+  email?: string;
+  contactoPrincipal?: string;
+  observaciones?: string;
+  activa: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 🆕 TIPOS PARA SISTEMA DE USUARIOS Y AUTENTICACIÓN
+export interface Usuario {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: 'super_admin' | 'contabilidad' | 'tecnico';
+  activo: boolean;
+  ultimoAcceso?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SesionUsuario {
+  usuario: Usuario;
+  token: string;
+  fechaInicio: string;
+  activa: boolean;
+}
+
+export interface PermisosModulo {
+  leer: boolean;
+  escribir: boolean;
+}
+
+export interface PermisosRol {
+  dashboard: PermisosModulo;
+  equipos: PermisosModulo;
+  inventarioTecnico: PermisosModulo;
+  calendario: PermisosModulo;
+  mercaderias: PermisosModulo;
+  documentos: PermisosModulo;
+  remisiones: PermisosModulo;
+  facturacion: PermisosModulo;
+  archivos: PermisosModulo;
+  tareas: PermisosModulo;
+  clinicas: PermisosModulo;
+  stock: PermisosModulo;
+  reportes: PermisosModulo;
+  configuracion: PermisosModulo;
+}
+
+// 🆕 TIPOS PARA SISTEMA DE STOCK
+export interface TransaccionStock {
+  id: string;
+  componenteId: string;
+  tipo: 'ENTRADA' | 'SALIDA' | 'RESERVA' | 'AJUSTE' | 'DEVOLUCION';
+  cantidad: number;
+  cantidadAnterior: number;
+  cantidadNueva: number;
+  motivo: string;
+  referencia?: string; // REM-20250115-001, CARGA-001, etc.
+  numeroFactura?: string;
+  cliente?: string;
+  tecnicoResponsable?: string;
+  observaciones?: string;
+  fecha: string;
+  createdAt: string;
+  // Información del componente para historial
+  componente?: {
+    nombre: string;
+    marca: string;
+    modelo: string;
+    numeroSerie?: string;
+  };
+}
+
+export interface EstadisticasStock {
+  totalProductos: number;
+  valorTotalStock: number;
+  productosConStockBajo: number;
+  transaccionesHoy: number;
+  entradasMes: number;
+  salidasMes: number;
+}
+
+// 🆕 TIPOS PARA REMISIONES DIGITALES (ACTUALIZADO)
+export interface ProductoRemision {
+  id: string;
+  componenteId: string | null; // null para productos del stock general
+  stockItemId?: string | null; // ID del stock general si aplica
+  origen?: 'inventario' | 'stock'; // Origen del producto
+  nombre: string;
+  marca: string;
+  modelo: string;
+  numeroSerie?: string;
+  cantidadSolicitada: number;
+  cantidadDisponible: number;
+  observaciones?: string;
+}
+
+export interface Remision {
+  id: string;
+  numeroRemision: string;        // AUTO: REM-YYYYMMDD-XXX
+  numeroFactura?: string;        // 🆕 NUEVO: Número de factura
+  fecha: string;
+  cliente: string;               // Hospital/Clínica
+  direccionEntrega: string;      // Dirección específica
+  contacto?: string;             // Persona de contacto
+  telefono?: string;             // Teléfono de contacto
+  tipoRemision: 'Instalación' | 'Mantenimiento' | 'Reparación' | 'Entrega';
+  tecnicoResponsable: string;    // Siempre "Javier Lopez"
+  productos: ProductoRemision[];
+  descripcionGeneral?: string;   // Observaciones generales
+  estado: 'Borrador' | 'Confirmada' | 'En tránsito' | 'Entregada' | 'Cancelada';
+  fechaEntrega?: string;         // Cuando se confirma la entrega
+  observacionesEntrega?: string; // Observaciones al entregar
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 🆕 TIPOS PARA GESTIÓN DOCUMENTAL
+export interface DocumentoCarga {
+  id: string;
+  cargaId: string;
+  codigoCarga: string;
+  nombre: string;
+  tipoDocumento: 'Factura Paraguay Box' | 'Documento DHL' | 'Comprobante Pago' | 'Foto Producto' | 'Documento Aduanero' | 'Otro';
+  archivo: {
+    nombre: string;
+    tamaño: number;
+    tipo: string;
+    url: string;
+  };
+  observaciones?: string;
+  fechaSubida: string;
+  subidoPor?: string;
+  createdAt: string;
+}
+
+export interface CargaConDocumentos extends CargaMercaderia {
+  documentos: DocumentoCarga[];
+  totalDocumentos: number;
+}
+
 export interface AppState {
+  // Hydration state
+  isHydrated: boolean;
+  
   equipos: Equipo[];
   mantenimientos: Mantenimiento[];
   cargasMercaderia: CargaMercaderia[];
-  componentesDisponibles: ComponenteDisponible[];
+  componentesDisponibles: ComponenteDisponible[]; // Para inventario técnico
+  stockItems: ComponenteDisponible[]; // 🎯 NUEVO: Para stock general
   historialAsignaciones: AsignacionComponente[];
+  remisiones: Remision[];
+  clinicas: Clinica[];
+  transaccionesStock: TransaccionStock[];
+  documentosCarga: DocumentoCarga[];
+  movimientosStock: import('@/lib/database').MovimientoStock[];
   
   // 🆕 NUEVOS ARRAYS PARA CALENDARIO
   planesMantenimiento: PlanMantenimiento[];
@@ -227,6 +397,55 @@ export interface AppState {
   getComponentesDisponibles: () => ComponenteDisponible[];
   getHistorialAsignaciones: (componenteId?: string, equipoId?: string) => AsignacionComponente[];
 
+  // 🆕 FUNCIONES PARA STOCK GENERAL
+  loadStock: () => Promise<void>;
+  updateStockItem: (itemId: string, nuevaCantidad: number, motivo: string) => Promise<void>;
+  updateStockItemDetails: (productId: string, updates: { imagen?: string; observaciones?: string }) => Promise<void>;
+  getEstadisticasStockGeneral: () => {
+    totalProductos: number;
+    productosConStockBajo: number;
+    entradasMes: number;
+    salidasMes: number;
+  };
+
+  // 🆕 FUNCIONES PARA TRAZABILIDAD Y MOVIMIENTOS
+  movimientosStock: import('@/lib/database').MovimientoStock[];
+  loadMovimientosStock: () => Promise<void>;
+  getMovimientosByProducto: (productoNombre: string, productoMarca?: string) => Promise<import('@/lib/database').MovimientoStock[]>;
+  getMovimientosByCarpeta: (carpeta: string) => Promise<import('@/lib/database').MovimientoStock[]>;
+  getEstadisticasTrazabilidad: () => Promise<{
+    totalMovimientos: number;
+    movimientosHoy: number;
+    movimientosMes: number;
+    entradas: { total: number; mes: number; valorTotal: number };
+    salidas: { total: number; mes: number; valorTotal: number };
+    ajustes: { total: number; mes: number };
+    productosConMasMovimientos: Array<{ producto: string; cantidad: number }>;
+    carpetasConMasActividad: Array<{ carpeta: string; cantidad: number }>;
+  }>;
+  registrarSalidaStock: (salidaData: {
+    itemId: string;
+    productoNombre: string;
+    productoMarca?: string;
+    productoModelo?: string;
+    cantidad: number;
+    cantidadAnterior: number;
+    motivo: string;
+    destino: string;
+    responsable: string;
+    cliente?: string;
+    numeroFactura?: string;
+    observaciones?: string;
+    carpetaOrigen?: string;
+  }) => Promise<void>;
+  getEstadisticasPorCarpeta: (carpeta: string) => {
+    totalMovimientos: number;
+    entradas: { total: number; cantidad: number; valorTotal: number };
+    salidas: { total: number; cantidad: number; valorTotal: number };
+    productosUnicos: number;
+    ultimoMovimiento: string | null;
+  };
+
   // 🆕 NUEVAS FUNCIONES PARA CALENDARIO
   loadTecnicos: () => Promise<void>;
   addTecnico: (tecnico: Omit<Tecnico, 'id'>) => Promise<void>;
@@ -253,4 +472,50 @@ export interface AppState {
   getMantenimientosProgramados: () => Mantenimiento[];
   getMantenimientosByTecnico: (tecnico: string) => Mantenimiento[];
   getMantenimientosVencidos: () => Mantenimiento[];
+
+  // 🆕 FUNCIONES PARA CLÍNICAS
+  loadClinicas: () => Promise<void>;
+  addClinica: (clinica: Omit<Clinica, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Clinica>;
+  updateClinica: (id: string, updates: Partial<Clinica>) => Promise<void>;
+  deleteClinica: (id: string) => Promise<void>;
+  getClinicas: () => Clinica[];
+  getClinicasActivas: () => Clinica[];
+
+  // 🆕 FUNCIONES PARA SISTEMA DE STOCK
+  loadTransaccionesStock: () => Promise<void>;
+  addTransaccionStock: (transaccion: Omit<TransaccionStock, 'id' | 'createdAt'>) => Promise<void>;
+  getTransaccionesStock: () => TransaccionStock[];
+  getTransaccionesByComponente: (componenteId: string) => TransaccionStock[];
+  getEstadisticasStock: () => EstadisticasStock;
+  procesarSalidaStock: (componenteId: string, cantidad: number, motivo: string, referencia?: string, numeroFactura?: string, cliente?: string) => Promise<void>;
+
+  // 🆕 FUNCIONES PARA SISTEMA DE USUARIOS
+  usuarios: Usuario[];
+  sesionActual: SesionUsuario | null;
+  loadUsuarios: () => Promise<void>;
+  login: (email: string, password: string) => Promise<SesionUsuario>;
+  logout: () => void;
+  getCurrentUser: () => Usuario | null;
+  getUserPermissions: (rol: Usuario['rol']) => PermisosRol;
+  hasPermission: (modulo: keyof PermisosRol) => boolean;
+  hasWritePermission: (modulo: keyof PermisosRol) => boolean;
+
+  // 🆕 FUNCIONES PARA REMISIONES DIGITALES
+  loadRemisiones: () => Promise<void>;
+  addRemision: (remision: Omit<Remision, 'id' | 'numeroRemision' | 'createdAt' | 'updatedAt'>) => Promise<Remision>;
+  updateRemision: (id: string, updates: Partial<Remision>) => Promise<void>;
+  deleteRemision: (id: string) => Promise<void>;
+  getRemisiones: () => Remision[];
+  getRemisionesByCliente: (cliente: string) => Remision[];
+  generateNumeroRemision: () => Promise<string>;
+
+  // 🆕 FUNCIONES PARA GESTIÓN DOCUMENTAL
+  loadDocumentosCarga: () => Promise<void>;
+  addDocumentoCarga: (documento: Omit<DocumentoCarga, 'id' | 'createdAt'>) => Promise<DocumentoCarga>;
+  deleteDocumentoCarga: (id: string) => Promise<void>;
+  getDocumentosByCarga: (cargaId: string) => DocumentoCarga[];
+  getCargasConDocumentos: () => CargaConDocumentos[];
+
+  // Hydration functions
+  setHydrated: () => void;
 } 

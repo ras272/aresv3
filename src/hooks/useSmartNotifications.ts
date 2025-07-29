@@ -53,7 +53,7 @@ export function useSmartNotifications() {
     }
   ) => {
     const notification: SmartNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `notification-${Date.now()}-${Date.now().toString(36).substr(2, 9)}`,
       type,
       title,
       message,
@@ -135,7 +135,9 @@ export function useSmartNotifications() {
           label: 'Ver Equipo',
           onClick: () => {
             // Navegar al equipo
-            window.location.href = '/equipos';
+            if (typeof window !== 'undefined') {
+              window.location.href = '/equipos';
+            }
           }
         },
         context: { cliente }
@@ -154,7 +156,9 @@ export function useSmartNotifications() {
         action: {
           label: 'Ver Inventario',
           onClick: () => {
-            window.location.href = '/inventory';
+            if (typeof window !== 'undefined') {
+              window.location.href = '/inventory';
+            }
           }
         }
       }
@@ -172,7 +176,9 @@ export function useSmartNotifications() {
         action: {
           label: 'Programar Mantenimiento',
           onClick: () => {
-            window.location.href = '/calendario';
+            if (typeof window !== 'undefined') {
+              window.location.href = '/calendario';
+            }
           }
         }
       }
@@ -265,7 +271,7 @@ export function useSmartNotifications() {
         )
       },
       {
-        condition: () => Math.random() < 0.1, // 10% probabilidad
+        condition: () => (Date.now() % 100) < 10, // 10% probabilidad determinística
         notification: () => notifyPrediccionFalla(
           'HydraFacial Hospital Bautista',
           75,

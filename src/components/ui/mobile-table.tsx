@@ -75,33 +75,56 @@ export function MobileTable({
     );
   }
 
-  // Versión desktop: Tabla normal
+  // Versión desktop: Tabla normal con scroll optimizado y sin scroll horizontal
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-gray-200">
-            {columns.filter(col => col.desktop !== false).map((column) => (
-              <th key={column.key} className="text-left py-3 px-4 font-medium text-gray-600">
-                {column.label}
-              </th>
+    <div className="h-full flex flex-col">
+      <div className="overflow-y-auto flex-1">
+        <table className="w-full table-fixed">
+          <thead className="sticky top-0 bg-white z-10">
+            <tr className="border-b border-gray-200">
+              {columns.filter(col => col.desktop !== false).map((column, index) => {
+                // Definir anchos específicos ultra compactos para eliminar scroll horizontal completamente
+                const getColumnWidth = (key: string) => {
+                  switch (key) {
+                    case 'cliente': return 'w-36'; // Cliente & Ubicación - más reducido
+                    case 'equipo': return 'w-32'; // Equipo - más reducido
+                    case 'marca': return 'w-28'; // Marca/Modelo - más reducido
+                    case 'serie': return 'w-24'; // Serie Base - más reducido
+                    case 'estado': return 'w-28'; // Estado General - más reducido
+                    case 'componentes': return 'w-20'; // Componentes - más reducido
+                    case 'fecha': return 'w-20'; // Fecha Entrega - más reducido
+                    case 'mantenimientos': return 'w-24'; // Mantenimientos - más reducido
+                    case 'acciones': return 'w-20'; // Acciones - más reducido
+                    default: return 'w-20';
+                  }
+                };
+                
+                return (
+                  <th 
+                    key={column.key} 
+                    className={`text-left py-2 px-2 font-medium text-gray-600 bg-white text-xs ${getColumnWidth(column.key)}`}
+                  >
+                    {column.label}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item, index) => (
+              <motion.tr
+                key={item.id || index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="border-b border-gray-100 hover:bg-gray-50"
+              >
+                {renderDesktopRow(item, index)}
+              </motion.tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((item, index) => (
-            <motion.tr
-              key={item.id || index}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="border-b border-gray-100 hover:bg-gray-50"
-            >
-              {renderDesktopRow(item, index)}
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

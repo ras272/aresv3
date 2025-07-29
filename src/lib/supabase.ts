@@ -1,247 +1,93 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ovmodvuelqasgsdrbptk.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92bW9kdnVlbHFhc2dzZHJicHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3MDUzNjYsImV4cCI6MjA2NjI4MTM2Nn0.OAey7qYJ23NVJycRs2fslqQ1eHcMIhY98P1NQfW9Th4';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: typeof window !== 'undefined',
+    autoRefreshToken: typeof window !== 'undefined',
+    detectSessionInUrl: typeof window !== 'undefined',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 2,
+    },
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'ares-system',
+    },
+  },
+});
 
-// Tipos para las tablas de la base de datos
-export type Database = {
-  public: {
-    Tables: {
-      cargas_mercaderia: {
-        Row: {
-          id: string
-          codigo_carga: string
-          fecha_ingreso: string
-          destino: string
-          observaciones_generales: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          codigo_carga: string
-          fecha_ingreso: string
-          destino: string
-          observaciones_generales?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          codigo_carga?: string
-          fecha_ingreso?: string
-          destino?: string
-          observaciones_generales?: string | null
-          updated_at?: string
-        }
-      }
-      productos_carga: {
-        Row: {
-          id: string
-          carga_id: string
-          producto: string
-          tipo_producto: 'Insumo' | 'Repuesto' | 'Equipo Médico'
-          marca: string
-          modelo: string
-          numero_serie: string | null
-          cantidad: number
-          observaciones: string | null
-          imagen: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          carga_id: string
-          producto: string
-          tipo_producto: 'Insumo' | 'Repuesto' | 'Equipo Médico'
-          marca: string
-          modelo: string
-          numero_serie?: string | null
-          cantidad: number
-          observaciones?: string | null
-          imagen?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          carga_id?: string
-          producto?: string
-          tipo_producto?: 'Insumo' | 'Repuesto' | 'Equipo Médico'
-          marca?: string
-          modelo?: string
-          numero_serie?: string | null
-          cantidad?: number
-          observaciones?: string | null
-          imagen?: string | null
-          updated_at?: string
-        }
-      }
-      subitems: {
-        Row: {
-          id: string
-          producto_id: string
-          nombre: string
-          numero_serie: string
-          cantidad: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          producto_id: string
-          nombre: string
-          numero_serie: string
-          cantidad: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          producto_id?: string
-          nombre?: string
-          numero_serie?: string
-          cantidad?: number
-          updated_at?: string
-        }
-      }
-      equipos: {
-        Row: {
-          id: string
-          cliente: string
-          ubicacion: string
-          nombre_equipo: string
-          tipo_equipo: string
-          marca: string
-          modelo: string
-          numero_serie_base: string
-          accesorios: string
-          fecha_entrega: string
-          observaciones: string | null
-          codigo_carga_origen: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          cliente: string
-          ubicacion: string
-          nombre_equipo: string
-          tipo_equipo: string
-          marca: string
-          modelo: string
-          numero_serie_base: string
-          accesorios: string
-          fecha_entrega: string
-          observaciones?: string | null
-          codigo_carga_origen?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          cliente?: string
-          ubicacion?: string
-          nombre_equipo?: string
-          tipo_equipo?: string
-          marca?: string
-          modelo?: string
-          numero_serie_base?: string
-          accesorios?: string
-          fecha_entrega?: string
-          observaciones?: string | null
-          codigo_carga_origen?: string | null
-          updated_at?: string
-        }
-      }
-      componentes_equipo: {
-        Row: {
-          id: string
-          equipo_id: string
-          nombre: string
-          numero_serie: string
-          estado: 'Operativo' | 'En reparacion' | 'Fuera de servicio'
-          observaciones: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          equipo_id: string
-          nombre: string
-          numero_serie: string
-          estado: 'Operativo' | 'En reparacion' | 'Fuera de servicio'
-          observaciones?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          equipo_id?: string
-          nombre?: string
-          numero_serie?: string
-          estado?: 'Operativo' | 'En reparacion' | 'Fuera de servicio'
-          observaciones?: string | null
-          updated_at?: string
-        }
-      }
-      mantenimientos: {
-        Row: {
-          id: string
-          equipo_id: string
-          componente_id: string | null
-          fecha: string
-          descripcion: string
-          estado: 'Pendiente' | 'En proceso' | 'Finalizado'
-          comentarios: string | null
-          archivo_nombre: string | null
-          archivo_tamaño: number | null
-          archivo_tipo: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          equipo_id: string
-          componente_id?: string | null
-          fecha: string
-          descripcion: string
-          estado: 'Pendiente' | 'En proceso' | 'Finalizado'
-          comentarios?: string | null
-          archivo_nombre?: string | null
-          archivo_tamaño?: number | null
-          archivo_tipo?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          equipo_id?: string
-          componente_id?: string | null
-          fecha?: string
-          descripcion?: string
-          estado?: 'Pendiente' | 'En proceso' | 'Finalizado'
-          comentarios?: string | null
-          archivo_nombre?: string | null
-          archivo_tamaño?: number | null
-          archivo_tipo?: string | null
-          updated_at?: string
-        }
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      tipo_producto: 'Insumo' | 'Repuesto' | 'Equipo Médico'
-      estado_componente: 'Operativo' | 'En reparacion' | 'Fuera de servicio'
-      estado_mantenimiento: 'Pendiente' | 'En proceso' | 'Finalizado'
-    }
+// Función helper para subir archivos
+export const uploadFile = async (
+  file: File,
+  path: string,
+  bucket: string = 'ares-files'
+) => {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) {
+    throw error;
   }
-} 
+
+  return data;
+};
+
+// Función helper para obtener URL pública
+export const getPublicUrl = (path: string, bucket: string = 'ares-files') => {
+  const { data } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(path);
+
+  return data.publicUrl;
+};
+
+// Función helper para descargar archivo
+export const downloadFile = async (path: string, bucket: string = 'ares-files') => {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .download(path);
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+// Función helper para eliminar archivo
+export const deleteFile = async (path: string, bucket: string = 'ares-files') => {
+  const { error } = await supabase.storage
+    .from(bucket)
+    .remove([path]);
+
+  if (error) {
+    throw error;
+  }
+
+  return true;
+};
+
+// Función helper para listar archivos
+export const listFiles = async (path: string = '', bucket: string = 'ares-files') => {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .list(path, {
+      limit: 100,
+      offset: 0,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};

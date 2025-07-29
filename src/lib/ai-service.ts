@@ -252,21 +252,26 @@ Ing. Javier López`;
     };
     
     const prefijo = prefijos[marca as keyof typeof prefijos] || prefijos.default;
-    const numeroSecuencial = Math.floor(Math.random() * 999) + 1;
+    // ✅ FIXED: Use deterministic generation to prevent hydration errors
+    const timestamp = Date.now();
+    const numeroSecuencial = Math.floor(timestamp % 999) + 1;
     
     return `${numeroSecuencial.toString().padStart(4, '0')} ${modelo.slice(0, 8)}`;
   }
 
   private generarNumeroFormulario(): string {
-    // Generar número de formulario correlativo
-    const base = Math.floor(Math.random() * 9000) + 1000;
+    // ✅ FIXED: Use deterministic generation to prevent hydration errors
+    const timestamp = Date.now();
+    const base = Math.floor((timestamp % 9000) + 1000);
     return base.toString();
   }
 
   private calcularCostoServicio(): string {
     // Costos realistas en guaraníes paraguayos
     const costosBase = [250000, 300000, 330000, 350000, 400000, 450000, 500000];
-    const costoSeleccionado = costosBase[Math.floor(Math.random() * costosBase.length)];
+    // ✅ FIXED: Use deterministic generation to prevent hydration errors
+    const timestamp = Date.now();
+    const costoSeleccionado = costosBase[Math.floor(timestamp % costosBase.length)];
     
     // Formatear con puntos como separador de miles
     return costoSeleccionado.toLocaleString('es-PY');

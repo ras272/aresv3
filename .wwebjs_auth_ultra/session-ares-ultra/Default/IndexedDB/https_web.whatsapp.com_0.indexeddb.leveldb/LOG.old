@@ -1,0 +1,21 @@
+2025/07/28-15:30:20.757 368c Reusing MANIFEST C:\Users\green\Desktop\devs-\ARES-SERV\arestech-care-demo\.wwebjs_auth_ultra\session-ares-ultra\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/28-15:30:20.758 368c Recovering log #198
+2025/07/28-15:30:20.846 368c Reusing old log C:\Users\green\Desktop\devs-\ARES-SERV\arestech-care-demo\.wwebjs_auth_ultra\session-ares-ultra\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000198.log 
+2025/07/28-15:30:22.499 2198 Manual compaction at level-0 from '\x00-\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00.\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/07/28-15:30:30.406 2198 Level-0 table #208: started
+2025/07/28-15:30:30.430 2198 Level-0 table #208: 1207898 bytes OK
+2025/07/28-15:30:30.431 2198 Delete type=0 #198
+2025/07/28-15:30:30.464 143c Compacting 1@1 + 5@2 files
+2025/07/28-15:30:30.564 143c Generated table #209@1: 42669 keys, 2215488 bytes
+2025/07/28-15:30:30.593 143c Generated table #210@1: 2815 keys, 2155842 bytes
+2025/07/28-15:30:30.651 143c Generated table #211@1: 19620 keys, 2225311 bytes
+2025/07/28-15:30:30.713 143c Generated table #212@1: 36545 keys, 2192622 bytes
+2025/07/28-15:30:30.808 143c Generated table #213@1: 100813 keys, 2218168 bytes
+2025/07/28-15:30:30.808 143c Compacted 1@1 + 5@2 files => 11007431 bytes
+2025/07/28-15:30:30.808 143c compacted to: files[ 0 0 5 0 0 0 0 ]
+2025/07/28-15:30:30.809 143c Delete type=2 #201
+2025/07/28-15:30:30.809 143c Delete type=2 #202
+2025/07/28-15:30:30.809 143c Delete type=2 #203
+2025/07/28-15:30:30.809 143c Delete type=2 #204
+2025/07/28-15:30:30.809 143c Delete type=2 #205
+2025/07/28-15:30:30.809 143c Delete type=2 #208

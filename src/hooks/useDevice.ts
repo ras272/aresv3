@@ -25,6 +25,9 @@ export function useDevice(): DeviceInfo {
 
   useEffect(() => {
     const updateDeviceInfo = () => {
+      // ✅ FIXED: Check if window is available to prevent hydration errors
+      if (typeof window === 'undefined') return;
+      
       const width = window.innerWidth;
       const height = window.innerHeight;
       
@@ -49,13 +52,15 @@ export function useDevice(): DeviceInfo {
     updateDeviceInfo();
 
     // Listen for resize events
-    window.addEventListener('resize', updateDeviceInfo);
-    window.addEventListener('orientationchange', updateDeviceInfo);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', updateDeviceInfo);
+      window.addEventListener('orientationchange', updateDeviceInfo);
 
-    return () => {
-      window.removeEventListener('resize', updateDeviceInfo);
-      window.removeEventListener('orientationchange', updateDeviceInfo);
-    };
+      return () => {
+        window.removeEventListener('resize', updateDeviceInfo);
+        window.removeEventListener('orientationchange', updateDeviceInfo);
+      };
+    }
   }, []);
 
   return deviceInfo;

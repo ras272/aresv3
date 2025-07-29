@@ -1,6 +1,8 @@
 'use client';
 
 import { AppInitializer } from './AppInitializer';
+import { HydrationErrorBoundary } from './HydrationErrorBoundary';
+import { AuthGuard } from './AuthGuard';
 
 interface ClientLayoutWrapperProps {
   children: React.ReactNode;
@@ -8,9 +10,11 @@ interface ClientLayoutWrapperProps {
 
 export function ClientLayoutWrapper({ children }: ClientLayoutWrapperProps) {
   return (
-    <>
+    <HydrationErrorBoundary>
       <AppInitializer />
-      {children}
-    </>
+      <AuthGuard>
+        {children}
+      </AuthGuard>
+    </HydrationErrorBoundary>
   );
 } 

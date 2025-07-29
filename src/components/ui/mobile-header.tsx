@@ -13,7 +13,8 @@ import {
   Package,
   FileText,
   Truck,
-  ChevronRight
+  ChevronRight,
+  MessageCircle
 } from 'lucide-react';
 
 interface MobileHeaderProps {
@@ -113,6 +114,12 @@ export function MobileNavDrawer({ isOpen, onClose }: MobileNavDrawerProps) {
       label: 'Reportes', 
       href: '/reportes',
       description: 'Estadísticas y análisis'
+    },
+    { 
+      icon: MessageCircle, 
+      label: 'WhatsApp', 
+      href: '/whatsapp',
+      description: 'Configuración de mensajería'
     },
   ];
 

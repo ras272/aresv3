@@ -3,94 +3,168 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useAppStore } from '@/store/useAppStore';
 import { 
   Heart, 
-  Settings, 
   FileText, 
   Home,
-  Search,
   Plus,
   Package,
-  GraduationCap,
   Wrench,
   Calendar,
-  Truck
+  Truck,
+  Receipt,
+  Building2,
+  BarChart3,
+  HardDrive,
+  CheckSquare,
+  MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const navigation = [
   {
     name: 'Dashboard',
     href: '/',
     icon: Home,
+    permission: 'dashboard' as const,
+  },
+  {
+    name: 'Análisis',
+    href: '/analisis',
+    icon: BarChart3,
+    permission: 'reportes' as const,
   },
   {
     name: 'Equipos',
     href: '/equipos',
     icon: Heart,
+    permission: 'equipos' as const,
   },
   {
     name: 'Nuevo Equipo',
     href: '/equipos/nuevo',
     icon: Plus,
+    permission: 'equipos' as const,
+    requiresWrite: true, // Solo mostrar si tiene permisos de escritura
   },
   {
     name: 'Inventario Técnico',
     href: '/inventario-tecnico',
     icon: Wrench,
+    permission: 'inventarioTecnico' as const,
   },
-  // {
-  //   name: 'Sistema de Stock',
-  //   href: '/stock',
-  //   icon: Package,
-  // },
   {
     name: 'Calendario',
     href: '/calendario',
     icon: Calendar,
+    permission: 'calendario' as const,
   },
   {
     name: 'Ingreso de Mercaderías',
     href: '/mercaderias',
     icon: Truck,
+    permission: 'mercaderias' as const,
   },
-  // {
-  //   name: 'Capacitaciones',
-  //   href: '/capacitaciones',
-  //   icon: GraduationCap,
-  // },
   {
-    name: 'Reportes',
+    name: 'Gestión Documental',
+    href: '/documentos',
+    icon: FileText,
+    permission: 'documentos' as const,
+  },
+  {
+    name: 'Remisiones',
+    href: '/remisiones',
+    icon: Receipt,
+    permission: 'remisiones' as const,
+  },
+
+  {
+    name: 'Sistema de Archivos',
+    href: '/archivos',
+    icon: HardDrive,
+    permission: 'archivos' as const,
+  },
+  {
+    name: 'Tareas',
+    href: '/tareas',
+    icon: CheckSquare,
+    permission: 'tareas' as const,
+  },
+  {
+    name: 'Clínicas',
+    href: '/clinicas',
+    icon: Building2,
+    permission: 'clinicas' as const,
+  },
+  {
+    name: 'Stock',
+    href: '/stock',
+    icon: Package,
+    permission: 'stock' as const,
+  },
+  {
+    name: 'Reportes de Servicio',
     href: '/reportes',
     icon: FileText,
+    permission: 'reportes' as const,
+  },
+  {
+    name: 'WhatsApp',
+    href: '/whatsapp',
+    icon: MessageCircle,
+    permission: 'reportes' as const,
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { hasPermission, hasWritePermission, getCurrentUser } = useAppStore();
+  
+  // Filtrar navegación según permisos del usuario
+  const filteredNavigation = navigation.filter(item => {
+    // Verificar permiso de lectura básico
+    if (!hasPermission(item.permission)) return false;
+    
+    // Si requiere permisos de escritura, verificar también eso
+    if (item.requiresWrite && !hasWritePermission(item.permission)) return false;
+    
+    return true;
+  });
 
   return (
-    <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200">
+    <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex h-16 items-center justify-center border-b border-gray-200">
+      <div className="flex h-20 items-center justify-center border-b border-sidebar-border px-4">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-3"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-            <Heart className="h-5 w-5 text-white" />
+          <div className="flex-shrink-0">
+            <img 
+              src="/logo-ares.png" 
+              alt="ARES Paraguay" 
+              className="h-12 w-auto object-contain"
+            />
           </div>
-          <div>
-                          <h1 className="text-lg font-bold text-gray-900">Ares</h1>
-            <p className="text-xs text-gray-500">DEMO</p>
+          <div className="flex flex-col">
+            <h1 className="text-sm font-bold text-sidebar-foreground">ARES</h1>
+            <p className="text-xs text-muted-foreground">PARAGUAY</p>
+            <p className="text-xs text-muted-foreground opacity-75">Care Demo</p>
           </div>
         </motion.div>
       </div>
 
+      {/* Theme Toggle */}
+      <div className="border-b border-sidebar-border p-4">
+        <ThemeToggle variant="switch" showLabel={false} />
+      </div>
+
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item, index) => {
+        {filteredNavigation.map((item, index) => {
           const isActive = pathname === item.href || 
             (item.href !== '/' && pathname.startsWith(item.href));
           
@@ -106,16 +180,16 @@ export function Sidebar() {
                 className={cn(
                   'group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )}
               >
                 <item.icon
                   className={cn(
                     'mr-3 h-5 w-5 flex-shrink-0',
                     isActive
-                      ? 'text-blue-500'
-                      : 'text-gray-400 group-hover:text-gray-500'
+                      ? 'text-sidebar-primary'
+                      : 'text-muted-foreground group-hover:text-sidebar-accent-foreground'
                   )}
                 />
                 {item.name}
@@ -126,8 +200,8 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="text-xs text-gray-500">
+      <div className="border-t border-sidebar-border p-4">
+        <div className="text-xs text-muted-foreground">
           <p className="font-semibold">Ares Paraguay</p>
           <p>Sistema de Servicio Técnico</p>
           <p className="mt-1">v1.0.0 DEMO</p>

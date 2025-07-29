@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { MobileTable, MobileEquipoCard } from '@/components/ui/mobile-table';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useAppStore } from '@/store/useAppStore';
+import { usePermissions } from '@/components/PermissionGuard';
 import { 
   Search, 
   Eye, 
@@ -29,11 +30,16 @@ import { toast } from 'sonner';
 
 export default function EquiposPage() {
   const { equipos, mantenimientos, searchEquipos, deleteEquipo } = useAppStore();
+  const { getCurrentUser } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [equipoAEliminar, setEquipoAEliminar] = useState<{ id: string; nombre: string } | null>(null);
   const [eliminando, setEliminando] = useState(false);
   
   const equiposFiltrados = searchTerm ? searchEquipos(searchTerm) : equipos;
+  
+  // 🎯 Verificar si el usuario actual es técnico
+  const currentUser = getCurrentUser();
+  const esTecnico = currentUser?.rol === 'tecnico';
 
   const getMantenimientosCount = (equipoId: string) => {
     return mantenimientos.filter(m => m.equipoId === equipoId).length;
@@ -116,7 +122,7 @@ export default function EquiposPage() {
       title="Gestión de Equipos" 
       subtitle="Administra todos los equipos médicos y sus componentes registrados en el sistema"
     >
-      <div className="space-y-4 sm:space-y-6">
+      <div className="h-full flex flex-col space-y-4 sm:space-y-6">
         {/* Header Actions - Mobile Optimized */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -129,24 +135,27 @@ export default function EquiposPage() {
                 className="pl-10 w-full"
               />
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={exportarCSV}
-                className="flex items-center space-x-2 flex-1 sm:flex-none"
-              >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Exportar CSV</span>
-                <span className="sm:hidden">CSV</span>
-              </Button>
-              <Link href="/equipos/nuevo" className="flex-1 sm:flex-none">
-                <Button className="w-full flex items-center justify-center space-x-2">
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Nuevo Equipo</span>
-                  <span className="sm:hidden">Nuevo</span>
+            {/* 🎯 Botones solo para roles que no sean técnico */}
+            {!esTecnico && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={exportarCSV}
+                  className="flex items-center space-x-2 flex-1 sm:flex-none"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Exportar CSV</span>
+                  <span className="sm:hidden">CSV</span>
                 </Button>
-              </Link>
-            </div>
+                <Link href="/equipos/nuevo" className="flex-1 sm:flex-none">
+                  <Button className="w-full flex items-center justify-center space-x-2">
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Nuevo Equipo</span>
+                    <span className="sm:hidden">Nuevo</span>
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
@@ -240,18 +249,21 @@ export default function EquiposPage() {
           </motion.div>
         </div>
 
-        {/* Tabla de Equipos - Responsive */}
+        {/* Tabla de Equipos - Responsive con scroll optimizado */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
+          className="flex-1 min-h-0"
         >
-          <Card>
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <Card className="h-full flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900">
                 Lista de Equipos ({equiposFiltrados.length})
               </h3>
-              
+            </div>
+            
+            <div className="flex-1 min-h-0 overflow-hidden">
               <MobileTable
                 data={equiposFiltrados}
                 columns={[
@@ -291,100 +303,102 @@ export default function EquiposPage() {
                   
                   return (
                     <>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-gray-900">{equipo.cliente}</p>
-                          <div className="flex items-center text-sm text-gray-500 mt-1">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {equipo.ubicacion}
+                      <TableCell className="px-2 py-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate text-xs">{equipo.cliente}</p>
+                          <div className="flex items-center text-xs text-gray-500 mt-1">
+                            <MapPin className="h-2.5 w-2.5 mr-1 flex-shrink-0" />
+                            <span className="truncate">{equipo.ubicacion}</span>
                           </div>
                         </div>
                       </TableCell>
                       
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-gray-900">{equipo.nombreEquipo}</p>
-                          <p className="text-sm text-gray-500">{equipo.tipoEquipo}</p>
+                      <TableCell className="px-2 py-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate text-xs">{equipo.nombreEquipo}</p>
+                          <p className="text-xs text-gray-500 truncate">{equipo.tipoEquipo}</p>
                         </div>
                       </TableCell>
                       
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{equipo.marca}</p>
-                          <p className="text-sm text-gray-500">{equipo.modelo}</p>
+                      <TableCell className="px-2 py-2">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate text-xs">{equipo.marca}</p>
+                          <p className="text-xs text-gray-500 truncate">{equipo.modelo}</p>
                         </div>
                       </TableCell>
                       
-                      <TableCell>
-                        <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                      <TableCell className="px-2 py-2">
+                        <code className="bg-gray-100 px-1 py-1 rounded text-xs block truncate">
                           {equipo.numeroSerieBase}
                         </code>
                       </TableCell>
 
-                      <TableCell>
-                        <div className="flex flex-col space-y-1">
+                      <TableCell className="px-2 py-2">
+                        <div className="flex flex-col space-y-1 min-w-0">
                           {estadoGeneral === 'CRITICO' && (
-                            <Badge variant="destructive" className="w-fit flex items-center space-x-1">
-                              <span className="w-2 h-2 bg-white rounded-full"></span>
+                            <Badge variant="destructive" className="w-fit flex items-center space-x-1 text-xs">
+                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
                               <span>CRÍTICO</span>
                             </Badge>
                           )}
                           {estadoGeneral === 'REPARACION' && (
-                            <Badge variant="secondary" className="w-fit flex items-center space-x-1 bg-yellow-600 text-white">
-                              <Wrench className="w-3 h-3" />
-                              <span>EN REPARACIÓN</span>
+                            <Badge variant="secondary" className="w-fit flex items-center space-x-1 bg-yellow-600 text-white text-xs">
+                              <Wrench className="w-2.5 h-2.5" />
+                              <span>REPARACIÓN</span>
                             </Badge>
                           )}
                           {estadoGeneral === 'OPERATIVO' && (
-                            <Badge variant="default" className="w-fit flex items-center space-x-1 bg-green-600">
-                              <CheckCircle className="w-3 h-3" />
+                            <Badge variant="default" className="w-fit flex items-center space-x-1 bg-green-600 text-xs">
+                              <CheckCircle className="w-2.5 h-2.5" />
                               <span>OPERATIVO</span>
                             </Badge>
                           )}
                           {estadoGeneral === 'SIN_DATOS' && (
-                            <Badge variant="outline" className="w-fit">
+                            <Badge variant="outline" className="w-fit text-xs">
                               Sin datos
                             </Badge>
                           )}
-                          <div className="text-xs text-gray-500 mt-1">
-                            {fueraServicio > 0 && `${fueraServicio} fuera de servicio`}
-                            {enReparacion > 0 && `${enReparacion} en reparación`}
-                          </div>
                         </div>
                       </TableCell>
                       
-                      <TableCell>
-                        <div className="flex flex-col space-y-1">
-                          <Badge variant="outline" className="w-fit">
-                            {total} total
+                      <TableCell className="px-2 py-2">
+                        <div className="flex flex-col space-y-1 min-w-0">
+                          <Badge variant="outline" className="w-fit text-xs">
+                            {total}
                           </Badge>
-                          <div className="flex space-x-1">
+                          <div className="flex flex-wrap gap-1">
                             {operativos > 0 && (
                               <Badge variant="default" className="w-fit text-xs">
-                                {operativos} ✓
+                                {operativos}✓
                               </Badge>
                             )}
                             {enReparacion > 0 && (
                               <Badge variant="secondary" className="w-fit text-xs bg-yellow-100 text-yellow-800">
-                                {enReparacion} 🔧
+                                {enReparacion}🔧
                               </Badge>
                             )}
                             {fueraServicio > 0 && (
                               <Badge variant="destructive" className="w-fit text-xs">
-                                {fueraServicio} ❌
+                                {fueraServicio}❌
                               </Badge>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       
-                      <TableCell>
-                        {new Date(equipo.fechaEntrega).toLocaleDateString('es-ES')}
+                      <TableCell className="px-2 py-2">
+                        <span className="text-xs">
+                          {new Date(equipo.fechaEntrega).toLocaleDateString('es-ES', { 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: '2-digit' 
+                          })}
+                        </span>
                       </TableCell>
                       
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={mantenimientosCount > 0 ? 'default' : 'secondary'}>
+                      <TableCell className="px-2 py-2">
+                        <div className="flex flex-col space-y-1 min-w-0">
+                          <Badge variant={mantenimientosCount > 0 ? 'default' : 'secondary'} className="w-fit text-xs">
                             {mantenimientosCount}
                           </Badge>
                           {ultimoMantenimiento && (
@@ -393,29 +407,33 @@ export default function EquiposPage() {
                                 ultimoMantenimiento.estado === 'Finalizado' ? 'default' :
                                 ultimoMantenimiento.estado === 'En proceso' ? 'secondary' : 'destructive'
                               }
+                              className="w-fit text-xs"
                             >
-                              {ultimoMantenimiento.estado}
+                              {ultimoMantenimiento.estado === 'Finalizado' ? 'OK' : 
+                               ultimoMantenimiento.estado === 'En proceso' ? 'Proc' : 'Pend'}
                             </Badge>
                           )}
                         </div>
                       </TableCell>
                       
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
+                      <TableCell className="px-2 py-2">
+                        <div className="flex items-center space-x-1">
                           <Link href={`/equipo/${equipo.id}`}>
-                            <Button variant="outline" size="sm" className="flex items-center space-x-1">
-                              <Eye className="h-4 w-4" />
-                              <span>Ver</span>
+                            <Button variant="outline" size="sm" className="h-7 px-1">
+                              <Eye className="h-3 w-3" />
                             </Button>
                           </Link>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEquipoAEliminar({ id: equipo.id, nombre: equipo.nombreEquipo })}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {/* 🎯 Botón eliminar solo para roles que no sean técnico */}
+                          {!esTecnico && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEquipoAEliminar({ id: equipo.id, nombre: equipo.nombreEquipo })}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-7 px-1"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </>

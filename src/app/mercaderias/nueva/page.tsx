@@ -15,8 +15,86 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Package, Zap, ShoppingCart, Trash2, Save, Heart, Plus, Upload, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Package, Zap, ShoppingCart, Trash2, Save, Heart, Plus, Upload, AlertCircle, Building, Search } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Componente ClienteSelector para dropdown de clínicas
+function ClienteSelector({ value, onChange, error }: {
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) {
+  const { getClinicasActivas } = useAppStore();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const clinicasActivas = getClinicasActivas();
+
+  // Filtrar clínicas por término de búsqueda
+  const clinicasFiltradas = clinicasActivas.filter(clinica =>
+    clinica.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    clinica.ciudad.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Encontrar la clínica seleccionada
+  const clinicaSeleccionada = clinicasActivas.find(c => c.nombre === value);
+
+  return (
+    <div className="relative">
+      <Select
+        value={value}
+        onValueChange={onChange}
+      >
+        <SelectTrigger className="w-full">
+          <div className="flex items-center space-x-2">
+            <Building className="h-4 w-4 text-gray-400" />
+            <SelectValue placeholder="Seleccionar clínica/institución...">
+              {clinicaSeleccionada ? (
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">{clinicaSeleccionada.nombre}</span>
+                  <span className="text-xs text-gray-500">{clinicaSeleccionada.ciudad}</span>
+                </div>
+              ) : (
+                "Seleccionar clínica/institución..."
+              )}
+            </SelectValue>
+          </div>
+        </SelectTrigger>
+        <SelectContent className="w-full">
+          {/* Lista de clínicas */}
+          {clinicasFiltradas.length > 0 ? (
+            clinicasFiltradas.map((clinica) => (
+              <SelectItem key={clinica.id} value={clinica.nombre}>
+                <div className="flex flex-col items-start py-1">
+                  <span className="font-medium">{clinica.nombre}</span>
+                  <div className="flex items-center space-x-2 text-xs text-gray-500">
+                    <span>{clinica.ciudad}</span>
+                    {clinica.telefono && (
+                      <>
+                        <span>•</span>
+                        <span>{clinica.telefono}</span>
+                      </>
+                    )}
+                  </div>
+                  {clinica.contactoPrincipal && (
+                    <span className="text-xs text-blue-600">{clinica.contactoPrincipal}</span>
+                  )}
+                </div>
+              </SelectItem>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-gray-500">
+              No hay clínicas disponibles
+            </div>
+          )}
+        </SelectContent>
+      </Select>
+
+      {error && (
+        <p className="text-sm text-red-600 mt-1">{error}</p>
+      )}
+    </div>
+  );
+}
 
 // Datos específicos para Ares Paraguay
 const MARCAS_ESTETICAS = [
@@ -45,7 +123,7 @@ const MARCAS_ESTETICAS = [
 const INSUMOS_POR_MARCA: { [key: string]: string[] } = {
   'Hydrafacial': [
     'Kit Hydra Clarify',
-    'Kit Hydra Purify', 
+    'Kit Hydra Purify',
     'Kit Hydra Nourish',
     'Tips Blue (Standard)',
     'Tips Teal (Sensitive)',
@@ -278,13 +356,13 @@ const FRECUENCIAS_COMUNES = ['4.5MHz', '7MHz', '2MHz', '1MHz', 'Variable', 'N/A'
 
 export default function NuevaCargaPage() {
   const router = useRouter();
-  const { addCargaMercaderia, generateCodigoCarga } = useAppStore();
+  const { addCargaMercaderia, generateCodigoCarga, loadClinicas } = useAppStore();
   const [codigoCarga, setCodigoCarga] = useState<string>('Generando...');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Estados para modo de funcionamiento
   const [modoFormulario, setModoFormulario] = useState<'rapido' | 'equipo'>('rapido');
-  
+
   // Estados para el flujo rápido (insumos)
   const [marcaSeleccionada, setMarcaSeleccionada] = useState<string>('');
   const [tipoProductoComun, setTipoProductoComun] = useState<'Insumo' | 'Repuesto' | 'Equipo Médico'>('Insumo');
@@ -295,31 +373,33 @@ export default function NuevaCargaPage() {
     cantidad: number;
     observaciones: string;
     paraServicioTecnico?: boolean; // 🎯 NUEVO: Control manual para servicio técnico
+    imagen?: string; // 🖼️ NUEVO: Imagen del producto
   }>>([]);
-  
+
   // Estados para el formulario de agregar producto manual
   const [nombreProducto, setNombreProducto] = useState('');
   const [numeroSerieProducto, setNumeroSerieProducto] = useState(''); // 🆕 NUEVO: Estado para número de serie
   const [cantidadProducto, setCantidadProducto] = useState(1);
-  
+
   // Estado para número de carga general
   const [numeroCargaGeneral, setNumeroCargaGeneral] = useState('');
 
   // Estados para equipos médicos complejos
   const [imagenEquipo, setImagenEquipo] = useState<string>('');
 
-  // Generar código de carga al cargar el componente
+  // Generar código de carga y cargar clínicas al cargar el componente
   useEffect(() => {
-    const generarCodigo = async () => {
+    const inicializar = async () => {
       try {
         const codigo = await generateCodigoCarga();
         setCodigoCarga(codigo);
+        await loadClinicas(); // Cargar clínicas para el dropdown
       } catch (error) {
         setCodigoCarga('Error al generar código');
       }
     };
-    generarCodigo();
-  }, [generateCodigoCarga]);
+    inicializar();
+  }, [generateCodigoCarga, loadClinicas]);
 
   const {
     register,
@@ -393,7 +473,7 @@ export default function NuevaCargaPage() {
       toast.error('Ingresa el nombre del producto');
       return;
     }
-    
+
     const nuevoId = `producto-${Date.now()}-${Math.random()}`;
     const nuevosProductos = [...productosRapidos, {
       id: nuevoId,
@@ -403,9 +483,9 @@ export default function NuevaCargaPage() {
       observaciones: '',
       paraServicioTecnico: false // 🎯 NUEVO: Por defecto NO marcado
     }];
-    
+
     setProductosRapidos(nuevosProductos);
-    
+
     // 🔥 SINCRONIZAR con el formulario para que pase la validación
     if (modoFormulario === 'rapido') {
       const productosFormateados = nuevosProductos.map(producto => ({
@@ -428,22 +508,22 @@ export default function NuevaCargaPage() {
       setValue('productos', productosFormateados);
       console.log('🔄 Productos sincronizados con formulario:', productosFormateados);
     }
-    
+
     // Limpiar formulario
     setNombreProducto('');
     setNumeroSerieProducto(''); // 🆕 NUEVO: Limpiar número de serie
     setCantidadProducto(1);
-    
+
     toast.success(`Producto "${nombreProducto}" agregado`);
   };
 
   const actualizarProductoRapido = (id: string, campo: string, valor: any) => {
-    const nuevosProductos = productosRapidos.map(p => 
+    const nuevosProductos = productosRapidos.map(p =>
       p.id === id ? { ...p, [campo]: valor } : p
     );
-    
+
     setProductosRapidos(nuevosProductos);
-    
+
     // 🔥 SINCRONIZAR con el formulario
     if (modoFormulario === 'rapido') {
       const productosFormateados = nuevosProductos.map(producto => ({
@@ -470,7 +550,7 @@ export default function NuevaCargaPage() {
   const eliminarProductoRapido = (id: string) => {
     const nuevosProductos = productosRapidos.filter(p => p.id !== id);
     setProductosRapidos(nuevosProductos);
-    
+
     // 🔥 SINCRONIZAR con el formulario
     if (modoFormulario === 'rapido') {
       const productosFormateados = nuevosProductos.map(producto => ({
@@ -573,7 +653,7 @@ export default function NuevaCargaPage() {
     }
 
     setIsLoading(true);
-    
+
     try {
       console.log('✅ Validaciones pasadas, procesando datos...');
       let cargaFinal;
@@ -618,28 +698,49 @@ export default function NuevaCargaPage() {
 
       console.log('📋 Carga final preparada:', cargaFinal);
       console.log('🚀 Enviando a addCargaMercaderia...');
-      
+
       const nuevaCarga = await addCargaMercaderia(cargaFinal);
       console.log('✅ Carga creada exitosamente:', nuevaCarga);
-      
+
+      // Determinar carpeta de destino según tipo de carga
+      let carpetaDestino = '';
+      let mensajeDestino = '';
+
+      if (cargaFinal.tipoCarga === 'reparacion') {
+        carpetaDestino = 'Servicio Técnico';
+        mensajeDestino = 'Productos enviados a Servicio Técnico para reparación';
+      } else if (cargaFinal.tipoCarga === 'cliente') {
+        // Obtener la primera marca para determinar la carpeta
+        const primeraMarca = modoFormulario === 'rapido' ? marcaSeleccionada : cargaFinal.productos[0]?.marca;
+        carpetaDestino = `${primeraMarca}/Cliente Específico`;
+        mensajeDestino = `Productos enviados a ${primeraMarca}/Cliente Específico`;
+      } else {
+        // Stock normal - usar la marca
+        const primeraMarca = modoFormulario === 'rapido' ? marcaSeleccionada : cargaFinal.productos[0]?.marca;
+        carpetaDestino = primeraMarca || 'Stock';
+        mensajeDestino = `Productos enviados a Stock/${primeraMarca}`;
+      }
+
       // Mensaje diferente según el modo
       if (modoFormulario === 'rapido') {
         toast.success(`¡Carga registrada exitosamente!`, {
-          description: `Código: ${nuevaCarga.codigoCarga}. ${productosRapidos.length} productos de ${marcaSeleccionada} registrados.`
+          description: `Código: ${nuevaCarga.codigoCarga}. ${productosRapidos.length} productos de ${marcaSeleccionada} registrados. ${mensajeDestino}.`
         });
       } else {
         const equiposMedicos = data.productos.filter(p => p.tipoProducto === 'Equipo Médico').length;
         toast.success(`¡Carga registrada exitosamente!`, {
-          description: `Código: ${nuevaCarga.codigoCarga}. ${data.productos.length} producto(s) registrado(s). ${equiposMedicos > 0 ? `${equiposMedicos} equipo(s) médico(s) enviado(s) a Servicio Técnico.` : ''}`
+          description: `Código: ${nuevaCarga.codigoCarga}. ${data.productos.length} producto(s) registrado(s). ${mensajeDestino}.`
         });
       }
-      
+
+      // Navegar de vuelta a la lista de mercaderías
+      console.log('🔄 Navegando de vuelta a mercaderías...');
       router.push('/mercaderias');
     } catch (error) {
       console.error('❌ Error completo:', error);
       console.error('❌ Error message:', error instanceof Error ? error.message : 'Error desconocido');
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack');
-      
+
       toast.error('Error al registrar la carga', {
         description: error instanceof Error ? error.message : 'Error desconocido. Por favor, intenta nuevamente.'
       });
@@ -649,13 +750,13 @@ export default function NuevaCargaPage() {
     }
   };
 
-  const insumosDisponibles = marcaSeleccionada && INSUMOS_POR_MARCA[marcaSeleccionada] 
-    ? INSUMOS_POR_MARCA[marcaSeleccionada] 
+  const insumosDisponibles = marcaSeleccionada && INSUMOS_POR_MARCA[marcaSeleccionada]
+    ? INSUMOS_POR_MARCA[marcaSeleccionada]
     : [];
 
   return (
-    <DashboardLayout 
-      title="Nueva Carga de Mercadería" 
+    <DashboardLayout
+      title="Nueva Carga de Mercadería"
       subtitle={`Código: ${codigoCarga} - ${modoFormulario === 'rapido' ? 'Modo Rápido para Insumos' : 'Modo Equipo Médico Complejo'}`}
     >
       <div className="max-w-6xl mx-auto space-y-6">
@@ -719,7 +820,7 @@ export default function NuevaCargaPage() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="tipoCarga">Tipo de Carga *</Label>
-                  <Select 
+                  <Select
                     value={tipoCargaWatched}
                     onValueChange={(value: 'stock' | 'cliente' | 'reparacion') => setValue('tipoCarga', value)}
                   >
@@ -741,14 +842,11 @@ export default function NuevaCargaPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="cliente">Cliente/Institución *</Label>
-                      <Input
-                        id="cliente"
-                        {...register('cliente')}
-                        placeholder="Ej: Ares, Dr. García..."
+                      <ClienteSelector
+                        value={watch('cliente')}
+                        onChange={(value) => setValue('cliente', value)}
+                        error={errors.cliente?.message}
                       />
-                      {errors.cliente && (
-                        <p className="text-sm text-red-600 mt-1">{errors.cliente.message}</p>
-                      )}
                     </div>
                     <div>
                       <Label htmlFor="ubicacionServicio">Ubicación/Servicio *</Label>
@@ -770,7 +868,7 @@ export default function NuevaCargaPage() {
                     id="numeroCargaGeneral"
                     value={numeroCargaGeneral}
                     onChange={(e) => setNumeroCargaGeneral(e.target.value)}
-                                          placeholder="Ej: ARES042025, ARES042026, ARES042027..."
+                    placeholder="Ej: ARES042025, ARES042026, ARES042027..."
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Número de tracking para toda esta carga (AWB, BL, número de envío, etc.)
@@ -810,7 +908,7 @@ export default function NuevaCargaPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>Marca de esta Carga *</Label>
-                        <Select 
+                        <Select
                           value={marcaSeleccionada}
                           onValueChange={setMarcaSeleccionada}
                         >
@@ -829,7 +927,7 @@ export default function NuevaCargaPage() {
 
                       <div>
                         <Label>Tipo de Productos *</Label>
-                        <Select 
+                        <Select
                           value={tipoProductoComun}
                           onValueChange={(value: 'Insumo' | 'Repuesto' | 'Equipo Médico') => setTipoProductoComun(value)}
                         >
@@ -963,11 +1061,11 @@ export default function NuevaCargaPage() {
                                   {index + 1}
                                 </span>
                               </div>
-                              
+
                               <div className="md:col-span-3">
                                 <p className="font-medium text-gray-900">{producto.nombre}</p>
                               </div>
-                              
+
                               <div className="md:col-span-2">
                                 <Label className="text-xs text-gray-600">Número de Serie:</Label>
                                 <Input
@@ -977,7 +1075,7 @@ export default function NuevaCargaPage() {
                                   className="w-full h-8 text-xs"
                                 />
                               </div>
-                              
+
                               <div className="md:col-span-1">
                                 <Label className="text-xs text-gray-600">Cantidad:</Label>
                                 <Input
@@ -1011,7 +1109,7 @@ export default function NuevaCargaPage() {
                                   className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500"
                                 />
                               </div>
-                              
+
                               <div className="md:col-span-1">
                                 <Button
                                   type="button"
@@ -1140,7 +1238,7 @@ export default function NuevaCargaPage() {
                               <Label htmlFor={`productos.${productoIndex}.modelo`}>Modelo *</Label>
                               <Input
                                 {...register(`productos.${productoIndex}.modelo`)}
-                                                                 placeholder="Ultrafomer MPT"
+                                placeholder="Ultrafomer MPT"
                               />
                               {errors.productos?.[productoIndex]?.modelo && (
                                 <p className="text-sm text-red-600 mt-1">
@@ -1245,7 +1343,7 @@ export default function NuevaCargaPage() {
                                 <Upload className="w-4 h-4 mr-2" />
                                 Subir Imagen
                               </Label>
-                              
+
                               {imagenEquipo && (
                                 <img
                                   src={imagenEquipo}
@@ -1271,7 +1369,7 @@ export default function NuevaCargaPage() {
                               </Button>
                             </div>
 
-                            {(!productosWatched[productoIndex]?.subitems || 
+                            {(!productosWatched[productoIndex]?.subitems ||
                               productosWatched[productoIndex]?.subitems?.length === 0) ? (
                               <div className="text-center py-4 text-gray-500 text-sm">
                                 <AlertCircle className="w-6 h-6 mx-auto mb-2 opacity-50" />
@@ -1309,7 +1407,7 @@ export default function NuevaCargaPage() {
                                     {/* 🎯 NUEVO: Checkbox para Servicio Técnico */}
                                     <div className="flex flex-col items-center justify-center">
                                       <Label className="text-xs text-center mb-2">
-                                        🔧 Mantenimiento<br/>Técnico
+                                        🔧 Mantenimiento<br />Técnico
                                       </Label>
                                       <input
                                         type="checkbox"
@@ -1375,12 +1473,12 @@ export default function NuevaCargaPage() {
                 console.log('🔥 modoFormulario:', modoFormulario);
                 console.log('🔥 marcaSeleccionada:', marcaSeleccionada);
                 console.log('🔥 productosRapidos.length:', productosRapidos.length);
-                console.log('🔥 disabled condition:', isLoading || 
+                console.log('🔥 disabled condition:', isLoading ||
                   (modoFormulario === 'rapido' && (!marcaSeleccionada || productosRapidos.length === 0)) ||
                   (modoFormulario === 'equipo' && productosEquipo.length === 0)
                 );
               }}
-              disabled={isLoading || 
+              disabled={isLoading ||
                 (modoFormulario === 'rapido' && (!marcaSeleccionada || productosRapidos.length === 0)) ||
                 (modoFormulario === 'equipo' && productosEquipo.length === 0)
               }
@@ -1395,7 +1493,7 @@ export default function NuevaCargaPage() {
                 <>
                   <Save className="h-4 w-4 mr-2" />
                   <span>
-                    {modoFormulario === 'rapido' 
+                    {modoFormulario === 'rapido'
                       ? `Guardar Carga (${productosRapidos.length} productos)`
                       : `Guardar Equipos (${productosEquipo.length} equipos → Servicio Técnico)`
                     }

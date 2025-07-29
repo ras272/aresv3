@@ -268,15 +268,17 @@ export class WordReporteService {
     const mes = (fechaObj.getMonth() + 1).toString().padStart(2, '0');
     const dia = fechaObj.getDate().toString().padStart(2, '0');
     
-    // Generar número secuencial basado en la fecha
-    const secuencial = Math.floor(Math.random() * 9000) + 1000; // 4 dígitos
+    // ✅ FIXED: Use deterministic generation to prevent hydration errors
+    const timestamp = Date.now();
+    const secuencial = Math.floor(timestamp % 9000) + 1000; // 4 dígitos
     
     // Usar el nombre real del equipo
     return `${secuencial} ${equipoNombre}`;
   }
 
   static generarNumeroFormulario(): string {
-    // Generar número de formulario aleatorio de 3 dígitos
-    return Math.floor(Math.random() * 900 + 100).toString();
+    // ✅ FIXED: Use deterministic generation to prevent hydration errors
+    const timestamp = Date.now();
+    return Math.floor((timestamp % 900) + 100).toString();
   }
 } 

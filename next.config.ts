@@ -13,6 +13,24 @@ const nextConfig: NextConfig = {
     // incluso si tu proyecto tiene errores de TypeScript.
     ignoreBuildErrors: true,
   },
+
+  // Configuración simplificada de Webpack
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Solo configurar fallbacks básicos necesarios
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        readline: false,
+        worker_threads: false,
+      };
+    }
+
+    return config;
+  },
 };
 
 export default nextConfig;

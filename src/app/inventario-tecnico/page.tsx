@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { PermissionGuard, usePermissions } from '@/components/PermissionGuard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MobileTable, MobileComponenteCard } from '@/components/ui/mobile-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Package, Calendar, MapPin, Plus, History, X } from 'lucide-react';
+import { Search, Package, Calendar, MapPin, Plus, History, X, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Textarea } from '@/components/ui/textarea';
 import { ComponenteDisponible } from '@/types';
+import { UpdateQuantityModal } from '@/components/inventory/UpdateQuantityModal';
 
 const tipoComponenteColores = {
   'Pieza de mano': 'bg-blue-100 text-blue-800',
@@ -35,18 +37,24 @@ const estadoColores = {
 };
 
 export default function InventarioTecnicoPage() {
-  const { 
-    componentesDisponibles, 
-    equipos, 
+  const {
+    componentesDisponibles,
+    equipos,
     historialAsignaciones,
-    loadInventarioTecnico, 
-    asignarComponente 
+    loadInventarioTecnico,
+    asignarComponente
   } = useAppStore();
+  
+  const { getCurrentUser } = usePermissions();
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<string>('todos');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
   
+  // 🎯 Verificar si el usuario actual es técnico
+  const currentUser = getCurrentUser();
+  const esTecnico = currentUser?.rol === 'tecnico';
+
   // Estados para modal de asignación
   const [modalAsignacion, setModalAsignacion] = useState(false);
   const [componenteSeleccionado, setComponenteSeleccionado] = useState<ComponenteDisponible | null>(null);
@@ -61,6 +69,10 @@ export default function InventarioTecnicoPage() {
   const [modalHistorial, setModalHistorial] = useState(false);
   const [historialSeleccionado, setHistorialSeleccionado] = useState<ComponenteDisponible | null>(null);
 
+  // Estados para modal de actualización de cantidad
+  const [modalUpdateQuantity, setModalUpdateQuantity] = useState(false);
+  const [componenteParaActualizar, setComponenteParaActualizar] = useState<ComponenteDisponible | null>(null);
+
   useEffect(() => {
     loadInventarioTecnico();
   }, [loadInventarioTecnico]);
@@ -68,14 +80,14 @@ export default function InventarioTecnicoPage() {
   // Filtrar componentes
   const componentesFiltrados = componentesDisponibles.filter(comp => {
     const matchBusqueda = comp.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                         comp.marca.toLowerCase().includes(busqueda.toLowerCase()) ||
-                         comp.modelo.toLowerCase().includes(busqueda.toLowerCase()) ||
-                         (comp.numeroSerie && comp.numeroSerie.toLowerCase().includes(busqueda.toLowerCase())) ||
-                         comp.tipoComponente.toLowerCase().includes(busqueda.toLowerCase());
-    
+      comp.marca.toLowerCase().includes(busqueda.toLowerCase()) ||
+      comp.modelo.toLowerCase().includes(busqueda.toLowerCase()) ||
+      (comp.numeroSerie && comp.numeroSerie.toLowerCase().includes(busqueda.toLowerCase())) ||
+      comp.tipoComponente.toLowerCase().includes(busqueda.toLowerCase());
+
     const matchTipo = filtroTipo === 'todos' || comp.tipoComponente === filtroTipo;
     const matchEstado = filtroEstado === 'todos' || comp.estado === filtroEstado;
-    
+
     return matchBusqueda && matchTipo && matchEstado;
   });
 
@@ -122,7 +134,7 @@ export default function InventarioTecnicoPage() {
       setCantidadAsignar(1);
       setTecnicoResponsable('');
       setObservacionesAsignacion('');
-      
+
     } catch (error) {
       toast.error('Error al asignar componente', {
         description: error instanceof Error ? error.message : 'Error desconocido'
@@ -141,7 +153,7 @@ export default function InventarioTecnicoPage() {
   // 🚀 ASIGNACIÓN AUTOMÁTICA POR CÓDIGO DE CARGA
   const asignarDirectamenteAlEquipoPadre = async (componente: ComponenteDisponible) => {
     let equipoPadre = null;
-    
+
     // 1️⃣ PRIORIDAD: Información directa del equipo padre
     if (componente.equipoPadre) {
       equipoPadre = equipos.find(e => e.id === componente.equipoPadre!.equipoId);
@@ -149,39 +161,39 @@ export default function InventarioTecnicoPage() {
         console.log('✅ Equipo padre encontrado por ID directo:', equipoPadre.nombreEquipo);
       }
     }
-    
+
     // 2️⃣ CRITERIO PRINCIPAL: Buscar por código de carga exacto
     if (!equipoPadre && componente.codigoCargaOrigen) {
       // Extraer el identificador único del código de carga (fecha + número)
       const codigoComponente = componente.codigoCargaOrigen;
       console.log('🔍 Buscando equipo para código:', codigoComponente);
-      
+
       // Buscar equipo que contenga el código específico del componente
       equipoPadre = equipos.find(equipo => {
         console.log('📋 Verificando equipo:', equipo.nombreEquipo);
-        
+
         // Verificar si el equipo contiene el código exacto del componente
         // Esto debe ser una coincidencia muy específica
         const equipoContieneCodigoComponente = equipo.nombreEquipo.includes(codigoComponente);
-        
+
         if (equipoContieneCodigoComponente) {
           console.log('✅ MATCH encontrado:', equipo.nombreEquipo, 'para código:', codigoComponente);
         }
-        
+
         return equipoContieneCodigoComponente;
       });
-      
+
       if (equipoPadre) {
         console.log('✅ Equipo padre seleccionado:', equipoPadre.nombreEquipo, '- Cliente:', equipoPadre.cliente);
       } else {
         console.log('❌ No se encontró equipo para código:', codigoComponente);
       }
     }
-    
+
     if (!equipoPadre) {
       toast.error('No se encontró equipo con el mismo código de carga', {
-        description: componente.codigoCargaOrigen ? 
-          `Código: ${componente.codigoCargaOrigen}` : 
+        description: componente.codigoCargaOrigen ?
+          `Código: ${componente.codigoCargaOrigen}` :
           'Usa asignación manual para seleccionar el equipo.'
       });
       return;
@@ -205,7 +217,7 @@ export default function InventarioTecnicoPage() {
       toast.success(`¡Asignado automáticamente!`, {
         description: `${componente.nombre} → ${nombreLimpio}/${equipoPadre.cliente}`
       });
-      
+
     } catch (error) {
       toast.error('Error en la asignación automática', {
         description: error instanceof Error ? error.message : 'Error desconocido'
@@ -384,7 +396,7 @@ export default function InventarioTecnicoPage() {
                           const nombreLimpio = componente.equipoPadre.nombreEquipo
                             .replace(/-ENTRADA-\d{8}-\d{3}/, '') // Quitar -ENTRADA-YYYYMMDD-XXX
                             .replace(/-\d{8}-\d{3}/, ''); // Quitar -YYYYMMDD-XXX como fallback
-                          
+
                           return (
                             <div className="mt-1">
                               <p className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
@@ -396,26 +408,26 @@ export default function InventarioTecnicoPage() {
                             </div>
                           );
                         }
-                       
-                       // Buscar el equipo padre usando MISMA LÓGICA que la función de asignación
-                       let equipoPadre = null;
-                       if (componente.codigoCargaOrigen) {
-                         // Usar búsqueda por código de carga exacto (no por marca)
-                         equipoPadre = equipos.find(equipo => 
-                           equipo.nombreEquipo.includes(componente.codigoCargaOrigen!)
-                         );
-                         
-                         if (equipoPadre) {
-                           console.log('📝 Display - Equipo encontrado:', equipoPadre.nombreEquipo, '- Cliente:', equipoPadre.cliente);
-                         }
-                       }
-                       
-                       if (equipoPadre) {
+
+                        // Buscar el equipo padre usando MISMA LÓGICA que la función de asignación
+                        let equipoPadre = null;
+                        if (componente.codigoCargaOrigen) {
+                          // Usar búsqueda por código de carga exacto (no por marca)
+                          equipoPadre = equipos.find(equipo =>
+                            equipo.nombreEquipo.includes(componente.codigoCargaOrigen!)
+                          );
+
+                          if (equipoPadre) {
+                            console.log('📝 Display - Equipo encontrado:', equipoPadre.nombreEquipo, '- Cliente:', equipoPadre.cliente);
+                          }
+                        }
+
+                        if (equipoPadre) {
                           // Limpiar el nombre del equipo quitando el código de entrada
                           const nombreLimpio = equipoPadre.nombreEquipo
                             .replace(/-ENTRADA-\d{8}-\d{3}/, '') // Quitar -ENTRADA-YYYYMMDD-XXX
                             .replace(/-\d{8}-\d{3}/, ''); // Quitar -YYYYMMDD-XXX como fallback
-                          
+
                           return (
                             <div className="mt-1">
                               <p className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">
@@ -424,21 +436,21 @@ export default function InventarioTecnicoPage() {
                             </div>
                           );
                         }
-                       
-                       // Si no encuentra equipo específico, mostrar info de la carga
-                       if (componente.codigoCargaOrigen) {
-                         return (
-                           <p className="text-xs text-blue-600 mt-1">
-                             📦 Ingresado desde {componente.codigoCargaOrigen}
-                           </p>
-                         );
-                       }
-                       
-                       return componente.observaciones && (
-                         <p className="text-xs text-gray-600 truncate max-w-[200px]">
-                           {componente.observaciones}
-                         </p>
-                       );
+
+                        // Si no encuentra equipo específico, mostrar info de la carga
+                        if (componente.codigoCargaOrigen) {
+                          return (
+                            <p className="text-xs text-blue-600 mt-1">
+                              📦 Ingresado desde {componente.codigoCargaOrigen}
+                            </p>
+                          );
+                        }
+
+                        return componente.observaciones && (
+                          <p className="text-xs text-gray-600 truncate max-w-[200px]">
+                            {componente.observaciones}
+                          </p>
+                        );
                       })()}
                     </div>
                   </TableCell>
@@ -447,7 +459,7 @@ export default function InventarioTecnicoPage() {
                     <div>
                       <p className="font-medium text-sm">{componente.marca}</p>
                       <p className="text-xs text-gray-600">{componente.modelo}</p>
-                      <Badge 
+                      <Badge
                         className={`${tipoComponenteColores[componente.tipoComponente as keyof typeof tipoComponenteColores] || 'bg-gray-100 text-gray-800'} mt-1`}
                         variant="secondary"
                       >
@@ -455,14 +467,14 @@ export default function InventarioTecnicoPage() {
                       </Badge>
                     </div>
                   </TableCell>
-                  
+
                   {/* N° Serie - Oculto en móviles */}
                   <TableCell className="hidden sm:table-cell">
                     <span className="font-mono text-xs">
                       {componente.numeroSerie || 'N/A'}
                     </span>
                   </TableCell>
-                  
+
                   {/* Columna combinada: Stock & Estado */}
                   <TableCell className="min-w-[100px]">
                     <div className="text-center">
@@ -474,7 +486,7 @@ export default function InventarioTecnicoPage() {
                           /{componente.cantidadOriginal}
                         </span>
                       </div>
-                      <Badge 
+                      <Badge
                         className={`${estadoColores[componente.estado as keyof typeof estadoColores]} text-xs`}
                         variant="secondary"
                       >
@@ -482,7 +494,7 @@ export default function InventarioTecnicoPage() {
                       </Badge>
                     </div>
                   </TableCell>
-                  
+
                   {/* Ubicación - Oculto en tablets */}
                   <TableCell className="hidden lg:table-cell">
                     <div className="flex items-center space-x-1">
@@ -490,7 +502,7 @@ export default function InventarioTecnicoPage() {
                       <span className="text-xs truncate">{componente.ubicacionFisica || 'N/A'}</span>
                     </div>
                   </TableCell>
-                  
+
                   {/* Fecha - Solo en pantallas grandes */}
                   <TableCell className="hidden xl:table-cell">
                     <div className="flex items-center space-x-1">
@@ -498,97 +510,114 @@ export default function InventarioTecnicoPage() {
                       <span className="text-xs">{formatearFecha(componente.fechaIngreso)}</span>
                     </div>
                   </TableCell>
-                  {/* Acciones - Con asignación inteligente */}
+                  {/* Acciones - Simplificadas para técnico */}
                   <TableCell className="w-[120px]">
                     <div className="flex flex-col space-y-1">
-                      {componente.cantidadDisponible > 0 && (() => {
-                        // 🎯 DETECTAR EQUIPO POR CÓDIGO DE CARGA
-                        let equipoPadreUnico = null;
-                        let tieneEquipoPadre = false;
-                        
-                        // 1️⃣ Verificar equipo padre directo
-                        if (componente.equipoPadre) {
-                          equipoPadreUnico = equipos.find(e => e.id === componente.equipoPadre!.equipoId);
-                          tieneEquipoPadre = !!equipoPadreUnico;
-                        }
-                        
-                        // 2️⃣ Buscar por código de carga exacto (MISMA LÓGICA que la función)
-                        if (!tieneEquipoPadre && componente.codigoCargaOrigen) {
-                          const codigoComponente = componente.codigoCargaOrigen;
-                          equipoPadreUnico = equipos.find(equipo => 
-                            equipo.nombreEquipo.includes(codigoComponente)
-                          );
-                          tieneEquipoPadre = !!equipoPadreUnico;
-                          
-                          // Debug para UI
-                          if (equipoPadreUnico) {
-                            console.log('🎯 UI detectó equipo padre:', equipoPadreUnico.nombreEquipo, '- Cliente:', equipoPadreUnico.cliente);
-                          }
-                        }
-                        
-                        if (tieneEquipoPadre && equipoPadreUnico) {
-                          // Obtener nombre limpio del equipo único identificado
-                          const nombreLimpio = equipoPadreUnico.nombreEquipo
-                            .replace(/-ENTRADA-\d{8}-\d{3}/, '')
-                            .replace(/-\d{8}-\d{3}/, '') || 'Equipo';
-                         
-                         return (
-                           <div className="flex flex-col space-y-1">
-                             {/* Botón de asignación directa */}
-                             <Button
-                               variant="default"
-                               size="sm"
-                               onClick={() => asignarDirectamenteAlEquipoPadre(componente)}
-                               className="h-7 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
-                               title={`Asignar directamente a ${nombreLimpio}/${equipoPadreUnico.cliente}`}
-                               disabled={asignando}
-                             >
-                               <Plus className="w-3 h-3" />
-                               <span className="hidden lg:inline ml-1 truncate max-w-[60px]">
-                                 → {nombreLimpio.substring(0, 8)}...
-                               </span>
-                             </Button>
-                             
-                             {/* Botón manual como alternativa */}
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => abrirModalAsignacion(componente)}
-                               className="h-6 px-1 text-xs"
-                               title="Asignar a otro equipo"
-                             >
-                               <Plus className="w-2 h-2" />
-                               <span className="hidden xl:inline ml-1">Otro</span>
-                             </Button>
-                           </div>
-                         );
-                        } else {
-                          // Sin código de carga o equipo padre, asignación manual
-                          return (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => abrirModalAsignacion(componente)}
-                              className="h-8 px-2"
-                              title="Asignar componente manualmente"
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span className="hidden md:inline ml-1">Asignar</span>
-                            </Button>
-                          );
-                        }
-                      })()}
-                      
-                      {/* Botón de historial */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => abrirModalHistorial(componente)}
-                        className="h-6 w-full p-0"
-                        title="Ver historial"
-                      >
-                        <History className="w-3 h-3" />
-                      </Button>
+                      {/* 🎯 Para técnico: solo botón de consulta/historial */}
+                      {esTecnico ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => abrirModalHistorial(componente)}
+                          className="h-8 w-full flex items-center justify-center"
+                          title="Ver detalles del componente"
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          <span className="text-xs">Ver</span>
+                        </Button>
+                      ) : (
+                        // Para otros roles: funcionalidad completa de asignación
+                        <>
+                          {componente.cantidadDisponible > 0 && (() => {
+                            // 🎯 DETECTAR EQUIPO POR CÓDIGO DE CARGA
+                            let equipoPadreUnico = null;
+                            let tieneEquipoPadre = false;
+
+                            // 1️⃣ Verificar equipo padre directo
+                            if (componente.equipoPadre) {
+                              equipoPadreUnico = equipos.find(e => e.id === componente.equipoPadre!.equipoId);
+                              tieneEquipoPadre = !!equipoPadreUnico;
+                            }
+
+                            // 2️⃣ Buscar por código de carga exacto (MISMA LÓGICA que la función)
+                            if (!tieneEquipoPadre && componente.codigoCargaOrigen) {
+                              const codigoComponente = componente.codigoCargaOrigen;
+                              equipoPadreUnico = equipos.find(equipo =>
+                                equipo.nombreEquipo.includes(codigoComponente)
+                              );
+                              tieneEquipoPadre = !!equipoPadreUnico;
+
+                              // Debug para UI
+                              if (equipoPadreUnico) {
+                                console.log('🎯 UI detectó equipo padre:', equipoPadreUnico.nombreEquipo, '- Cliente:', equipoPadreUnico.cliente);
+                              }
+                            }
+
+                            if (tieneEquipoPadre && equipoPadreUnico) {
+                              // Obtener nombre limpio del equipo único identificado
+                              const nombreLimpio = equipoPadreUnico.nombreEquipo
+                                .replace(/-ENTRADA-\d{8}-\d{3}/, '')
+                                .replace(/-\d{8}-\d{3}/, '') || 'Equipo';
+
+                              return (
+                                <div className="flex flex-col space-y-1">
+                                  {/* Botón de asignación directa */}
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => asignarDirectamenteAlEquipoPadre(componente)}
+                                    className="h-7 px-2 bg-blue-600 hover:bg-blue-700 text-xs"
+                                    title={`Asignar directamente a ${nombreLimpio}/${equipoPadreUnico.cliente}`}
+                                    disabled={asignando}
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span className="hidden lg:inline ml-1 truncate max-w-[60px]">
+                                      → {nombreLimpio.substring(0, 8)}...
+                                    </span>
+                                  </Button>
+
+                                  {/* Botón manual como alternativa */}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => abrirModalAsignacion(componente)}
+                                    className="h-6 px-1 text-xs"
+                                    title="Asignar a otro equipo"
+                                  >
+                                    <Plus className="w-2 h-2" />
+                                    <span className="hidden xl:inline ml-1">Otro</span>
+                                  </Button>
+                                </div>
+                              );
+                            } else {
+                              // Sin código de carga o equipo padre, asignación manual
+                              return (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => abrirModalAsignacion(componente)}
+                                  className="h-8 px-2"
+                                  title="Asignar componente manualmente"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span className="hidden md:inline ml-1">Asignar</span>
+                                </Button>
+                              );
+                            }
+                          })()}
+
+                          {/* Botón de historial */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => abrirModalHistorial(componente)}
+                            className="h-6 w-full p-0"
+                            title="Ver historial"
+                          >
+                            <History className="w-3 h-3" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </>

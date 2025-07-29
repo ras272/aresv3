@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Equipo, Mantenimiento, ComponenteEquipo, CargaMercaderia, ProductoCarga, ComponenteDisponible, AsignacionComponente, PlanMantenimiento, Tecnico, AppState } from '@/types';
+import { Equipo, Mantenimiento, ComponenteEquipo, CargaMercaderia, ProductoCarga, ComponenteDisponible, AsignacionComponente, PlanMantenimiento, Tecnico, AppState, PermisosRol, Usuario } from '@/types';
 import { EquipoFormData, CargaMercaderiaFormData } from '@/lib/schemas';
-import { 
-  createCargaMercaderia, 
-  getAllCargas, 
+import {
+  createCargaMercaderia,
+  getAllCargas,
   generateCodigoCarga as dbGenerateCodigoCarga,
   getAllEquipos,
   createEquipo,
@@ -17,817 +17,1198 @@ import {
   deleteCargaMercaderia,
   deleteEquipo,
   getAllComponentesDisponibles,
+  getAllStockItems,
   asignarComponenteAEquipo,
-  getHistorialAsignaciones as dbGetHistorialAsignaciones
+  getHistorialAsignaciones as dbGetHistorialAsignaciones,
+  getAllClinicas,
+  createClinica,
+  updateClinica,
+  deleteClinica,
+  getAllRemisiones,
+  createRemision,
+  updateRemision,
+  deleteRemision,
+  generateNumeroRemision,
+  getAllTransaccionesStock,
+  createTransaccionStock,
+  createDocumentoCarga,
+  getAllDocumentosCarga,
+  getDocumentosByCarga,
+  deleteDocumentoCarga as dbDeleteDocumentoCarga,
+  getAllMovimientosStock,
+  getMovimientosByProducto,
+  getMovimientosByCarpeta,
+  getEstadisticasTrazabilidad,
+  registrarSalidaStock,
+  type MovimientoStock
 } from '@/lib/database';
+import { procesarProductoParaStock } from '@/lib/stock-flow';
+import { supabase } from '@/lib/supabase';
 
-// Datos de ejemplo actualizados
-const equiposEjemplo: Equipo[] = [
-  {
-    id: '1',
-    cliente: 'Ares',
-    ubicacion: 'Asuncion',
-    nombreEquipo: 'KIT-ARES-001',
-    tipoEquipo: 'Kit hydra',
-    marca: 'Ares',
-    modelo: 'MPT',
-    numeroSerieBase: 'ARES-2024-001',
-    componentes: [
-      {
-        id: 'comp-1-1',
-        nombre: 'Unidad Principal',
-        numeroSerie: 'ARES-2024-001-MAIN',
-        estado: 'Operativo',
-        observaciones: 'Unidad base del kit hydra'
-      },
-      {
-        id: 'comp-1-2',
-        nombre: 'Cable de Encendido',
-        numeroSerie: 'ARES-2024-001-CABLE',
-        estado: 'Operativo',
-        observaciones: 'Cable de encendido principal'
-      }
-    ],
-    accesorios: 'Cable de encendido, componentes adicionales',
-    fechaEntrega: '2024-01-15',
-    observaciones: 'Kit instalado en Asuncion',
-    createdAt: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: '2',
-    cliente: 'Ares',
-    ubicacion: 'Asuncion',
-    nombreEquipo: 'KIT-ARES-002',
-    tipoEquipo: 'Kit hydra',
-    marca: 'Ares',
-    modelo: 'MPT',
-    numeroSerieBase: 'ARES-2024-002',
-    componentes: [
-      {
-        id: 'comp-2-1',
-        nombre: 'Kit Principal',
-        numeroSerie: 'ARES-2024-002-KIT',
-        estado: 'Operativo',
-        observaciones: 'Kit hydra modelo MPT'
-      },
-      {
-        id: 'comp-2-2',
-        nombre: 'Cable de Encendido',
-        numeroSerie: 'ARES-2024-002-CABLE',
-        estado: 'En reparacion',
-        observaciones: 'Requiere revisión'
-      },
-      {
-        id: 'comp-2-3',
-        nombre: 'Componente Adicional',
-        numeroSerie: 'ARES-2024-002-COMP',
-        estado: 'Operativo',
-        observaciones: 'Componente estándar'
-      }
-    ],
-    accesorios: 'Cable de encendido, componentes adicionales MPT',
-    fechaEntrega: '2024-02-10',
-    observaciones: 'Kit para Ares Asuncion',
-    createdAt: '2024-02-10T14:30:00Z',
-  },
-  {
-    id: '3',
-    cliente: 'Ares',
-    ubicacion: 'Asuncion',
-    nombreEquipo: 'KIT-ARES-003',
-    tipoEquipo: 'Kit hydra',
-    marca: 'Ares',
-    modelo: 'MPT',
-    numeroSerieBase: 'ARES-2024-003',
-    componentes: [
-      {
-        id: 'comp-3-1',
-        nombre: 'Unidad Principal',
-        numeroSerie: 'ARES-2024-003-MAIN',
-        estado: 'Operativo',
-        observaciones: 'Unidad principal del kit hydra'
-      },
-      {
-        id: 'comp-3-2',
-        nombre: 'Cable de Encendido',
-        numeroSerie: 'ARES-2024-003-CABLE1',
-        estado: 'Operativo',
-        observaciones: 'Cable de encendido primario'
-      },
-      {
-        id: 'comp-3-3',
-        nombre: 'Cable de Encendido',
-        numeroSerie: 'ARES-2024-003-CABLE2',
-        estado: 'Operativo',
-        observaciones: 'Cable de encendido secundario'
-      }
-    ],
-    accesorios: 'Cables de encendido, componentes MPT',
-    fechaEntrega: '2024-03-05',
-    observaciones: 'Kit hydra para Ares Asuncion',
-    createdAt: '2024-03-05T09:15:00Z',
-  },
-];
-
-const mantenimientosEjemplo: Mantenimiento[] = [
-  {
-    id: '1',
-    equipoId: '1',
-    componenteId: 'comp-1-1',
-    fecha: '2024-03-15',
-    descripcion: 'El equipo no enciende después de un corte de luz. Se reporta que no responde al botón de encendido.',
-    estado: 'Finalizado',
-    tipo: 'Correctivo',
-    prioridad: 'Alta',
-    comentarios: 'Se reemplazó el fusible interno. Equipo funcionando correctamente.',
-    createdAt: '2024-03-15T08:00:00Z',
-  },
-  {
-    id: '2',
-    equipoId: '2',
-    componenteId: 'comp-2-2',
-    fecha: '2024-03-20',
-    descripcion: 'Alarma de SpO2 se activa constantemente sin motivo aparente. Los valores parecen correctos.',
-    estado: 'En proceso',
-    tipo: 'Correctivo',
-    prioridad: 'Media',
-    comentarios: 'Se está calibrando el sensor. Pendiente de pruebas finales.',
-    createdAt: '2024-03-20T11:30:00Z',
-  },
-  {
-    id: '3',
-    equipoId: '1',
-    componenteId: 'comp-1-2',
-    fecha: '2024-03-25',
-    descripcion: 'Electrodos muestran lecturas inconsistentes en algunas derivaciones.',
-    estado: 'Pendiente',
-    tipo: 'Correctivo',
-    prioridad: 'Crítica',
-    comentarios: '',
-    createdAt: '2024-03-25T16:45:00Z',
-  },
-];
-
-// Datos de ejemplo para cargas de mercadería - REDISEÑADO
-const cargasMercaderiaEjemplo: CargaMercaderia[] = [
-  {
-    id: '1',
-    codigoCarga: 'ARES042025',
-    fechaIngreso: '2024-12-01',
-    tipoCarga: 'cliente',
-    cliente: 'Ares',
-    ubicacionServicio: 'Asuncion',
-    destino: 'Ares - Asuncion',
-    observacionesGenerales: 'Carga completa de kits hydra para Ares Paraguay',
-    productos: [
-      {
-        id: 'prod-1-1',
-        producto: 'Kit hydra',
-        tipoProducto: 'Equipo Médico',
-        marca: 'Ares',
-        modelo: 'MPT',
-        numeroSerie: 'ARES-KH-2024-001',
-        cantidad: 1,
-        observaciones: 'Kit hydra principal modelo MPT',
-        subitems: [
-          {
-            id: 'sub-1-1-1',
-            nombre: 'Cable de Encendido',
-            numeroSerie: 'ARES-CE-2024-001-1',
-            cantidad: 1
-          },
-          {
-            id: 'sub-1-1-2',
-            nombre: 'Cable de Encendido',
-            numeroSerie: 'ARES-CE-2024-001-2',
-            cantidad: 1
-          }
-        ]
-      },
-      {
-        id: 'prod-1-2',
-        producto: 'Componentes Kit hydra',
-        tipoProducto: 'Insumo',
-        marca: 'Ares',
-        modelo: 'MPT',
-        numeroSerie: 'ARES-COMP-MPT-001',
-        cantidad: 5,
-        observaciones: 'Componentes adicionales para kit hydra MPT'
-      },
-      {
-        id: 'prod-1-3',
-        producto: 'Manual Kit hydra',
-        tipoProducto: 'Insumo',
-        marca: 'Ares',
-        modelo: 'MPT',
-        cantidad: 1,
-        observaciones: 'Manual de operación modelo MPT'
-      }
-    ],
-    createdAt: '2024-12-01T10:00:00Z',
-  },
-  {
-    id: '2',
-    codigoCarga: 'ARES042025-B',
-    fechaIngreso: '2024-12-01',
-    tipoCarga: 'cliente',
-    cliente: 'Ares',
-    ubicacionServicio: 'Asuncion',
-    destino: 'Ares - Asuncion',
-    observacionesGenerales: 'Carga adicional de repuestos y cables para kits hydra',
-    productos: [
-      {
-        id: 'prod-2-1',
-        producto: 'Cables de Repuesto',
-        tipoProducto: 'Repuesto',
-        marca: 'Ares',
-        modelo: 'MPT',
-        cantidad: 10,
-        observaciones: 'Cables de encendido de repuesto para kit hydra'
-      },
-      {
-        id: 'prod-2-2',
-        producto: 'Kit hydra',
-        tipoProducto: 'Equipo Médico',
-        marca: 'Ares',
-        modelo: 'MPT',
-        cantidad: 1,
-        observaciones: 'Kit hydra adicional modelo MPT'
-      }
-    ],
-    createdAt: '2024-12-01T11:30:00Z',
-  },
-];
-
-const useAppStore = create<AppState>()(
+// Sistema inicializado vacío - Los datos se cargan desde Supabase
+export const useAppStore = create<AppState>()(
   persist(
-    (set, get) => ({
-  equipos: equiposEjemplo,
-  mantenimientos: [
-    ...mantenimientosEjemplo,
-    // 🗓️ MANTENIMIENTOS PROGRAMADOS - Ahora se cargan desde la base de datos
-    // Los mantenimientos programados se crean usando createMantenimiento() que genera UUIDs válidos
-  ],
-  cargasMercaderia: cargasMercaderiaEjemplo,
-  componentesDisponibles: [],
-  historialAsignaciones: [],
-  
-  // 🆕 NUEVOS ARRAYS INICIALES
-  planesMantenimiento: [],
-  tecnicos: [
-    // Técnico único de ARES
-    {
-      id: 'tecnico-ares-javier-lopez', // ID único pero compatible
-      nombre: 'Javier Lopez',
-      especialidades: ['Equipos Médicos Generales', 'Equipos de Imagen', 'Electromedicina', 'Ultrasonido', 'Monitores', 'Desfibriladores'],
-      disponibilidad: {
-        lunes: { inicio: '08:00', fin: '17:00', disponible: true },
-        martes: { inicio: '08:00', fin: '17:00', disponible: true },
-        miercoles: { inicio: '08:00', fin: '17:00', disponible: true },
-        jueves: { inicio: '08:00', fin: '17:00', disponible: true },
-        viernes: { inicio: '08:00', fin: '17:00', disponible: true },
-        sabado: { inicio: '08:00', fin: '12:00', disponible: false },
-        domingo: { inicio: '08:00', fin: '12:00', disponible: false }
-      },
-      activo: true
-    }
-  ],
-
-  // ===============================================
-  // FUNCIONES DE EQUIPOS
-  // ===============================================
-  addEquipo: async (equipoData: any) => {
-    try {
-      console.log('🔄 Agregando equipo manual...', equipoData);
-      
-      // Crear equipo en la base de datos
-      const equipoCreado = await createEquipo(equipoData);
-      
-      // Recargar todos los equipos para actualizar la lista
-      const equipos = await getAllEquipos();
-      set({ equipos });
-      
-      console.log('✅ Equipo agregado exitosamente y lista actualizada');
-      
-      return equipoCreado;
-    } catch (error) {
-      console.error('❌ Error adding equipo:', error);
-      throw error;
-    }
-  },
-
-  // ===============================================
-  // FUNCIONES DE MANTENIMIENTOS
-  // ===============================================
-  addMantenimiento: async (mantenimientoData: any) => {
-    try {
-      await createMantenimiento({
-        equipoId: mantenimientoData.equipoId,
-        componenteId: mantenimientoData.componenteId,
-        descripcion: mantenimientoData.descripcion,
-        estado: mantenimientoData.estado,
-        comentarios: mantenimientoData.comentarios,
-        archivo: mantenimientoData.archivo
-      })
-      
-      // Recargar mantenimientos
-      const mantenimientos = await getAllMantenimientos()
-      set({ mantenimientos })
-    } catch (error) {
-      console.error('Error adding mantenimiento:', error)
-      throw error
-    }
-  },
-
-  updateMantenimiento: async (id: string, updates: Partial<Mantenimiento>) => {
-    try {
-      await dbUpdateMantenimiento(id, updates)
-      
-      // Recargar mantenimientos para reflejar los cambios
-      const mantenimientos = await getAllMantenimientos()
-      set({ mantenimientos })
-      
-      console.log('✅ Mantenimiento actualizado exitosamente')
-    } catch (error) {
-      console.error('❌ Error updating mantenimiento:', error)
-      throw error
-    }
-  },
-
-  deleteMantenimiento: async (id: string) => {
-    try {
-      await dbDeleteMantenimiento(id)
-      
-      // Recargar mantenimientos para reflejar los cambios
-      const mantenimientos = await getAllMantenimientos()
-      set({ mantenimientos })
-      
-      console.log('✅ Mantenimiento eliminado exitosamente')
-    } catch (error) {
-      console.error('❌ Error deleting mantenimiento:', error)
-      throw error
-    }
-  },
-
-  updateComponente: async (equipoId: string, componenteId: string, updates: any) => {
-    try {
-      await dbUpdateComponente(componenteId, updates)
-      
-      // Recargar equipos para reflejar los cambios
-      const equipos = await getAllEquipos()
-      set({ equipos })
-      
-      console.log('✅ Componente actualizado exitosamente')
-    } catch (error) {
-      console.error('❌ Error updating componente:', error)
-      throw error
-    }
-  },
-
-  getMantenimientosByEquipo: (equipoId: string) => {
-    const { mantenimientos } = get();
-    return mantenimientos.filter((m) => m.equipoId === equipoId);
-  },
-
-  searchEquipos: (term: string) => {
-    const { equipos } = get();
-    if (!term.trim()) return equipos;
-    
-    const searchTerm = term.toLowerCase();
-    return equipos.filter(
-      (equipo) =>
-        equipo.cliente.toLowerCase().includes(searchTerm) ||
-        equipo.nombreEquipo.toLowerCase().includes(searchTerm) ||
-        equipo.numeroSerieBase.toLowerCase().includes(searchTerm) ||
-        equipo.marca.toLowerCase().includes(searchTerm) ||
-        equipo.modelo.toLowerCase().includes(searchTerm) ||
-        equipo.ubicacion.toLowerCase().includes(searchTerm) ||
-        equipo.componentes.some(comp => 
-          comp.nombre.toLowerCase().includes(searchTerm) ||
-          comp.numeroSerie.toLowerCase().includes(searchTerm)
-        )
-    );
-  },
-
-  // ===============================================
-  // FUNCIONES DE CARGAS DE MERCADERÍA
-  // ===============================================
-  generateCodigoCarga: async () => {
-    try {
-      return await dbGenerateCodigoCarga()
-    } catch (error) {
-      console.error('Error generating codigo carga:', error)
-      // Fallback local en caso de error
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const random = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
-      return `ENTRADA-${year}${month}${day}-${random}`;
-    }
-  },
-
-  addCargaMercaderia: async (cargaData: CargaMercaderiaFormData) => {
-    try {
-      const nuevaCarga = await createCargaMercaderia(cargaData)
-      
-      // Actualizar estado local
-      set((state) => ({
-        cargasMercaderia: [nuevaCarga, ...state.cargasMercaderia]
-      }))
-
-      // Recargar equipos (porque pueden haberse creado nuevos)
-      const equipos = await getAllEquipos()
-      set({ equipos })
-
-      return nuevaCarga
-    } catch (error) {
-      console.error('Error creating carga mercadería:', error)
-      throw error
-    }
-  },
-
-  getCargasMercaderia: () => {
-    const { cargasMercaderia } = get();
-    return cargasMercaderia.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  },
-
-  deleteCarga: async (cargaId: string) => {
-    try {
-      await deleteCargaMercaderia(cargaId)
-      
-      // Actualizar estado local
-      set((state) => ({
-        cargasMercaderia: state.cargasMercaderia.filter(carga => carga.id !== cargaId)
-      }))
-
-      console.log('✅ Carga eliminada del estado local')
-    } catch (error) {
-      console.error('❌ Error deleting carga:', error)
-      throw error
-    }
-  },
-
-  deleteEquipo: async (equipoId: string) => {
-    try {
-      await deleteEquipo(equipoId)
-      
-      // Actualizar estado local
-      set((state) => ({
-        equipos: state.equipos.filter(equipo => equipo.id !== equipoId),
-        mantenimientos: state.mantenimientos.filter(m => m.equipoId !== equipoId)
-      }))
-
-      console.log('✅ Equipo eliminado del estado local')
-    } catch (error) {
-      console.error('❌ Error deleting equipo:', error)
-      throw error
-    }
-  },
-
-  // ===============================================
-  // FUNCIONES DE INICIALIZACIÓN
-  // ===============================================
-  loadAllData: async () => {
-    try {
-      console.log('🔄 Cargando datos desde Supabase...')
-      
-      const [cargas, equipos, mantenimientos, componentes, historial] = await Promise.all([
-        getAllCargas(),
-        getAllEquipos(),
-        getAllMantenimientos(),
-        getAllComponentesDisponibles(),
-        dbGetHistorialAsignaciones()
-      ])
-
-      set({
-        cargasMercaderia: cargas,
-        equipos: equipos,
-        mantenimientos: mantenimientos,
-        componentesDisponibles: componentes,
-        historialAsignaciones: historial
-      })
-
-      console.log('✅ Datos cargados exitosamente:', {
-        cargas: cargas.length,
-        equipos: equipos.length,
-        mantenimientos: mantenimientos.length,
-        componentes: componentes.length,
-        asignaciones: historial.length
-      })
-    } catch (error) {
-      console.error('❌ Error loading data from Supabase:', error)
-      // Mantener datos locales como fallback si fallan
-    }
-  },
-
-  // ===============================================
-  // ESTADÍSTICAS DASHBOARD
-  // ===============================================
-  getEstadisticas: async () => {
-    try {
-      return await getEstadisticasDashboard()
-    } catch (error) {
-      console.error('Error getting estadísticas:', error)
-      // Fallback con datos locales
-      const { cargasMercaderia } = get()
-      const totalCargas = cargasMercaderia.length
-      const cargasHoy = cargasMercaderia.filter(
-        carga => carga.fechaIngreso === new Date().toISOString().split('T')[0]
-      ).length
-      const totalProductos = cargasMercaderia.reduce((acc, carga) => acc + carga.productos.length, 0)
-      const equiposMedicos = cargasMercaderia.reduce((acc, carga) => {
-        return acc + carga.productos.filter(producto => producto.tipoProducto === 'Equipo Médico').length
-      }, 0)
-
+    (set, get) => {
       return {
-        totalCargas,
-        cargasHoy,
-        totalProductos,
-        equiposMedicos
-      }
-    }
-  },
+        // Hydration state
+        isHydrated: false,
+        isDataLoaded: false, // 🎯 Flag para evitar cargas múltiples
+        equipos: [],
+        mantenimientos: [],
+        cargasMercaderia: [],
+        documentosCarga: [],
+        componentesDisponibles: [],
+        stockItems: [], // 🎯 NUEVO: Campo separado para stock general
+        movimientosStock: [], // 🎯 NUEVO: Para trazabilidad completa
+        historialAsignaciones: [],
+        remisiones: [],
+        clinicas: [],
+        transaccionesStock: [],
 
-  // ===============================================
-  // FUNCIONES DE INVENTARIO TÉCNICO
-  // ===============================================
-  loadInventarioTecnico: async () => {
-    try {
-      console.log('🔄 Cargando inventario técnico desde Supabase...')
-      
-      const [componentes, historial] = await Promise.all([
-        getAllComponentesDisponibles(),
-        dbGetHistorialAsignaciones()
-      ])
+        // 🆕 NUEVOS ARRAYS PARA CALENDARIO
+        planesMantenimiento: [],
+        tecnicos: [],
 
-      set({
-        componentesDisponibles: componentes,
-        historialAsignaciones: historial
-      })
+        // ===============================================
+        // FUNCIONES DE CARGA DE DATOS
+        // ===============================================
+        loadAllData: async () => {
+          const { isDataLoaded } = get();
+          
+          // 🎯 Evitar cargas múltiples
+          if (isDataLoaded) {
+            console.log('⚠️ Datos ya cargados, saltando carga...');
+            return;
+          }
+          
+          try {
+            console.log('🔄 Cargando todos los datos desde Supabase...');
+            set({ isDataLoaded: true }); // Marcar como cargado inmediatamente
+            
+            // Intentar cargar datos reales, si falla usar datos de prueba
+            let equipos = [];
+            let mantenimientos = [];
+            
+            try {
+              const [
+                cargas,
+                equiposDB,
+                mantenimientosDB,
+                componentes,
+                historial,
+                clinicas,
+                remisiones,
+                transacciones,
+                documentos,
+                stockItems,
+                movimientos
+              ] = await Promise.all([
+                getAllCargas(),
+                getAllEquipos(),
+                getAllMantenimientos(),
+                getAllComponentesDisponibles(),
+                dbGetHistorialAsignaciones(),
+                getAllClinicas(),
+                getAllRemisiones(),
+                getAllTransaccionesStock(),
+                getAllDocumentosCarga(),
+                getAllStockItems(),
+                getAllMovimientosStock()
+              ]);
 
-      console.log('✅ Inventario técnico cargado exitosamente:', {
-        componentes: componentes.length,
-        asignaciones: historial.length
-      })
-    } catch (error) {
-      console.error('❌ Error loading inventario técnico:', error)
-    }
-  },
+              equipos = equiposDB;
+              mantenimientos = mantenimientosDB;
 
-  asignarComponente: async (
-    componenteId: string, 
-    equipoId: string, 
-    cantidadAsignada: number, 
-    motivo: string, 
-    tecnicoResponsable?: string, 
-    observaciones?: string
-  ) => {
-    try {
-      await asignarComponenteAEquipo(
-        componenteId, 
-        equipoId, 
-        cantidadAsignada, 
-        motivo, 
-        tecnicoResponsable, 
-        observaciones
-      )
-      
-      // Recargar inventario técnico y equipos
-      const [componentes, historial, equipos] = await Promise.all([
-        getAllComponentesDisponibles(),
-        dbGetHistorialAsignaciones(),
-        getAllEquipos()
-      ])
+              set({
+                cargasMercaderia: cargas,
+                equipos: equipos,
+                mantenimientos: mantenimientos,
+                componentesDisponibles: componentes,
+                historialAsignaciones: historial,
+                clinicas: clinicas,
+                remisiones: remisiones,
+                transaccionesStock: transacciones,
+                documentosCarga: documentos,
+                stockItems: stockItems,
+                movimientosStock: movimientos
+              });
+            } catch (dbError) {
+              console.warn('⚠️ Error cargando desde DB, usando datos de prueba:', dbError);
+              
+              // 🎯 DATOS DE PRUEBA PARA DESARROLLO
+              const equiposPrueba = [
+                {
+                  id: 'equipo-demo-1',
+                  nombreEquipo: 'Ultraformer III - Demo',
+                  cliente: 'Clínica Estética Bella',
+                  ubicacion: 'Asunción - Centro',
+                  tipoEquipo: 'Equipo de Ultrasonido Estético',
+                  marca: 'Classys',
+                  modelo: 'Ultraformer III',
+                  numeroSerieBase: 'UF3-2024-001',
+                  fechaEntrega: '2024-01-15',
+                  accesorios: 'Transductores 4MHz y 7MHz, Pedal de control, Manual técnico',
+                  observaciones: 'Equipo de demostración para pruebas del sistema',
+                  componentes: [
+                    {
+                      id: 'comp-1',
+                      nombre: 'Transductor 4MHz',
+                      numeroSerie: 'T4-001',
+                      estado: 'Operativo',
+                      observaciones: 'Componente principal'
+                    },
+                    {
+                      id: 'comp-2',
+                      nombre: 'Transductor 7MHz',
+                      numeroSerie: 'T7-001',
+                      estado: 'Operativo',
+                      observaciones: 'Componente secundario'
+                    },
+                    {
+                      id: 'comp-3',
+                      nombre: 'Pedal de control',
+                      numeroSerie: 'P-001',
+                      estado: 'En reparacion',
+                      observaciones: 'Requiere revisión'
+                    }
+                  ]
+                },
+                {
+                  id: 'equipo-demo-2',
+                  nombreEquipo: 'Hydrafacial MD - Demo',
+                  cliente: 'Centro Dermatológico Premium',
+                  ubicacion: 'San Lorenzo',
+                  tipoEquipo: 'Equipo de Hidrodermabrasión',
+                  marca: 'HydraFacial',
+                  modelo: 'MD Elite',
+                  numeroSerieBase: 'HF-2024-002',
+                  fechaEntrega: '2024-01-20',
+                  accesorios: 'Punta Aqua Peel, Kit de limpieza, Serums incluidos',
+                  observaciones: 'Equipo demo con todos los accesorios',
+                  componentes: [
+                    {
+                      id: 'comp-4',
+                      nombre: 'Punta Aqua Peel',
+                      numeroSerie: 'AP-001',
+                      estado: 'Operativo',
+                      observaciones: 'Punta principal'
+                    },
+                    {
+                      id: 'comp-5',
+                      nombre: 'Bomba de succión',
+                      numeroSerie: 'BS-001',
+                      estado: 'Operativo',
+                      observaciones: 'Sistema de succión'
+                    }
+                  ]
+                }
+              ];
 
-      set({
-        componentesDisponibles: componentes,
-        historialAsignaciones: historial,
-        equipos: equipos
-      })
+              const mantenimientosPrueba = [
+                {
+                  id: 'mant-demo-1',
+                  equipoId: 'equipo-demo-1',
+                  componenteId: 'comp-3',
+                  fecha: '2024-01-22',
+                  descripcion: 'El pedal de control no responde correctamente',
+                  estado: 'Pendiente',
+                  comentarios: 'Revisar conexiones internas',
+                  reporteGenerado: false,
+                  precioServicio: undefined // Sin precio aún
+                },
+                {
+                  id: 'mant-demo-2',
+                  equipoId: 'equipo-demo-2',
+                  componenteId: 'comp-4',
+                  fecha: '2024-01-20',
+                  descripcion: 'Mantenimiento preventivo completado',
+                  estado: 'Finalizado',
+                  comentarios: 'Servicio completado exitosamente',
+                  reporteGenerado: true,
+                  precioServicio: 350000 // 💰 Precio de ejemplo para testing
+                },
+                {
+                  id: 'mant-demo-3',
+                  equipoId: 'equipo-demo-1',
+                  componenteId: 'comp-1',
+                  fecha: '2024-01-18',
+                  descripcion: 'Calibración de transductor',
+                  estado: 'Finalizado',
+                  comentarios: 'Calibración completada',
+                  reporteGenerado: true,
+                  precioServicio: 280000 // 💰 Otro precio de ejemplo
+                }
+              ];
 
-      console.log('✅ Componente asignado exitosamente')
-    } catch (error) {
-      console.error('❌ Error asignando componente:', error)
-      throw error
-    }
-  },
+              set({
+                equipos: equiposPrueba,
+                mantenimientos: mantenimientosPrueba,
+                cargasMercaderia: [],
+                componentesDisponibles: [],
+                historialAsignaciones: [],
+                clinicas: [],
+                remisiones: [],
+                transaccionesStock: [],
+                documentosCarga: [],
+                stockItems: [],
+                movimientosStock: []
+              });
+            }
+            
+            console.log('✅ Datos cargados exitosamente:', {
+              equipos: equipos.length,
+              mantenimientos: mantenimientos.length
+            });
+          } catch (error) {
+            console.error('❌ Error loading data:', error);
+          }
+        },
 
-  getComponentesDisponibles: () => {
-    const { componentesDisponibles } = get();
-    return componentesDisponibles.filter(comp => comp.estado === 'Disponible' && comp.cantidadDisponible > 0);
-  },
+        // ===============================================
+        // FUNCIONES DE STOCK GENERAL
+        // ===============================================
+        loadStock: async () => {
+          try {
+            console.log('🔄 Cargando stock general desde Supabase...');
+            const stockItems = await getAllStockItems();
+            set({
+              stockItems: stockItems
+            });
+            console.log('✅ Stock general cargado exitosamente:', {
+              items: stockItems.length
+            });
+          } catch (error) {
+            console.error('❌ Error loading stock:', error);
+          }
+        },
 
-  getHistorialAsignaciones: (componenteId?: string, equipoId?: string) => {
-    const { historialAsignaciones } = get();
-    
-    if (componenteId && equipoId) {
-      return historialAsignaciones.filter(asig => 
-        asig.componenteId === componenteId && asig.equipoId === equipoId
-      );
-    } else if (componenteId) {
-      return historialAsignaciones.filter(asig => asig.componenteId === componenteId);
-    } else if (equipoId) {
-      return historialAsignaciones.filter(asig => asig.equipoId === equipoId);
-    }
-    
-    return historialAsignaciones;
-  },
+        updateStockItem: async (itemId: string, nuevaCantidad: number, motivo: string) => {
+          try {
+            const { error } = await supabase
+              .from('componentes_disponibles')
+              .update({
+                cantidad_disponible: nuevaCantidad,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', itemId);
 
-  // 🆕 NUEVAS FUNCIONES PARA TÉCNICOS
-  loadTecnicos: async () => {
-    // En el futuro cargar desde Supabase
-    // Por ahora usamos los datos por defecto del store
-  },
+            if (error) throw error;
 
-  addTecnico: async (tecnico) => {
-    const nuevoTecnico: Tecnico = {
-      ...tecnico,
-      id: `tecnico-${Date.now()}`
-    };
-    
-    set((state) => ({
-      tecnicos: [...state.tecnicos, nuevoTecnico]
-    }));
-  },
+            // Recargar datos
+            await get().loadStock();
+            console.log('✅ Stock item actualizado exitosamente');
+          } catch (error) {
+            console.error('❌ Error updating stock item:', error);
+            throw error;
+          }
+        },
 
-  updateTecnico: async (id, updates) => {
-    set((state) => ({
-      tecnicos: state.tecnicos.map(tecnico =>
-        tecnico.id === id ? { ...tecnico, ...updates } : tecnico
-      )
-    }));
-  },
+        updateStockItemDetails: async (productId: string, updates: { imagen?: string; observaciones?: string }) => {
+          try {
+            const { updateStockItemDetails } = await import('@/lib/database');
 
-  getTecnicosDisponibles: () => {
-    return get().tecnicos.filter(tecnico => tecnico.activo);
-  },
+            // Actualizar solo en componentes_disponibles (donde están los datos reales)
+            await updateStockItemDetails(productId, updates);
 
-  // 🆕 FUNCIONES PARA PLANES DE MANTENIMIENTO
-  loadPlanesMantenimiento: async () => {
-    // En el futuro cargar desde Supabase
-  },
+            // Recargar datos
+            await Promise.all([
+              get().loadStock(),
+              get().loadInventarioTecnico()
+            ]);
 
-  addPlanMantenimiento: async (plan) => {
-    const nuevoPlan: PlanMantenimiento = {
-      ...plan,
-      id: `plan-${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
-    
-    set((state) => ({
-      planesMantenimiento: [...state.planesMantenimiento, nuevoPlan]
-    }));
-  },
+            console.log('✅ Detalles del producto actualizados exitosamente');
+          } catch (error) {
+            console.error('❌ Error updating product details:', error);
+            throw error;
+          }
+        },
 
-  // 🆕 FUNCIONES PARA MANTENIMIENTOS PROGRAMADOS
-  addMantenimientoProgramado: async (mantenimiento) => {
-    try {
-      // Usar la función createMantenimiento para que Supabase genere el UUID
-      await createMantenimiento({
-        equipoId: mantenimiento.equipoId,
-        descripcion: mantenimiento.descripcion,
-        estado: 'Pendiente'
-      });
-      
-      // Recargar mantenimientos desde la base de datos
-      const mantenimientos = await getAllMantenimientos();
-      set({ mantenimientos });
-      
-      console.log('✅ Mantenimiento programado creado exitosamente');
-    } catch (error) {
-      console.error('❌ Error creating mantenimiento programado:', error);
-      throw error;
-    }
-  },
+        createStockItemManual: async (itemData: {
+          nombre: string;
+          marca: string;
+          modelo?: string;
+          tipoComponente: 'Insumo' | 'Repuesto' | 'Equipo Médico' | 'Accesorio';
+          numeroSerie?: string;
+          cantidad: number;
+          cantidadMinima: number;
+          ubicacionFisica?: string;
+          observaciones?: string;
+          imagen?: string;
+        }) => {
+          try {
+            console.log('🔄 Creando item de stock manual...', itemData);
 
-  getMantenimientosProgramados: () => {
-    return get().mantenimientos.filter(m => 
-      m.tipo === 'Preventivo' || m.esProgramado
-    );
-  },
+            // Determinar ubicación física automáticamente si no se proporciona
+            let ubicacionFinal = itemData.ubicacionFisica;
+            if (!ubicacionFinal) {
+              // Usar la misma lógica que el sistema automático
+              const { determinarUbicacionPorMarca } = await import('@/lib/stock-flow');
+              ubicacionFinal = determinarUbicacionPorMarca(itemData.marca, 'stock');
+            }
 
-  getMantenimientosByTecnico: (tecnico) => {
-    return get().mantenimientos.filter(m => 
-      m.tecnicoAsignado === tecnico
-    );
-  },
+            // Generar código único para el item
+            const codigoItem = `MANUAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  getMantenimientosVencidos: () => {
-    const hoy = new Date();
-    return get().mantenimientos.filter(m => {
-      if (m.estado === 'Finalizado') return false;
-      const fechaMantenimiento = new Date(m.fechaProgramada || m.fecha);
-      return fechaMantenimiento < hoy;
-    });
-  },
-    }),
+            // Crear el item en la base de datos
+            const { data: nuevoItem, error } = await supabase
+              .from('stock_items')
+              .insert({
+                codigo_item: codigoItem,
+                nombre: itemData.nombre,
+                marca: itemData.marca,
+                modelo: itemData.modelo || '',
+                numero_serie: itemData.numeroSerie || null,
+                cantidad_actual: itemData.cantidad,
+                cantidad_minima: itemData.cantidadMinima,
+                estado: 'Disponible',
+                observaciones: itemData.observaciones || null,
+                codigo_carga_origen: codigoItem,
+                fecha_ingreso: new Date().toISOString().split('T')[0]
+              })
+              .select()
+              .single();
+
+            if (error) throw error;
+
+            // Registrar movimiento para trazabilidad
+            await supabase
+              .from('movimientos_stock')
+              .insert({
+                item_id: nuevoItem.id,
+                producto_nombre: itemData.nombre,
+                producto_marca: itemData.marca,
+                producto_modelo: itemData.modelo || null,
+                tipo_movimiento: 'Entrada',
+                cantidad: itemData.cantidad,
+                cantidad_anterior: 0,
+                cantidad_nueva: itemData.cantidad,
+                motivo: 'Creación manual',
+                responsable: 'Sistema',
+                carpeta_destino: itemData.marca,
+                ubicacion_destino: ubicacionFinal,
+                observaciones: `Item creado manualmente: ${itemData.observaciones || ''}`
+              });
+
+            // Recargar datos
+            await Promise.all([
+              get().loadStock(),
+              get().loadMovimientosStock()
+            ]);
+
+            console.log('✅ Item de stock manual creado exitosamente:', nuevoItem);
+            return nuevoItem;
+          } catch (error) {
+            console.error('❌ Error creating manual stock item:', error);
+            throw error;
+          }
+        },
+
+        getEstadisticasStockGeneral: () => {
+          const { stockItems } = get();
+
+          const totalProductos = stockItems.length;
+          const productosConStockBajo = stockItems.filter(item =>
+            item.cantidadDisponible <= 5 && item.cantidadDisponible > 0
+          ).length;
+
+          return {
+            totalProductos,
+            productosConStockBajo,
+            entradasMes: 0,
+            salidasMes: 0
+          };
+        },
+
+        // ===============================================
+        // FUNCIONES DE TRAZABILIDAD Y MOVIMIENTOS
+        // ===============================================
+        loadMovimientosStock: async () => {
+          try {
+            console.log('🔄 Cargando movimientos de stock desde Supabase...');
+            const movimientos = await getAllMovimientosStock();
+            set({ movimientosStock: movimientos });
+            console.log('✅ Movimientos de stock cargados exitosamente:', movimientos.length);
+          } catch (error) {
+            console.error('❌ Error loading movimientos stock:', error);
+          }
+        },
+
+        getMovimientosByProducto: async (productoNombre: string, productoMarca?: string) => {
+          try {
+            return await getMovimientosByProducto(productoNombre, productoMarca);
+          } catch (error) {
+            console.error('❌ Error getting movimientos by producto:', error);
+            return [];
+          }
+        },
+
+        getMovimientosByCarpeta: async (carpeta: string) => {
+          try {
+            return await getMovimientosByCarpeta(carpeta);
+          } catch (error) {
+            console.error('❌ Error getting movimientos by carpeta:', error);
+            return [];
+          }
+        },
+
+        getEstadisticasTrazabilidad: async () => {
+          try {
+            return await getEstadisticasTrazabilidad();
+          } catch (error) {
+            console.error('❌ Error getting estadísticas trazabilidad:', error);
+            return {
+              totalMovimientos: 0,
+              movimientosHoy: 0,
+              movimientosMes: 0,
+              entradas: { total: 0, mes: 0, valorTotal: 0 },
+              salidas: { total: 0, mes: 0, valorTotal: 0 },
+              ajustes: { total: 0, mes: 0 },
+              productosConMasMovimientos: [],
+              carpetasConMasActividad: []
+            };
+          }
+        },
+
+        registrarSalidaStock: async (salidaData: {
+          itemId: string;
+          productoNombre: string;
+          productoMarca?: string;
+          productoModelo?: string;
+          cantidad: number;
+          cantidadAnterior: number;
+          motivo: string;
+          destino: string;
+          responsable: string;
+          cliente?: string;
+          numeroFactura?: string;
+          observaciones?: string;
+          carpetaOrigen?: string;
+        }) => {
+          try {
+            await registrarSalidaStock(salidaData);
+
+            // Recargar datos
+            await Promise.all([
+              get().loadStock(),
+              get().loadMovimientosStock()
+            ]);
+
+            console.log('✅ Salida de stock registrada exitosamente');
+          } catch (error) {
+            console.error('❌ Error registrando salida stock:', error);
+            throw error;
+          }
+        },
+
+        getEstadisticasPorCarpeta: (carpeta: string) => {
+          const { movimientosStock } = get();
+
+          const movimientosCarpeta = movimientosStock.filter(mov =>
+            mov.carpetaOrigen === carpeta || mov.carpetaDestino === carpeta
+          );
+
+          const entradas = movimientosCarpeta.filter(mov => mov.tipoMovimiento === 'Entrada');
+          const salidas = movimientosCarpeta.filter(mov => mov.tipoMovimiento === 'Salida');
+
+          return {
+            totalMovimientos: movimientosCarpeta.length,
+            entradas: {
+              total: entradas.length,
+              cantidad: entradas.reduce((sum, mov) => sum + mov.cantidad, 0),
+              valorTotal: entradas.reduce((sum, mov) => sum + (mov.valorTotal || 0), 0)
+            },
+            salidas: {
+              total: salidas.length,
+              cantidad: salidas.reduce((sum, mov) => sum + mov.cantidad, 0),
+              valorTotal: salidas.reduce((sum, mov) => sum + (mov.valorTotal || 0), 0)
+            },
+            productosUnicos: [...new Set(movimientosCarpeta.map(mov => mov.productoNombre))].length,
+            ultimoMovimiento: movimientosCarpeta[0]?.fechaMovimiento || null
+          };
+        },
+
+        // ===============================================
+        // FUNCIONES BÁSICAS (SIMPLIFICADAS)
+        // ===============================================
+        addEquipo: async (equipoData: any) => {
+          try {
+            console.log('🔄 Agregando equipo manual...', equipoData);
+            const equipoCreado = await createEquipo(equipoData);
+            const equipos = await getAllEquipos();
+            set({ equipos });
+            console.log('✅ Equipo agregado exitosamente y lista actualizada');
+            return equipoCreado;
+          } catch (error) {
+            console.error('❌ Error adding equipo:', error);
+            throw error;
+          }
+        },
+
+        addCargaMercaderia: async (cargaData: CargaMercaderiaFormData) => {
+          try {
+            const nuevaCarga = await createCargaMercaderia(cargaData);
+            const cargas = await getAllCargas();
+            set({ cargasMercaderia: cargas });
+            return nuevaCarga;
+          } catch (error) {
+            console.error('Error adding carga mercadería:', error);
+            throw error;
+          }
+        },
+
+        getCargasMercaderia: () => {
+          const { cargasMercaderia } = get();
+          return cargasMercaderia.sort((a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        },
+
+        generateCodigoCarga: async () => {
+          try {
+            return await dbGenerateCodigoCarga();
+          } catch (error) {
+            console.error('Error generating codigo carga:', error);
+            const timestamp = Date.now();
+            const random = String(Math.floor(timestamp % 999) + 1).padStart(3, '0');
+            return `ENTRADA-FALLBACK-${random}`;
+          }
+        },
+
+        deleteCarga: async (cargaId: string) => {
+          try {
+            await deleteCargaMercaderia(cargaId);
+            const cargas = await getAllCargas();
+            set({ cargasMercaderia: cargas });
+            console.log('✅ Carga eliminada exitosamente');
+          } catch (error) {
+            console.error('❌ Error deleting carga:', error);
+            throw error;
+          }
+        },
+
+        deleteEquipo: async (equipoId: string) => {
+          try {
+            await deleteEquipo(equipoId);
+            const equipos = await getAllEquipos();
+            set({ equipos });
+            console.log('✅ Equipo eliminado exitosamente');
+          } catch (error) {
+            console.error('❌ Error deleting equipo:', error);
+            throw error;
+          }
+        },
+
+        getEstadisticas: async () => {
+          try {
+            return await getEstadisticasDashboard();
+          } catch (error) {
+            console.error('Error getting estadísticas:', error);
+            const { cargasMercaderia } = get();
+            const totalCargas = cargasMercaderia.length;
+            const cargasHoy = cargasMercaderia.filter(
+              carga => carga.fechaIngreso === new Date().toISOString().split('T')[0]
+            ).length;
+            const totalProductos = cargasMercaderia.reduce((acc, carga) => acc + carga.productos.length, 0);
+            const equiposMedicos = cargasMercaderia.reduce((acc, carga) => {
+              return acc + carga.productos.filter(producto => producto.tipoProducto === 'Equipo Médico').length;
+            }, 0);
+            return {
+              totalCargas,
+              cargasHoy,
+              totalProductos,
+              equiposMedicos
+            };
+          }
+        },
+
+        // ===============================================
+        // FUNCIONES DE INVENTARIO TÉCNICO
+        // ===============================================
+        loadInventarioTecnico: async () => {
+          try {
+            console.log('🔄 Cargando inventario técnico desde Supabase...');
+            const [componentes, historial] = await Promise.all([
+              getAllComponentesDisponibles(),
+              dbGetHistorialAsignaciones()
+            ]);
+            set({
+              componentesDisponibles: componentes,
+              historialAsignaciones: historial
+            });
+            console.log('✅ Inventario técnico cargado exitosamente:', {
+              componentes: componentes.length,
+              asignaciones: historial.length
+            });
+          } catch (error) {
+            console.error('❌ Error loading inventario técnico:', error);
+          }
+        },
+
+        asignarComponente: async (
+          componenteId: string,
+          equipoId: string,
+          cantidadAsignada: number,
+          motivo: string,
+          tecnicoResponsable?: string,
+          observaciones?: string
+        ) => {
+          try {
+            await asignarComponenteAEquipo(
+              componenteId,
+              equipoId,
+              cantidadAsignada,
+              motivo,
+              tecnicoResponsable,
+              observaciones
+            );
+            const [componentes, historial, equipos] = await Promise.all([
+              getAllComponentesDisponibles(),
+              dbGetHistorialAsignaciones(),
+              getAllEquipos()
+            ]);
+            set({
+              componentesDisponibles: componentes,
+              historialAsignaciones: historial,
+              equipos: equipos
+            });
+            console.log('✅ Componente asignado exitosamente');
+          } catch (error) {
+            console.error('❌ Error asignando componente:', error);
+            throw error;
+          }
+        },
+
+        getComponentesDisponibles: () => {
+          const { componentesDisponibles } = get();
+          return componentesDisponibles.filter(comp => comp.estado === 'Disponible' && comp.cantidadDisponible > 0);
+        },
+
+        getHistorialAsignaciones: (componenteId?: string, equipoId?: string) => {
+          const { historialAsignaciones } = get();
+          if (componenteId && equipoId) {
+            return historialAsignaciones.filter(asig =>
+              asig.componenteId === componenteId && asig.equipoId === equipoId
+            );
+          } else if (componenteId) {
+            return historialAsignaciones.filter(asig => asig.componenteId === componenteId);
+          } else if (equipoId) {
+            return historialAsignaciones.filter(asig => asig.equipoId === equipoId);
+          }
+          return historialAsignaciones;
+        },
+
+        // ===============================================
+        // HYDRATION FUNCTIONS
+        // ===============================================
+        setHydrated: () => {
+          set({ isHydrated: true });
+        },
+
+        // ===============================================
+        // FUNCIONES DE AUTENTICACIÓN
+        // ===============================================
+        usuarios: [],
+        sesionActual: null,
+
+        loadUsuarios: async () => {
+          try {
+            console.log('🔄 Cargando usuarios desde Supabase...');
+            const { data, error } = await supabase
+              .from('sistema_usuarios')
+              .select('*')
+              .eq('activo', true)
+              .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const usuarios = data.map(user => ({
+              id: user.id,
+              nombre: user.nombre,
+              email: user.email,
+              rol: user.rol as Usuario['rol'],
+              activo: user.activo,
+              ultimoAcceso: user.ultimo_acceso,
+              createdAt: user.created_at,
+              updatedAt: user.updated_at
+            }));
+
+            set({ usuarios });
+            console.log('✅ Usuarios cargados exitosamente:', usuarios.length);
+          } catch (error) {
+            console.error('❌ Error loading usuarios:', error);
+          }
+        },
+
+        login: async (email: string, password: string) => {
+          try {
+            console.log('🔄 Intentando login...', { email });
+
+            // Buscar usuario en la base de datos
+            const { data, error } = await supabase
+              .from('sistema_usuarios')
+              .select('*')
+              .eq('email', email)
+              .eq('activo', true)
+              .single();
+
+            if (error || !data) {
+              throw new Error('Usuario no encontrado o inactivo');
+            }
+
+            // En un sistema real, aquí verificarías el password hash
+            // Por ahora, aceptamos cualquier password para la demo
+
+            const usuario: Usuario = {
+              id: data.id,
+              nombre: data.nombre,
+              email: data.email,
+              rol: data.rol as Usuario['rol'],
+              activo: data.activo,
+              ultimoAcceso: data.ultimo_acceso,
+              createdAt: data.created_at,
+              updatedAt: data.updated_at
+            };
+
+            // Actualizar último acceso
+            await supabase
+              .from('sistema_usuarios')
+              .update({ ultimo_acceso: new Date().toISOString() })
+              .eq('id', data.id);
+
+            // Crear sesión
+            const sesion: SesionUsuario = {
+              usuario: usuario,
+              token: `token-${Date.now()}`,
+              fechaInicio: new Date().toISOString(),
+              activa: true
+            };
+
+            set({ sesionActual: sesion });
+            console.log('✅ Login exitoso:', usuario.nombre, 'Rol:', usuario.rol);
+
+            return sesion;
+          } catch (error) {
+            console.error('❌ Error en login:', error);
+            throw error;
+          }
+        },
+
+        logout: () => {
+          set({ sesionActual: null });
+          console.log('✅ Logout exitoso');
+        },
+
+        getCurrentUser: () => {
+          const { sesionActual } = get();
+          return sesionActual?.usuario || null;
+        },
+
+        getUserPermissions: (rol: Usuario['rol']) => {
+          // Definición de permisos por rol según los requerimientos
+          const permisos: Record<Usuario['rol'], PermisosRol> = {
+            super_admin: {
+              // Super Admin: Acceso completo a todo
+              dashboard: { leer: true, escribir: true },
+              equipos: { leer: true, escribir: true },
+              inventarioTecnico: { leer: true, escribir: true },
+              calendario: { leer: true, escribir: true },
+              mercaderias: { leer: true, escribir: true },
+              documentos: { leer: true, escribir: true },
+              remisiones: { leer: true, escribir: true },
+              facturacion: { leer: true, escribir: true },
+              archivos: { leer: true, escribir: true },
+              tareas: { leer: true, escribir: true },
+              clinicas: { leer: true, escribir: true },
+              stock: { leer: true, escribir: true },
+              reportes: { leer: true, escribir: true },
+              configuracion: { leer: true, escribir: true }
+            },
+            contabilidad: {
+              // Contabilidad: Facturación, archivos, gestión documental, clínicas, tareas
+              dashboard: { leer: true, escribir: false },
+              equipos: { leer: false, escribir: false },
+              inventarioTecnico: { leer: false, escribir: false },
+              calendario: { leer: false, escribir: false },
+              mercaderias: { leer: false, escribir: false },
+              documentos: { leer: true, escribir: true },
+              remisiones: { leer: false, escribir: false },
+              facturacion: { leer: true, escribir: true },
+              archivos: { leer: true, escribir: true },
+              tareas: { leer: true, escribir: true },
+              clinicas: { leer: true, escribir: true },
+              stock: { leer: false, escribir: false },
+              reportes: { leer: true, escribir: false },
+              configuracion: { leer: false, escribir: false }
+            },
+            tecnico: {
+              // Técnico: Dashboard (solo lectura), equipos (solo lectura), inventario técnico (solo lectura), calendario
+              dashboard: { leer: true, escribir: false },
+              equipos: { leer: true, escribir: false },
+              inventarioTecnico: { leer: true, escribir: false },
+              calendario: { leer: true, escribir: true },
+              mercaderias: { leer: false, escribir: false },
+              documentos: { leer: false, escribir: false },
+              remisiones: { leer: false, escribir: false },
+              facturacion: { leer: false, escribir: false },
+              archivos: { leer: false, escribir: false },
+              tareas: { leer: false, escribir: false },
+              clinicas: { leer: false, escribir: false },
+              stock: { leer: false, escribir: false },
+              reportes: { leer: false, escribir: false },
+              configuracion: { leer: false, escribir: false }
+            }
+          };
+
+          return permisos[rol] || permisos.tecnico;
+        },
+
+        hasPermission: (modulo: keyof PermisosRol) => {
+          const usuario = get().getCurrentUser();
+          if (!usuario) return false;
+
+          const permisos = get().getUserPermissions(usuario.rol);
+          return permisos[modulo]?.leer || false;
+        },
+
+        hasWritePermission: (modulo: keyof PermisosRol) => {
+          const usuario = get().getCurrentUser();
+          if (!usuario) return false;
+
+          const permisos = get().getUserPermissions(usuario.rol);
+          return permisos[modulo]?.escribir || false;
+        },
+
+        // ===============================================
+        // FUNCIONES BÁSICAS REQUERIDAS POR LOS TIPOS
+        // ===============================================
+        addMantenimiento: async (mantenimientoData: any) => {
+          try {
+            const nuevoMantenimiento = await createMantenimiento(mantenimientoData);
+            set((state) => ({
+              mantenimientos: [...state.mantenimientos, nuevoMantenimiento]
+            }));
+            return nuevoMantenimiento;
+          } catch (error) {
+            console.error('Error al crear mantenimiento:', error);
+            throw error;
+          }
+        },
+        updateMantenimiento: async (mantenimientoId: string, updates: any) => {
+          try {
+            await dbUpdateMantenimiento(mantenimientoId, updates);
+            const mantenimientos = await getAllMantenimientos();
+            set({ mantenimientos });
+            console.log('✅ Mantenimiento actualizado exitosamente');
+          } catch (error) {
+            console.error('❌ Error updating mantenimiento:', error);
+            throw error;
+          }
+        },
+        
+        deleteMantenimiento: async (mantenimientoId: string) => {
+          try {
+            await dbDeleteMantenimiento(mantenimientoId);
+            const mantenimientos = await getAllMantenimientos();
+            set({ mantenimientos });
+            console.log('✅ Mantenimiento eliminado exitosamente');
+          } catch (error) {
+            console.error('❌ Error deleting mantenimiento:', error);
+            throw error;
+          }
+        },
+        
+        updateComponente: async (equipoId: string, componenteId: string, updates: any) => {
+          try {
+            // La función dbUpdateComponente solo necesita componenteId y updates
+            await dbUpdateComponente(componenteId, updates);
+            const equipos = await getAllEquipos();
+            set({ equipos });
+            console.log('✅ Componente actualizado exitosamente');
+          } catch (error) {
+            console.error('❌ Error updating componente:', error);
+            throw error;
+          }
+        },
+        
+        getMantenimientosByEquipo: (equipoId: string) => {
+          const { mantenimientos } = get();
+          return mantenimientos.filter(m => m.equipoId === equipoId);
+        },
+        
+        searchEquipos: (searchTerm: string) => {
+          const { equipos } = get();
+          const term = searchTerm.toLowerCase();
+          return equipos.filter(equipo =>
+            equipo.nombreEquipo.toLowerCase().includes(term) ||
+            equipo.cliente.toLowerCase().includes(term) ||
+            equipo.ubicacion.toLowerCase().includes(term) ||
+            equipo.marca.toLowerCase().includes(term) ||
+            equipo.modelo.toLowerCase().includes(term) ||
+            equipo.numeroSerieBase.toLowerCase().includes(term)
+          );
+        },
+        loadTecnicos: async () => { },
+        addTecnico: async () => { },
+        updateTecnico: async () => { },
+        getTecnicosDisponibles: () => [],
+        loadPlanesMantenimiento: async () => { },
+        addPlanMantenimiento: async () => { },
+        addMantenimientoProgramado: async () => { },
+        getMantenimientosProgramados: () => [],
+        getMantenimientosByTecnico: () => [],
+        getMantenimientosVencidos: () => [],
+        loadClinicas: async () => {
+          try {
+            console.log('🔄 Cargando clínicas desde Supabase...');
+            const clinicas = await getAllClinicas();
+            set({ clinicas });
+            console.log('✅ Clínicas cargadas exitosamente:', clinicas.length);
+          } catch (error) {
+            console.error('❌ Error loading clínicas:', error);
+          }
+        },
+        addClinica: async (clinicaData: Omit<Clinica, 'id' | 'createdAt' | 'updatedAt'>) => {
+          try {
+            const nuevaClinica = await createClinica(clinicaData);
+            const clinicas = await getAllClinicas();
+            set({ clinicas });
+            console.log('✅ Clínica agregada exitosamente');
+            return nuevaClinica;
+          } catch (error) {
+            console.error('❌ Error adding clínica:', error);
+            throw error;
+          }
+        },
+        updateClinica: async (id: string, updates: Partial<Clinica>) => {
+          try {
+            await updateClinica(id, updates);
+            const clinicas = await getAllClinicas();
+            set({ clinicas });
+            console.log('✅ Clínica actualizada exitosamente');
+          } catch (error) {
+            console.error('❌ Error updating clínica:', error);
+            throw error;
+          }
+        },
+        deleteClinica: async (id: string) => {
+          try {
+            await deleteClinica(id);
+            const clinicas = await getAllClinicas();
+            set({ clinicas });
+            console.log('✅ Clínica eliminada exitosamente');
+          } catch (error) {
+            console.error('❌ Error deleting clínica:', error);
+            throw error;
+          }
+        },
+        getClinicas: () => {
+          const { clinicas } = get();
+          return clinicas || [];
+        },
+        getClinicasActivas: () => {
+          const { clinicas } = get();
+          return (clinicas || []).filter(c => c.activa);
+        },
+        loadTransaccionesStock: async () => { },
+        addTransaccionStock: async () => { },
+        getTransaccionesStock: () => [],
+        getTransaccionesByComponente: () => [],
+        getEstadisticasStock: () => ({
+          totalProductos: 0,
+          productosConStockBajo: 0,
+          transaccionesHoy: 0,
+          entradasMes: 0,
+          salidasMes: 0,
+          valorTotalStock: 0
+        }),
+        procesarSalidaStock: async (
+          itemId: string | null,
+          stockItemId: string | null,
+          cantidad: number,
+          motivo: string,
+          numeroRemision?: string,
+          numeroFactura?: string,
+          cliente?: string
+        ) => {
+          try {
+            console.log('🔄 Procesando salida de stock...', {
+              itemId,
+              stockItemId,
+              cantidad,
+              motivo,
+              numeroRemision,
+              cliente
+            });
+
+            // Determinar si es del inventario técnico o stock general
+            if (itemId) {
+              // Es del inventario técnico (componentes_disponibles)
+              const componente = get().componentesDisponibles.find(c => c.id === itemId);
+              if (componente) {
+                await get().registrarSalidaStock({
+                  itemId: itemId,
+                  productoNombre: componente.nombre,
+                  productoMarca: componente.marca,
+                  productoModelo: componente.modelo,
+                  cantidad: cantidad,
+                  cantidadAnterior: componente.cantidadDisponible,
+                  motivo: motivo,
+                  destino: cliente || 'Cliente',
+                  responsable: 'Sistema - Remisión',
+                  cliente: cliente,
+                  numeroFactura: numeroFactura,
+                  observaciones: `Remisión: ${numeroRemision || 'N/A'}`,
+                  carpetaOrigen: componente.marca
+                });
+
+                // Actualizar cantidad en componentes_disponibles
+                const nuevaCantidad = Math.max(0, componente.cantidadDisponible - cantidad);
+                await supabase
+                  .from('componentes_disponibles')
+                  .update({
+                    cantidad_disponible: nuevaCantidad,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', itemId);
+              }
+            } else if (stockItemId) {
+              // Es del stock general (stock_items)
+              const stockItem = get().stockItems.find(s => s.id === stockItemId);
+              if (stockItem) {
+                await get().registrarSalidaStock({
+                  itemId: stockItemId,
+                  productoNombre: stockItem.nombre,
+                  productoMarca: stockItem.marca,
+                  productoModelo: stockItem.modelo,
+                  cantidad: cantidad,
+                  cantidadAnterior: stockItem.cantidadDisponible,
+                  motivo: motivo,
+                  destino: cliente || 'Cliente',
+                  responsable: 'Sistema - Remisión',
+                  cliente: cliente,
+                  numeroFactura: numeroFactura,
+                  observaciones: `Remisión: ${numeroRemision || 'N/A'}`,
+                  carpetaOrigen: stockItem.marca
+                });
+
+                // Actualizar cantidad en stock_items
+                const nuevaCantidad = Math.max(0, stockItem.cantidadDisponible - cantidad);
+                await supabase
+                  .from('stock_items')
+                  .update({
+                    cantidad_actual: nuevaCantidad,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', stockItemId);
+              }
+            }
+
+            // Recargar inventarios
+            await Promise.all([
+              get().loadInventarioTecnico(),
+              get().loadStock(),
+              get().loadMovimientosStock()
+            ]);
+
+            console.log('✅ Salida de stock procesada exitosamente');
+          } catch (error) {
+            console.error('❌ Error procesando salida stock:', error);
+            throw error;
+          }
+        },
+        loadRemisiones: async () => {
+          try {
+            console.log('🔄 Cargando remisiones desde Supabase...');
+            const remisiones = await getAllRemisiones();
+            set({ remisiones });
+            console.log('✅ Remisiones cargadas exitosamente:', remisiones.length);
+          } catch (error) {
+            console.error('❌ Error loading remisiones:', error);
+          }
+        },
+        addRemision: async (remisionData: any) => {
+          try {
+            console.log('🔄 Creando nueva remisión...', remisionData);
+            const nuevaRemision = await createRemision(remisionData);
+
+            // Recargar la lista de remisiones después de crear
+            const remisiones = await getAllRemisiones();
+            set({ remisiones });
+
+            console.log('✅ Remisión creada exitosamente:', nuevaRemision);
+            return nuevaRemision;
+          } catch (error) {
+            console.error('❌ Error creating remisión:', error);
+            throw error;
+          }
+        },
+        updateRemision: async (id: string, updates: any) => {
+          try {
+            console.log('🔄 Actualizando remisión...', { id, updates });
+            await updateRemision(id, updates);
+
+            // Recargar la lista de remisiones después de actualizar
+            const remisiones = await getAllRemisiones();
+            set({ remisiones });
+
+            console.log('✅ Remisión actualizada exitosamente');
+          } catch (error) {
+            console.error('❌ Error updating remisión:', error);
+            throw error;
+          }
+        },
+        deleteRemision: async (id: string) => {
+          try {
+            console.log('🔄 Eliminando remisión...', id);
+            await deleteRemision(id);
+
+            // Recargar la lista de remisiones después de eliminar
+            const remisiones = await getAllRemisiones();
+            set({ remisiones });
+
+            console.log('✅ Remisión eliminada exitosamente');
+          } catch (error) {
+            console.error('❌ Error deleting remisión:', error);
+            throw error;
+          }
+        },
+        getRemisiones: () => {
+          const { remisiones } = get();
+          return remisiones.sort((a, b) =>
+            new Date(b.createdAt || b.fecha).getTime() - new Date(a.createdAt || a.fecha).getTime()
+          );
+        },
+        getRemisionesByCliente: (cliente: string) => {
+          const { remisiones } = get();
+          return remisiones.filter(r => r.cliente === cliente);
+        },
+        generateNumeroRemision: async () => {
+          try {
+            return await generateNumeroRemision();
+          } catch (error) {
+            console.error('❌ Error generating numero remision:', error);
+            // Fallback: generar número local
+            const timestamp = Date.now();
+            const random = String(Math.floor(timestamp % 999) + 1).padStart(3, '0');
+            return `REM-${random}`;
+          }
+        },
+        loadDocumentosCarga: async () => { },
+        addDocumentoCarga: async () => { return {} as any; },
+        deleteDocumentoCarga: async () => { },
+        getDocumentosByCarga: () => [],
+        getCargasConDocumentos: () => []
+      };
+    },
     {
-      name: 'ares-app-store',
+      name: 'app-store',
       partialize: (state) => ({
-        equipos: state.equipos,
-        mantenimientos: state.mantenimientos,
-        cargasMercaderia: state.cargasMercaderia,
-        componentesDisponibles: state.componentesDisponibles,
-        historialAsignaciones: state.historialAsignaciones,
+        sesionActual: state.sesionActual,
         planesMantenimiento: state.planesMantenimiento,
-        tecnicos: state.tecnicos,
-      }),
+        tecnicos: state.tecnicos
+      })
     }
   )
 );
 
-export { useAppStore };
-
-// Hook para cargar datos al inicializar la app
-export const useInitializeApp = () => {
-  const loadAllData = useAppStore(state => state.loadAllData)
-  
-  return {
-    loadAllData
-  }
-}
-
-// 🎯 Función simple para filtrar componentes marcados manualmente para Servicio Técnico
-const filtrarComponentesParaServicioTecnico = (subitems: any[] = []) => {
-  // Simplemente filtrar los que están marcados como "paraServicioTecnico"
-  return subitems.filter(subitem => subitem.paraServicioTecnico === true);
-};
-
-// 🎯 Función para verificar si un producto principal está marcado para servicio técnico
-const esProductoParaServicioTecnico = (producto: ProductoCarga) => {
-  return producto.paraServicioTecnico === true;
-};
-
-// Función actualizada para envío inteligente al módulo de Servicio Técnico
-export const addEquipoAlServicioTecnico = (producto: ProductoCarga, carga: CargaMercaderia) => {
-  // 🔧 CASO ESPECIAL: Si el tipo de carga es "reparacion", enviar directamente al inventario técnico como "En reparación"
-  if (carga.tipoCarga === 'reparacion') {
-    console.log('🔧 Procesando entrada de REPARACIÓN - enviando al inventario técnico con estado "En reparación"');
-    // TODO: Implementar lógica para enviar directamente al inventario técnico
-    // Por ahora, continuamos con la lógica normal pero marcamos que es reparación
-  }
-  
-  // 🎯 NUEVO: Verificar si es equipo médico O producto marcado manualmente para servicio técnico
-  if (producto.tipoProducto === 'Equipo Médico' || esProductoParaServicioTecnico(producto)) {
-    // 🔧 Filtrar solo componentes que realmente necesitan servicio técnico
-    const componentesParaServicio = filtrarComponentesParaServicioTecnico(producto.subitems);
-    
-    // Crear lista de accesorios no técnicos para información
-    const accesoriosGenerales = producto.subitems?.filter(subitem => 
-      !componentesParaServicio.some(comp => comp.id === subitem.id)
-    ) || [];
-
-    // Convertir el producto de la carga a formato de equipo para el módulo de servicio técnico
-    const equipoParaServicio: EquipoFormData = {
-      cliente: carga.destino.split(' - ')[0] || carga.destino,
-      ubicacion: carga.destino,
-      nombreEquipo: `${producto.producto}-${carga.codigoCarga}`,
-      tipoEquipo: producto.producto,
-      marca: producto.marca,
-      modelo: producto.modelo,
-      numeroSerieBase: producto.numeroSerie || 'SIN-SERIE',
-      componentes: [
-        {
-          nombre: 'Equipo Principal',
-          numeroSerie: producto.numeroSerie || 'SIN-SERIE',
-          estado: 'Operativo' as const,
-          observaciones: `Cantidad: ${producto.cantidad}. ${producto.observaciones || ''}. ${esProductoParaServicioTecnico(producto) ? '🎯 Marcado manualmente para servicio técnico' : ''}`
-        },
-        // 🎯 Solo componentes filtrados que necesitan mantenimiento
-        ...componentesParaServicio.map(componente => ({
-          nombre: componente.nombre,
-          numeroSerie: componente.numeroSerie || 'SIN-SERIE', // 🔧 Manejar números de serie opcionales
-          estado: 'Operativo' as const,
-          observaciones: `Cantidad: ${componente.cantidad}. Componente técnico que requiere mantenimiento.`
-        }))
-      ],
-      // Incluir todos los accesorios como información, pero no como componentes
-      accesorios: [
-        ...componentesParaServicio.map(c => c.nombre),
-        ...(accesoriosGenerales.length > 0 ? [`📋 Accesorios adicionales: ${accesoriosGenerales.map(a => a.nombre).join(', ')}`] : [])
-      ].join(', ') || 'Sin accesorios específicos',
-      fechaEntrega: carga.fechaIngreso,
-      observaciones: `${producto.tipoProducto === 'Equipo Médico' ? '🤖 Enviado automáticamente' : '🎯 Marcado manualmente'} desde Mercaderías. Código: ${carga.codigoCarga}. 
-      🔧 Componentes técnicos: ${componentesParaServicio.length}
-      📦 Accesorios generales: ${accesoriosGenerales.length}
-      ${carga.observacionesGenerales || ''} ${producto.observaciones || ''}`,
-    };
-
-    // Simular el envío al store (en producción esto sería una API call)
-    useAppStore.getState().addEquipo(equipoParaServicio);
-    
-    console.log('✅ Producto enviado al Servicio Técnico:', {
-      tipo: producto.tipoProducto === 'Equipo Médico' ? 'Automático (Equipo Médico)' : 'Manual (Marcado)',
-      codigoCarga: carga.codigoCarga,
-      producto: producto.producto,
-      destino: carga.destino,
-      totalSubitems: producto.subitems?.length || 0,
-      componentesMarcados: componentesParaServicio.length,
-      accesoriosGenerales: accesoriosGenerales.length,
-      componentesEnviados: componentesParaServicio.map(c => c.nombre)
-    });
-  }
-}; 
+export default useAppStore;

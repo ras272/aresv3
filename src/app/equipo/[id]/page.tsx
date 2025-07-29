@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { usePermissions } from '@/components/PermissionGuard';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ export default function EquipoDetailPage() {
   const equipoId = params.id as string;
   
   const { equipos, addMantenimiento, updateMantenimiento, deleteMantenimiento, updateComponente, getMantenimientosByEquipo } = useAppStore();
+  const { getCurrentUser } = usePermissions();
   const [showNewMantenimiento, setShowNewMantenimiento] = useState(false);
   const [selectedComponenteId, setSelectedComponenteId] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -66,6 +68,10 @@ export default function EquipoDetailPage() {
 
   const equipo = equipos.find(e => e.id === equipoId);
   const mantenimientos = getMantenimientosByEquipo(equipoId);
+  
+  // 🎯 Verificar si el usuario actual es técnico
+  const currentUser = getCurrentUser();
+  const esTecnico = currentUser?.rol === 'tecnico';
 
   const {
     register,
@@ -307,8 +313,11 @@ export default function EquipoDetailPage() {
       setReporteGenerado(reporteGenerado);
       setReporteListo(true);
       
-      // Marcar el mantenimiento como que ya tiene reporte generado
-      await updateMantenimiento(selectedMantenimiento.id, { reporteGenerado: true });
+      // Marcar el mantenimiento como que ya tiene reporte generado y guardar el precio
+      await updateMantenimiento(selectedMantenimiento.id, { 
+        reporteGenerado: true,
+        precioServicio: parseFloat(precioServicio) || 0
+      });
       
       toast.success('¡Reporte generado exitosamente con IA!', {
         description: 'El reporte profesional está listo para descargar'
