@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,86 +8,43 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, LogIn, User, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+import { useAuthState } from '@/hooks/useAuth';
 
-// 🔥 SISTEMA SIMPLE SIN BUCLES
-const USUARIOS_DEMO = {
-  'superadmin@arestech.com': {
-    password: 'admin123',
-    user: {
-      id: '1',
-      email: 'superadmin@arestech.com',
-      name: 'Super Administrador',
-      role: 'super_admin'
-    }
-  },
-  'contabilidad@arestech.com': {
-    password: 'conta123',
-    user: {
-      id: '2',
-      email: 'contabilidad@arestech.com',
-      name: 'María González - Contabilidad',
-      role: 'contabilidad'
-    }
-  },
-  'tecnico@arestech.com': {
-    password: 'tecnico123',
-    user: {
-      id: '3',
-      email: 'tecnico@arestech.com',
-      name: 'Javier López - Técnico',
-      role: 'tecnico'
-    }
-  }
-};
+interface LoginRealProps {
+  onSuccess?: () => void;
+}
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function LoginReal({ onSuccess }: LoginRealProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  const { login, loading } = useAuthState();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     if (!email || !password) {
       setError('Por favor completa todos los campos');
-      setLoading(false);
       return;
     }
 
     try {
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const result = await login(email, password);
       
-      const userRecord = USUARIOS_DEMO[email as keyof typeof USUARIOS_DEMO];
-      
-      if (!userRecord || userRecord.password !== password) {
-        setError('Email o contraseña incorrectos');
-        setLoading(false);
-        return;
+      if (result.success) {
+        onSuccess?.();
+      } else {
+        setError(result.error || 'Error de autenticación');
       }
-
-      // Guardar usuario en localStorage
-      localStorage.setItem('ares_current_user', JSON.stringify(userRecord.user));
-      
-      toast.success('Login exitoso');
-      
-      // Redirigir después de un pequeño delay
-      setTimeout(() => {
-        router.push('/');
-      }, 100);
-      
     } catch (error) {
       setError('Error interno del sistema');
-      setLoading(false);
     }
   };
 
+  // Usuarios de ejemplo para mostrar
   const usuariosEjemplo = [
     { email: 'superadmin@arestech.com', password: 'admin123', rol: 'Super Admin' },
     { email: 'contabilidad@arestech.com', password: 'conta123', rol: 'Contabilidad' },
@@ -183,7 +139,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Usuarios de ejemplo */}
+            {/* Usuarios de ejemplo para desarrollo */}
             <div className="mt-6 pt-4 border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center mb-3">
                 👤 Usuarios de prueba:

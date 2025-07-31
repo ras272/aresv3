@@ -54,6 +54,196 @@ export default function Dashboard() {
   const mantenimientosEnProceso = mantenimientos.filter(m => m.estado === 'En proceso');
   const mantenimientosFinalizados = mantenimientos.filter(m => m.estado === 'Finalizado');
 
+  // 🔥 CÁLCULOS REALES PARA KPIs EJECUTIVOS
+  const calcularKPIsReales = () => {
+    // 💰 Ingresos del mes actual
+    const fechaActual = new Date();
+    const inicioMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
+    
+    const mantenimientosMesActual = mantenimientos.filter(m => {
+      const fechaMantenimiento = new Date(m.fecha);
+      return fechaMantenimiento >= inicioMes && m.estado === 'Finalizado' && m.precioServicio;
+    });
+    
+    const ingresosMesActual = mantenimientosMesActual.reduce((total, m) => total + (m.precioServicio || 0), 0);
+    
+    // 💰 Ingresos del mes anterior para comparación
+    const inicioMesAnterior = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - 1, 1);
+    const finMesAnterior = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 0);
+    
+    const mantenimientosMesAnterior = mantenimientos.filter(m => {
+      const fechaMantenimiento = new Date(m.fecha);
+      return fechaMantenimiento >= inicioMesAnterior && fechaMantenimiento <= finMesAnterior && 
+             m.estado === 'Finalizado' && m.precioServicio;
+    });
+    
+    const ingresosMesAnterior = mantenimientosMesAnterior.reduce((total, m) => total + (m.precioServicio || 0), 0);
+    const crecimientoIngresos = ingresosMesAnterior > 0 ? 
+      ((ingresosMesActual - ingresosMesAnterior) / ingresosMesAnterior * 100) : 0;
+
+    // 📊 Satisfacción del cliente (basada en mantenimientos sin reclamos)
+    const mantenimientosUltimos30Dias = mantenimientos.filter(m => {
+      const fechaMantenimiento = new Date(m.fecha);
+      const hace30Dias = new Date();
+      hace30Dias.setDate(hace30Dias.getDate() - 30);
+      return fechaMantenimiento >= hace30Dias && m.estado === 'Finalizado';
+    });
+    
+    // Asumimos que si no hay observaciones negativas = satisfacción alta
+    const mantenimientosSinProblemas = mantenimientosUltimos30Dias.filter(m => 
+      !m.observaciones || !m.observaciones.toLowerCase().includes('reclamo') &&
+      !m.observaciones.toLowerCase().includes('problema') &&
+      !m.observaciones.toLowerCase().includes('falla')
+    );
+    
+    const satisfaccionPromedio = mantenimientosUltimos30Dias.length > 0 ? 
+      (mantenimientosSinProblemas.length / mantenimientosUltimos30Dias.length * 5) : 4.5;
+
+    // ⚡ Eficiencia operativa (tareas completadas a tiempo)
+    const mantenimientosConFecha = mantenimientos.filter(m => m.fechaCompletado && m.fecha);
+    const mantenimientosATiempo = mantenimientosConFecha.filter(m => {
+      const fechaProgramada = new Date(m.fecha);
+      const fechaCompletada = new Date(m.fechaCompletado);
+      // Consideramos "a tiempo" si se completó el mismo día o antes
+      return fechaCompletada <= fechaProgramada;
+    });
+    
+    const eficienciaOperativa = mantenimientosConFecha.length > 0 ? 
+      (mantenimientosATiempo.length / mantenimientosConFecha.length * 100) : 95;
+
+    // 🏥 Clientes únicos
+    const clientesUnicos = new Set(equipos.map(e => e.cliente)).size;
+
+    return {
+      ingresosMesActual,
+      crecimientoIngresos,
+      satisfaccionPromedio,
+      eficienciaOperativa,
+      clientesUnicos
+    };
+  };
+
+  const kpis = calcularKPIsReales();
+
+  // 🚨 GENERAR ALERTAS CRÍTICAS REALES
+  const generarAlertasReales = () => {
+    const alertas = [];
+
+    // 🔍 Buscar clientes con múltiples mantenimientos recientes
+    const clientesConProblemas = {};
+    const hace7Dias = new Date();
+    hace7Dias.setDate(hace7Dias.getDate() - 7);
+
+    mantenimientos.forEach(m => {
+      if (new Date(m.fecha) >= hace7Dias) {
+        const equipo = equipos.find(e => e.id === m.equipoId);
+        if (equipo) {
+          if (!clientesConProblemas[equipo.cliente]) {
+            clientesConProblemas[equipo.cliente] = [];
+          }
+          clientesConProblemas[equipo.cliente].push(m);
+        }
+      }
+    });
+
+    // Cliente con múltiples mantenimientos
+    Object.entries(clientesConProblemas).forEach(([cliente, mantenimientosCliente]) => {
+      if (mantenimientosCliente.length >= 2) {
+        alertas.push({
+          tipo: 'cliente_riesgo',
+          titulo: cliente,
+          descripcion: `${mantenimientosCliente.length} servicios en 7 días - Revisar satisfacción`,
+          color: 'red',
+          accion: () => {
+            toast.info(`Análisis de ${cliente}`, {
+              description: `${mantenimientosCliente.length} servicios recientes. Contactar para feedback.`
+            });
+          }
+        });
+      }
+    });
+
+    // 🔧 Buscar equipos con múltiples fallas
+    const equiposProblematicos = {};
+    const hace30Dias = new Date();
+    hace30Dias.setDate(hace30Dias.getDate() - 30);
+
+    mantenimientos.forEach(m => {
+      if (new Date(m.fecha) >= hace30Dias && m.estado === 'Finalizado') {
+        if (!equiposProblematicos[m.equipoId]) {
+          equiposProblematicos[m.equipoId] = [];
+        }
+        equiposProblematicos[m.equipoId].push(m);
+      }
+    });
+
+    Object.entries(equiposProblematicos).forEach(([equipoId, mantenimientosEquipo]) => {
+      if (mantenimientosEquipo.length >= 3) {
+        const equipo = equipos.find(e => e.id === equipoId);
+        if (equipo) {
+          alertas.push({
+            tipo: 'equipo_problematico',
+            titulo: `${equipo.nombreEquipo} - ${equipo.numeroSerie}`,
+            descripcion: `${mantenimientosEquipo.length} fallas en 30 días - Requiere análisis`,
+            color: 'yellow',
+            accion: () => router.push(`/equipo/${equipoId}`)
+          });
+        }
+      }
+    });
+
+    // 📦 Buscar equipos fuera de servicio (stock crítico)
+    const equiposCriticos = equipos.filter(e => 
+      e.componentes?.some(c => c.estado === 'Fuera de servicio')
+    );
+
+    if (equiposCriticos.length > 0) {
+      alertas.push({
+        tipo: 'equipos_criticos',
+        titulo: 'Equipos Fuera de Servicio',
+        descripcion: `${equiposCriticos.length} equipo${equiposCriticos.length > 1 ? 's' : ''} requiere${equiposCriticos.length === 1 ? '' : 'n'} atención inmediata`,
+        color: 'orange',
+        accion: () => {
+          const equipo = equiposCriticos[0];
+          router.push(`/equipo/${equipo.id}`);
+          toast.info(`Equipo crítico: ${equipo.nombreEquipo}`, {
+            description: `Cliente: ${equipo.cliente}`
+          });
+        }
+      });
+    }
+
+    // 📅 Mantenimientos vencidos
+    const hoy = new Date();
+    const mantenimientosVencidos = mantenimientos.filter(m => {
+      const fechaMantenimiento = new Date(m.fecha);
+      return fechaMantenimiento < hoy && m.estado === 'Pendiente';
+    });
+
+    if (mantenimientosVencidos.length > 0) {
+      alertas.push({
+        tipo: 'mantenimientos_vencidos',
+        titulo: 'Mantenimientos Vencidos',
+        descripcion: `${mantenimientosVencidos.length} tarea${mantenimientosVencidos.length > 1 ? 's' : ''} vencida${mantenimientosVencidos.length > 1 ? 's' : ''} - Reprogramar urgente`,
+        color: 'red',
+        accion: () => {
+          const mantenimiento = mantenimientosVencidos[0];
+          const equipo = equipos.find(e => e.id === mantenimiento.equipoId);
+          if (equipo) {
+            router.push(`/equipo/${equipo.id}`);
+            toast.warning(`Mantenimiento vencido: ${equipo.nombreEquipo}`, {
+              description: `Vencido desde: ${new Date(mantenimiento.fecha).toLocaleDateString()}`
+            });
+          }
+        }
+      });
+    }
+
+    return alertas.slice(0, 3); // Máximo 3 alertas
+  };
+
+  const alertasReales = generarAlertasReales();
+
   // Función para ir al equipo específico
   const irAlEquipo = (equipoId: string) => {
     router.push(`/equipo/${equipoId}`);
@@ -599,49 +789,94 @@ export default function Dashboard() {
               transition={{ delay: 0.3 }}
               className="grid grid-cols-2 lg:grid-cols-4 gap-4"
             >
-              {/* Ingresos del Mes */}
-              <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
+              {/* Ingresos del Mes - DATOS REALES */}
+              <Card 
+                className="p-6 bg-gradient-to-br from-green-50 to-emerald-100 border-green-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => router.push('/reportes')}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-green-700">Ingresos del Mes</p>
-                    <p className="text-2xl font-bold text-green-800">₲ 45.2M</p>
-                    <p className="text-xs text-green-600">+12% vs mes anterior</p>
+                    <p className="text-2xl font-bold text-green-800">
+                      {kpis.ingresosMesActual > 0 
+                        ? `₲ ${kpis.ingresosMesActual.toLocaleString('es-PY')}`
+                        : '₲ 0'
+                      }
+                    </p>
+                    <p className={`text-xs ${kpis.crecimientoIngresos >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {kpis.crecimientoIngresos >= 0 ? '+' : ''}{kpis.crecimientoIngresos.toFixed(1)}% vs mes anterior
+                    </p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-green-600" />
                 </div>
               </Card>
 
-              {/* Equipos Activos */}
-              <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              {/* Equipos Activos - DATOS REALES */}
+              <Card 
+                className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => router.push('/equipos')}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-700">Equipos Activos</p>
                     <p className="text-2xl font-bold text-blue-800">{equipos.length}</p>
-                    <p className="text-xs text-blue-600">En {new Set(equipos.map(e => e.cliente)).size} clientes</p>
+                    <p className="text-xs text-blue-600">En {kpis.clientesUnicos} clientes</p>
                   </div>
                   <Heart className="h-8 w-8 text-blue-600" />
                 </div>
               </Card>
 
-              {/* Satisfacción Cliente */}
-              <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              {/* Satisfacción Cliente - DATOS REALES */}
+              <Card 
+                className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => {
+                  toast.info('Análisis de Satisfacción', {
+                    description: `Basado en ${mantenimientos.filter(m => {
+                      const fecha = new Date(m.fecha);
+                      const hace30Dias = new Date();
+                      hace30Dias.setDate(hace30Dias.getDate() - 30);
+                      return fecha >= hace30Dias && m.estado === 'Finalizado';
+                    }).length} servicios de los últimos 30 días`
+                  });
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-purple-700">Satisfacción</p>
-                    <p className="text-2xl font-bold text-purple-800">4.8/5</p>
-                    <p className="text-xs text-purple-600">Promedio últimos 30 días</p>
+                    <p className="text-2xl font-bold text-purple-800">
+                      {kpis.satisfaccionPromedio.toFixed(1)}/5
+                    </p>
+                    <p className="text-xs text-purple-600">Basado en servicios sin reclamos</p>
                   </div>
                   <CheckCircle className="h-8 w-8 text-purple-600" />
                 </div>
               </Card>
 
-              {/* Eficiencia Operativa */}
-              <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+              {/* Eficiencia Operativa - DATOS REALES */}
+              <Card 
+                className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => {
+                  const tareasATiempo = mantenimientos.filter(m => {
+                    if (!m.fechaCompletado || !m.fecha) return false;
+                    const fechaProgramada = new Date(m.fecha);
+                    const fechaCompletada = new Date(m.fechaCompletado);
+                    return fechaCompletada <= fechaProgramada;
+                  }).length;
+                  
+                  const totalTareas = mantenimientos.filter(m => m.fechaCompletado && m.fecha).length;
+                  
+                  toast.info('Eficiencia Operativa', {
+                    description: `${tareasATiempo} de ${totalTareas} tareas completadas a tiempo`
+                  });
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-orange-700">Eficiencia</p>
-                    <p className="text-2xl font-bold text-orange-800">94%</p>
-                    <p className="text-xs text-orange-600">Tareas a tiempo</p>
+                    <p className="text-2xl font-bold text-orange-800">
+                      {kpis.eficienciaOperativa.toFixed(0)}%
+                    </p>
+                    <p className="text-xs text-orange-600">Tareas completadas a tiempo</p>
                   </div>
                   <Clock className="h-8 w-8 text-orange-600" />
                 </div>
@@ -662,44 +897,59 @@ export default function Dashboard() {
                   Alertas Críticas
                 </h3>
                 <div className="space-y-3">
-                  {/* Cliente con múltiples reclamos */}
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-red-800">Clínica Estética Bella</p>
-                        <p className="text-sm text-red-600">3 reclamos en 7 días - Riesgo de pérdida</p>
-                      </div>
-                      <Button size="sm" variant="outline" className="text-red-700 border-red-300">
-                        Revisar
-                      </Button>
+                  {alertasReales.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">¡Todo bajo control!</h4>
+                      <p className="text-gray-600">No hay alertas críticas en este momento</p>
                     </div>
-                  </div>
+                  ) : (
+                    alertasReales.map((alerta, index) => {
+                      const colorClasses = {
+                        red: 'bg-red-50 border-red-200 text-red-800 border-red-300',
+                        yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800 border-yellow-300',
+                        orange: 'bg-orange-50 border-orange-200 text-orange-800 border-orange-300'
+                      };
 
-                  {/* Equipo problemático */}
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-yellow-800">Ultraformer III - Serie UF3-2024-001</p>
-                        <p className="text-sm text-yellow-600">5 fallas en 30 días - Requiere análisis</p>
-                      </div>
-                      <Button size="sm" variant="outline" className="text-yellow-700 border-yellow-300">
-                        Analizar
-                      </Button>
-                    </div>
-                  </div>
+                      const buttonClasses = {
+                        red: 'text-red-700 border-red-300 hover:bg-red-100',
+                        yellow: 'text-yellow-700 border-yellow-300 hover:bg-yellow-100',
+                        orange: 'text-orange-700 border-orange-300 hover:bg-orange-100'
+                      };
 
-                  {/* Stock crítico */}
-                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-orange-800">Stock Crítico</p>
-                        <p className="text-sm text-orange-600">Transductores 4MHz: Solo 2 unidades</p>
-                      </div>
-                      <Button size="sm" variant="outline" className="text-orange-700 border-orange-300">
-                        Ordenar
-                      </Button>
-                    </div>
-                  </div>
+                      return (
+                        <motion.div
+                          key={`${alerta.tipo}-${index}`}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className={`p-3 rounded-lg border ${colorClasses[alerta.color as keyof typeof colorClasses]}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className={`font-medium ${alerta.color === 'red' ? 'text-red-800' : alerta.color === 'yellow' ? 'text-yellow-800' : 'text-orange-800'}`}>
+                                {alerta.titulo}
+                              </p>
+                              <p className={`text-sm ${alerta.color === 'red' ? 'text-red-600' : alerta.color === 'yellow' ? 'text-yellow-600' : 'text-orange-600'}`}>
+                                {alerta.descripcion}
+                              </p>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className={buttonClasses[alerta.color as keyof typeof buttonClasses]}
+                              onClick={alerta.accion}
+                            >
+                              {alerta.tipo === 'cliente_riesgo' && 'Contactar'}
+                              {alerta.tipo === 'equipo_problematico' && 'Revisar'}
+                              {alerta.tipo === 'equipos_criticos' && 'Atender'}
+                              {alerta.tipo === 'mantenimientos_vencidos' && 'Reprogramar'}
+                            </Button>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  )}
                 </div>
               </Card>
 
@@ -876,27 +1126,7 @@ export default function Dashboard() {
               </Card>
             </motion.div>
 
-            {/* 📈 Gráfico de Tendencias (Placeholder) */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <TrendingUp className="h-5 w-5 text-blue-500 mr-2" />
-                  Tendencias del Negocio
-                </h3>
-                <div className="h-64 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <TrendingUp className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-                    <p className="text-lg font-medium text-gray-700">Gráficos de Tendencias</p>
-                    <p className="text-sm text-gray-500">Ingresos, reclamos y eficiencia por mes</p>
-                    <p className="text-xs text-gray-400 mt-2">Próximamente: Integración con Chart.js</p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
+
           </div>
         )}
 

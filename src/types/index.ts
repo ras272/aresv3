@@ -38,6 +38,16 @@ export interface Mantenimiento {
   reporteGenerado?: boolean;
   precioServicio?: number; // 💰 Precio del servicio en guaraníes (se completa al generar reporte)
   
+  // 🔧 REPUESTOS UTILIZADOS EN EL SERVICIO
+  repuestosUtilizados?: Array<{
+    id: string;
+    nombre: string;
+    marca: string;
+    modelo: string;
+    cantidad: number;
+    stockAntes: number;
+  }>;
+  
   // 📋 TRACKING DE FACTURACIÓN EXTERNA
   estadoFacturacion?: 'Pendiente' | 'Facturado' | 'Enviado'; // Estado del proceso de facturación
   numeroFacturaExterna?: string; // Número de factura del sistema externo
@@ -437,6 +447,33 @@ export interface AppState {
     numeroFactura?: string;
     observaciones?: string;
     carpetaOrigen?: string;
+  }) => Promise<void>;
+
+  // 🎯 NUEVAS FUNCIONES HÍBRIDAS PARA REPORTES DE SERVICIO TÉCNICO
+  registrarSalidaStockReporte: (salidaData: {
+    itemId: string;
+    productoNombre: string;
+    productoMarca?: string;
+    productoModelo?: string;
+    cantidad: number;
+    cantidadAnterior: number;
+    mantenimientoId?: string;
+    equipoId?: string;
+    tecnicoResponsable?: string;
+    observaciones?: string;
+  }) => Promise<void>;
+
+  devolverRepuestosAlStockReporte: (devolucionData: {
+    itemId: string;
+    productoNombre: string;
+    productoMarca?: string;
+    productoModelo?: string;
+    cantidad: number;
+    cantidadAnterior: number;
+    mantenimientoId?: string;
+    equipoId?: string;
+    tecnicoResponsable?: string;
+    observaciones?: string;
   }) => Promise<void>;
   getEstadisticasPorCarpeta: (carpeta: string) => {
     totalMovimientos: number;

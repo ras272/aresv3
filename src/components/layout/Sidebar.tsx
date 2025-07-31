@@ -18,7 +18,8 @@ import {
   BarChart3,
   HardDrive,
   CheckSquare,
-  MessageCircle
+  MessageCircle,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -116,21 +117,52 @@ const navigation = [
     icon: MessageCircle,
     permission: 'reportes' as const,
   },
+  {
+    name: 'Usuarios',
+    href: '/usuarios',
+    icon: Users,
+    permission: 'usuarios' as const,
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { hasPermission, hasWritePermission, getCurrentUser } = useAppStore();
+  
+  // 🔧 Usar el sistema de autenticación real
+  const canAccess = (permission: string) => {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const savedUser = localStorage.getItem('ares_current_user');
+      if (!savedUser) return false;
+      
+      const user = JSON.parse(savedUser);
+      if (!user) return false;
+
+      // Super admin puede todo
+      if (user.role === 'super_admin') return true;
+
+      // Definir permisos por rol
+      const permissions = {
+        admin: ['dashboard', 'equipos', 'inventario', 'reportes', 'stock', 'remisiones', 'usuarios', 'calendario', 'inventarioTecnico', 'mercaderias', 'documentos', 'archivos', 'tareas', 'clinicas'],
+        gerente: ['dashboard', 'equipos', 'inventario', 'reportes', 'stock', 'remisiones', 'calendario', 'inventarioTecnico', 'mercaderias', 'documentos', 'archivos', 'clinicas'],
+        contabilidad: ['dashboard', 'reportes', 'remisiones', 'archivos', 'clinicas', 'documentos', 'tareas'],
+        tecnico: ['dashboard', 'equipos', 'inventario', 'calendario', 'inventarioTecnico', 'reportes', 'stock'],
+        vendedor: ['dashboard', 'equipos', 'reportes', 'remisiones', 'clinicas', 'mercaderias'],
+        cliente: ['dashboard', 'equipos']
+      };
+
+      const userPermissions = permissions[user.role as keyof typeof permissions] || [];
+      return userPermissions.includes(permission);
+    } catch {
+      return false;
+    }
+  };
   
   // Filtrar navegación según permisos del usuario
   const filteredNavigation = navigation.filter(item => {
-    // Verificar permiso de lectura básico
-    if (!hasPermission(item.permission)) return false;
-    
-    // Si requiere permisos de escritura, verificar también eso
-    if (item.requiresWrite && !hasWritePermission(item.permission)) return false;
-    
-    return true;
+    // Verificar permiso usando el sistema de auth real
+    return canAccess(item.permission);
   });
 
   return (

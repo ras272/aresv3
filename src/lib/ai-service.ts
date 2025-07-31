@@ -1,5 +1,5 @@
-// Servicio de IA para generar reportes técnicos profesionales
-// Usando Groq (gratis y muy rápido)
+// 🤖 Servicio de IA MEJORADO para generar reportes técnicos profesionales
+// Integrado con base de conocimiento de Ares Paraguay
 
 interface ReporteContext {
   equipo: {
@@ -37,16 +37,26 @@ class AIReporteService {
   }
 
   async generarReporte(context: ReporteContext): Promise<string> {
+    console.log('🚀 INICIANDO GENERACIÓN DE REPORTE');
+    console.log('📋 Contexto:', {
+      equipo: context.equipo.marca + ' ' + context.equipo.modelo,
+      cliente: context.equipo.cliente,
+      textoInformal: context.textoInformal
+    });
+
     if (!this.apiKey) {
-      // Fallback a simulación si no hay API key
-      return this.generarReporteSimulado(context);
+      console.log('⚠️  NO HAY API KEY - USANDO SISTEMA LOCAL');
+      return this.generarReporteLocal(context);
     }
 
+    console.log('🔑 API KEY ENCONTRADA - INTENTANDO USAR GROK API');
+
     try {
-      const prompt = this.construirPromptProfesional(context);
+      // 🚀 USAR PROMPT SIMPLE Y DIRECTO PARA GROK
+      const promptSimple = this.construirPromptProfesional(context);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(this.baseURL, {
         method: 'POST',
@@ -58,12 +68,16 @@ class AIReporteService {
           model: 'llama3-8b-8192',
           messages: [
             {
+              role: 'system',
+              content: this.getSystemPrompt()
+            },
+            {
               role: 'user', 
-              content: `${this.getSystemPrompt()}\n\n${prompt}`
+              content: promptSimple
             }
           ],
-          temperature: 0.3,
-          max_tokens: 800
+          temperature: 0.2, // Más determinístico para reportes técnicos
+          max_tokens: 800 // Suficiente para el párrafo técnico
         }),
         signal: controller.signal
       });
@@ -77,51 +91,62 @@ class AIReporteService {
       }
 
       const data = await response.json();
-      console.log('Groq Response:', data); // Para debug
+      console.log('🤖 Groq Response:', data);
       const reporteGenerado = data.choices[0]?.message?.content;
       
-      return this.formatearReporteFinal(context, reporteGenerado);
+      if (!reporteGenerado) {
+        console.error('❌ No se recibió contenido de Grok');
+        throw new Error('No content received from Grok');
+      }
+
+      console.log('✅ REPORTE GENERADO POR GROK API:', reporteGenerado);
+      
+      // 🧹 LIMPIAR RESPUESTA DE GROK (remover markdown y formato estructurado)
+      const reporteLimpio = this.limpiarRespuestaGrok(reporteGenerado);
+      console.log('🧹 REPORTE LIMPIADO:', reporteLimpio);
+      console.log('🎯 FORMATEANDO REPORTE CON DATOS DE GROK');
+      
+      // 🎯 USAR EL FORMATO ORIGINAL DE ARES
+      const reporteFinal = this.formatearReporteFinal(context, reporteLimpio);
+      console.log('🏆 REPORTE FINAL COMPLETADO - FUENTE: GROK API');
+      return reporteFinal;
 
     } catch (error) {
-      console.error('Error con Groq API:', error);
+      console.error('❌ ERROR CON GROQ API:', error);
+      console.log('🔄 FALLBACK - USANDO SISTEMA LOCAL');
       
-      // Verificar tipo de error
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          console.log('Timeout - usando simulación');
-        } else {
-          console.log('Error API - usando simulación:', error.message);
-        }
-      }
-      
-      // Fallback a simulación
-      return this.generarReporteSimulado(context);
+      // 🔄 Fallback al sistema local
+      return this.generarReporteLocal(context);
     }
   }
 
   private getSystemPrompt(): string {
-    return `Eres un ingeniero especializado en equipos médicos estéticos de ARES Paraguay.
+    return `Eres un ingeniero técnico senior de ARES Paraguay. Tu trabajo es transformar descripciones informales de técnicos en UN SOLO PÁRRAFO técnico profesional.
 
-Debes generar ÚNICAMENTE la sección "Trabajo Realizado" de un reporte técnico profesional siguiendo el formato corporativo de ARES.
+IMPORTANTE: 
+- Responde ÚNICAMENTE con el párrafo técnico
+- NO uses markdown, NO uses títulos, NO uses secciones
+- NO menciones el nombre del cliente o clínica (esa info ya está en el encabezado)
+- NO repitas información del equipo que ya está en el encabezado
+- Enfócate SOLO en los procedimientos técnicos realizados
 
-FORMATO EXACTO REQUERIDO:
-- Un solo párrafo continuo y fluido
-- Lenguaje técnico profesional
-- Descripción del problema encontrado
-- Procedimientos realizados paso a paso
-- Solución aplicada y resultado final
-- Sin listas numeradas ni viñetas
-- Sin títulos ni encabezados
+TRANSFORMACIONES OBLIGATORIAS:
+- "bastante polvo" → "acumulación significativa de residuos particulados"
+- "se sopletea" → "aplicación de aire comprimido especializado"
+- "se limpian ventiladores" → "mantenimiento de ventiladores con lubricación de rodamientos"
+- "se limpia radiador" → "limpieza del intercambiador de calor con solventes dieléctricos"
+- "refrigerante al ¼" → "sistema de refrigeración con nivel crítico (25% de capacidad)"
+- "paleta rajada" → "deterioro estructural en componente lateral"
+- "se recarga" → "recarga con refrigerante certificado según especificaciones"
+- "se calibra pantalla" → "calibración del sistema de interfaz táctil con verificación de precisión"
 
-EJEMPLO DE ESTILO:
-"Se verificó el equipo y se encontró muy sucio tanto por fuera como por dentro, con los aplicadores visiblemente manchados de suciedad. Al probar la funcionalidad del equipo, apareció un error relacionado con el reservorio. Se abrió el equipo y se revisaron todas las conexiones, encontrando que las mangueras del circuito de succión de residuos estaban muy sucias. Al verificar el sensor de nivel de residuos, se comprobó que no funcionaba. Se realizó una conexión interna para evitar que el controlador verifique el nivel de residuos, y esta solución funcionó. El equipo quedó funcionando correctamente y a disposición del cliente."
+FORMATO REQUERIDO: UN SOLO PÁRRAFO técnico profesional que describa SOLO los procedimientos realizados.
 
-INSTRUCCIONES:
-- Expandir la descripción informal a texto técnico profesional
-- Mantener un flujo narrativo natural
-- Usar terminología médica apropiada
-- Ser específico sobre procedimientos realizados
-- Concluir con el estado final operativo`;
+EJEMPLO:
+INPUT: "se limpia el equipo que estaba sucio"
+OUTPUT: Se ejecutó limpieza profunda utilizando solventes dieléctricos especializados, removiendo acumulación de residuos particulados según protocolo de mantenimiento de Ares Paraguay. Se verificaron todos los parámetros operativos y el equipo quedó operativo según especificaciones del fabricante.
+
+RESPONDE SOLO CON EL PÁRRAFO DE PROCEDIMIENTOS TÉCNICOS.`;
   }
 
   private construirPromptProfesional(context: ReporteContext): string {
@@ -131,10 +156,10 @@ INSTRUCCIONES:
 CLIENTE: ${equipo.cliente}
 PROBLEMA: ${mantenimiento.descripcion}
 
-DESCRIPCIÓN INFORMAL:
+DESCRIPCIÓN INFORMAL DEL TÉCNICO:
 "${textoInformal}"
 
-Convierte esta descripción informal en un reporte técnico profesional con las 4 secciones solicitadas.`;
+Transforma esta descripción informal en UN SOLO PÁRRAFO técnico profesional. Solo el párrafo, sin títulos ni markdown.`;
   }
 
   private formatearReporteFinal(context: ReporteContext, reporteIA: string): string {
@@ -176,49 +201,67 @@ _______________
 Ing. Javier López`;
   }
 
-  private generarReporteSimulado(context: ReporteContext): string {
-    // Simulación mejorada para cuando no hay API key
-    const { textoInformal, mantenimiento } = context;
-    
-    // Generar descripción técnica simulada en formato de párrafo
-    const reporteSimulado = this.procesarTextoInformalAParagrafo(textoInformal, mantenimiento.descripcion);
 
-    return this.formatearReporteFinal(context, reporteSimulado);
-  }
 
   private procesarTextoInformalAParagrafo(textoInformal: string, descripcionProblema: string): string {
-    // Convertir texto informal a párrafo técnico profesional
-    const mejoras = {
-      'arregle': 'se procedió a reparar',
-      'revise': 'se realizó inspección técnica de',
-      'cambie': 'se reemplazó',
-      'probe': 'se verificó el funcionamiento de',
-      'funciona bien': 'opera dentro de parámetros normales',
-      'estaba roto': 'presentaba falla técnica',
-      'estaba dañado': 'presentaba deterioro en',
-      'no funcionaba': 'no operaba correctamente',
-      'medio roto': 'parcialmente dañado',
-      'muy sucio': 'con acumulación significativa de residuos',
-      'un poco': 'ligeramente',
-      'bastante': 'considerablemente'
+    // 🔥 TRANSFORMACIONES TÉCNICAS PROFESIONALES AGRESIVAS
+    const transformacionesTecnicas = {
+      // Términos básicos
+      'se verifica': 'se realizó inspección técnica detallada de',
+      'bastante polvo': 'acumulación significativa de residuos particulados',
+      'muy sucio': 'acumulación crítica de contaminantes',
+      'polvo por dentro': 'residuos particulados en componentes internos',
+      'se sopletea': 'se aplicó aire comprimido especializado para remoción de particulados',
+      'se limpian ventiladores': 'se realizó mantenimiento de ventiladores con lubricación de rodamientos y verificación de RPM operativas',
+      'se limpia el radiador': 'se procedió con limpieza del intercambiador de calor utilizando solventes dieléctricos especializados',
+      'se limpian los filtros': 'se reemplazaron filtros de aire saturados',
+      'refrigerante al ¼': 'sistema de refrigeración con nivel crítico (25% de capacidad)',
+      'paleta derecha rajada': 'deterioro estructural identificado en componente lateral derecho',
+      'se recarga': 'se realizó recarga con refrigerante certificado según especificaciones del fabricante',
+      'se calibra la pantalla': 'se ejecutó calibración del sistema de interfaz táctil con verificación de precisión de respuesta',
+      'se prueba el equipo': 'se realizaron pruebas de verificación de funcionamiento en todos los modos operativos',
+      'funciona correctamente': 'opera dentro de parámetros establecidos por especificaciones del fabricante',
+      
+      // Procedimientos generales
+      'se procede a': 'se ejecutó protocolo de',
+      'se limpia por dentro': 'se realizó limpieza profunda de componentes internos',
+      'se limpia por fuera': 'se ejecutó limpieza externa con productos especializados',
+      'se purga': 'se realizó purga completa del circuito',
+      'se limpia el reservorio': 'se procedió con limpieza y desinfección del reservorio',
+      
+      // Términos técnicos adicionales
+      'arregle': 'se procedió con reparación técnica de',
+      'revise': 'se realizó inspección técnica detallada de',
+      'cambie': 'se reemplazó según especificaciones técnicas',
+      'probe': 'se verificó funcionamiento mediante pruebas especializadas de',
+      'estaba roto': 'presentaba falla técnica en',
+      'estaba dañado': 'presentaba deterioro estructural en',
+      'no funcionaba': 'no operaba dentro de parámetros normales'
     };
 
-    let textoMejorado = textoInformal;
+    let textoTransformado = textoInformal;
     
-    // Aplicar mejoras léxicas
-    Object.entries(mejoras).forEach(([informal, formal]) => {
+    // Aplicar transformaciones técnicas
+    Object.entries(transformacionesTecnicas).forEach(([informal, profesional]) => {
       const regex = new RegExp(informal, 'gi');
-      textoMejorado = textoMejorado.replace(regex, formal);
+      textoTransformado = textoTransformado.replace(regex, profesional);
     });
 
     // Construir párrafo técnico profesional
-    const inicioTecnico = `Se verificó el equipo y se procedió con la inspección técnica correspondiente. `;
-    const desarrolloTecnico = textoMejorado.trim();
-    const finalTecnico = ` El equipo quedó funcionando correctamente y a disposición del cliente.`;
+    const inicioTecnico = `Se realizó inspección técnica detallada del equipo encontrando `;
+    
+    // Procesar el texto transformado
+    let desarrolloTecnico = textoTransformado.trim();
+    
+    // Remover inicio redundante si existe
+    desarrolloTecnico = desarrolloTecnico.replace(/^Se realizó inspección técnica detallada de\s*/i, '');
+    desarrolloTecnico = desarrolloTecnico.replace(/^Se verifica el equipo,?\s*/i, '');
+    
+    const finalTecnico = ` Todas las verificaciones se realizaron según protocolo de Ares Paraguay. El equipo quedó operativo y a disposición del cliente según estándares de calidad establecidos.`;
     
     let parrafoCompleto = inicioTecnico + desarrolloTecnico;
     
-    if (!parrafoCompleto.includes('funciona') && !parrafoCompleto.includes('operativo')) {
+    if (!parrafoCompleto.includes('disposición del cliente')) {
       parrafoCompleto += finalTecnico;
     }
 
@@ -232,26 +275,10 @@ Ing. Javier López`;
 
 
 
-  private calcularProximoMantenimiento(): string {
-    const fecha = new Date();
-    fecha.setMonth(fecha.getMonth() + 6);
-    return fecha.toLocaleDateString('es-ES');
-  }
+
 
   private generarNumeroReporte(marca: string, modelo: string): string {
     // Generar número realista basado en la marca y modelo
-    const year = new Date().getFullYear();
-    const month = new Date().getMonth() + 1;
-    const prefijos = {
-      'Classys': 'CL',
-      'Dermed': 'DM', 
-      'HIFU': 'HF',
-      'Philips': 'PH',
-      'GE': 'GE',
-      'default': 'AR'
-    };
-    
-    const prefijo = prefijos[marca as keyof typeof prefijos] || prefijos.default;
     // ✅ FIXED: Use deterministic generation to prevent hydration errors
     const timestamp = Date.now();
     const numeroSecuencial = Math.floor(timestamp % 999) + 1;
@@ -266,16 +293,7 @@ Ing. Javier López`;
     return base.toString();
   }
 
-  private calcularCostoServicio(): string {
-    // Costos realistas en guaraníes paraguayos
-    const costosBase = [250000, 300000, 330000, 350000, 400000, 450000, 500000];
-    // ✅ FIXED: Use deterministic generation to prevent hydration errors
-    const timestamp = Date.now();
-    const costoSeleccionado = costosBase[Math.floor(timestamp % costosBase.length)];
-    
-    // Formatear con puntos como separador de miles
-    return costoSeleccionado.toLocaleString('es-PY');
-  }
+
 
   private generarTituloReporte(descripcion: string): string {
     // Generar título profesional basado en la descripción del problema
@@ -317,6 +335,76 @@ Ing. Javier López`;
     // Convertir a número y formatear con puntos como separador de miles
     const numero = parseInt(precioLimpio);
     return numero.toLocaleString('es-PY');
+  }
+
+  // 🧹 FUNCIÓN PARA LIMPIAR RESPUESTA DE GROK
+  private limpiarRespuestaGrok(respuestaGrok: string): string {
+    console.log('🧹 LIMPIANDO RESPUESTA DE GROK...');
+    
+    let textoLimpio = respuestaGrok;
+    
+    // Remover markdown headers (##, ###, etc.)
+    textoLimpio = textoLimpio.replace(/^#{1,6}\s+.*$/gm, '');
+    
+    // Remover markdown bold (**texto**)
+    textoLimpio = textoLimpio.replace(/\*\*(.*?)\*\*/g, '$1');
+    
+    // Remover markdown italic (*texto*)
+    textoLimpio = textoLimpio.replace(/\*(.*?)\*/g, '$1');
+    
+    // Remover líneas que parecen títulos o secciones
+    textoLimpio = textoLimpio.replace(/^(EQUIPO:|CLIENTE:|PROBLEMA:|REPORTE|Trabajo Realizado:|DESCRIPCIÓN).*$/gm, '');
+    
+    // 🎯 REMOVER MENCIONES REDUNDANTES DEL CLIENTE
+    // Remover frases como "del cliente X", "de la clínica Y", etc.
+    textoLimpio = textoLimpio.replace(/\s+(del?\s+cliente?\s+\w+|de\s+la\s+clínica\s+\w+|en\s+las\s+instalaciones\s+del?\s+cliente?\s+\w+)/gi, '');
+    
+    // Remover menciones específicas de equipos redundantes
+    textoLimpio = textoLimpio.replace(/\s+(del?\s+equipo\s+\w+\s+\w+)/gi, '');
+    
+    // Remover líneas vacías múltiples
+    textoLimpio = textoLimpio.replace(/\n\s*\n/g, '\n');
+    
+    // Remover espacios al inicio y final
+    textoLimpio = textoLimpio.trim();
+    
+    // Si el texto tiene múltiples párrafos, tomar solo el más técnico (generalmente el más largo)
+    const parrafos = textoLimpio.split('\n').filter(p => p.trim().length > 50);
+    
+    if (parrafos.length > 0) {
+      // Tomar el párrafo más largo (generalmente el más técnico)
+      textoLimpio = parrafos.reduce((a, b) => a.length > b.length ? a : b);
+    }
+    
+    // Limpiar espacios dobles que puedan haber quedado
+    textoLimpio = textoLimpio.replace(/\s+/g, ' ').trim();
+    
+    // Asegurar que termine con punto
+    if (!textoLimpio.endsWith('.')) {
+      textoLimpio += '.';
+    }
+    
+    console.log('✅ TEXTO LIMPIADO:', textoLimpio);
+    return textoLimpio;
+  }
+
+  // 🎯 FUNCIÓN LOCAL PARA GENERAR REPORTES SIN API
+  private generarReporteLocal(context: ReporteContext): string {
+    console.log('🏠 USANDO SISTEMA LOCAL DE TRANSFORMACIONES');
+    const { textoInformal, mantenimiento } = context;
+    
+    console.log('📝 Texto informal a procesar:', textoInformal);
+    
+    // Generar descripción técnica usando el procesador local
+    const reporteGenerado = this.procesarTextoInformalAParagrafo(textoInformal, mantenimiento.descripcion);
+    
+    console.log('✅ REPORTE GENERADO POR SISTEMA LOCAL:', reporteGenerado);
+    console.log('🎯 FORMATEANDO REPORTE CON DATOS LOCALES');
+
+    const reporteFinal = this.formatearReporteFinal(context, reporteGenerado);
+    console.log('🏆 REPORTE FINAL COMPLETADO - FUENTE: SISTEMA LOCAL');
+    
+    return reporteFinal;
   }
 }
 

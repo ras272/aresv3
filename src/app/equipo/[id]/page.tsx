@@ -18,6 +18,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { mantenimientoSchema, MantenimientoFormData } from '@/lib/schemas';
 import { aiReporteService } from '@/lib/ai-service';
 import { WordReporteService } from '@/lib/word-service';
+import { RepuestosSimpleSelector } from '@/components/reportes/RepuestosSimpleSelector';
 import { 
   ArrowLeft, 
   Heart,
@@ -45,7 +46,7 @@ export default function EquipoDetailPage() {
   const router = useRouter();
   const equipoId = params.id as string;
   
-  const { equipos, addMantenimiento, updateMantenimiento, deleteMantenimiento, updateComponente, getMantenimientosByEquipo } = useAppStore();
+  const { equipos, addMantenimiento, updateMantenimiento, deleteMantenimiento, updateComponente, getMantenimientosByEquipo, updateStockItem } = useAppStore();
   const { getCurrentUser } = usePermissions();
   const [showNewMantenimiento, setShowNewMantenimiento] = useState(false);
   const [selectedComponenteId, setSelectedComponenteId] = useState<string>('');
@@ -65,6 +66,43 @@ export default function EquipoDetailPage() {
   // Estados para eliminación de mantenimientos
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [mantenimientoToDelete, setMantenimientoToDelete] = useState<any>(null);
+
+  // 🔧 Estado para repuestos utilizados (NUEVO - Sistema simple)
+  const [repuestosUtilizados, setRepuestosUtilizados] = useState<any[]>([]);
+
+  // 🔧 Función para devolver repuestos al stock cuando se elimina un reporte
+  const devolverRepuestosAlStock = async (mantenimiento: any, motivo: string = 'Reporte eliminado') => {
+    if (!mantenimiento.repuestosUtilizados || mantenimiento.repuestosUtilizados.length === 0) {
+      return; // No hay repuestos que devolver
+    }
+    
+    for (const repuesto of mantenimiento.repuestosUtilizados) {
+      try {
+        // 🎯 Usar la nueva función híbrida para devolución con trazabilidad completa
+        const { devolverRepuestosAlStockReporte } = useAppStore.getState();
+        await devolverRepuestosAlStockReporte({
+          itemId: repuesto.id,
+          productoNombre: repuesto.nombre,
+          productoMarca: repuesto.marca,
+          productoModelo: repuesto.modelo,
+          cantidad: repuesto.cantidad,
+          cantidadAnterior: repuesto.stockAntes - repuesto.cantidad, // Stock actual antes de devolver
+          mantenimientoId: mantenimiento.id,
+          equipoId: equipoId,
+          tecnicoResponsable: 'Sistema',
+          observaciones: `${motivo} - ${equipo.cliente} - ${selectedMantenimiento?.descripcion || 'Reporte eliminado'}`
+        });
+        
+        console.log(`✅ Repuesto devuelto al stock con trazabilidad completa: ${repuesto.nombre} (+${repuesto.cantidad})`);
+        toast.success(`Repuesto devuelto: ${repuesto.nombre} (+${repuesto.cantidad})`, {
+          description: 'Stock actualizado con trazabilidad completa'
+        });
+      } catch (error) {
+        console.error(`❌ Error devolviendo repuesto ${repuesto.nombre}:`, error);
+        toast.error(`Error devolviendo ${repuesto.nombre} al stock`);
+      }
+    }
+  };
 
   const equipo = equipos.find(e => e.id === equipoId);
   const mantenimientos = getMantenimientosByEquipo(equipoId);
@@ -228,18 +266,28 @@ export default function EquipoDetailPage() {
     setPrecioServicio('');
     setReporteGenerado('');
     setReporteListo(false);
+    // 🔧 Limpiar repuestos utilizados
+    setRepuestosUtilizados([]);
   };
 
   const eliminarReporte = async () => {
     setReporteGenerado('');
     setReporteListo(false);
     
-    // Marcar el mantenimiento como que NO tiene reporte generado
-    if (selectedMantenimiento) {
-      await updateMantenimiento(selectedMantenimiento.id, { reporteGenerado: false });
+    // 🔧 Devolver repuestos al stock antes de eliminar el reporte
+    if (selectedMantenimiento && selectedMantenimiento.repuestosUtilizados) {
+      await devolverRepuestosAlStock(selectedMantenimiento, 'Reporte eliminado desde equipo');
     }
     
-    toast.success('Reporte eliminado. Puedes generar uno nuevo.');
+    // Marcar el mantenimiento como que NO tiene reporte generado y limpiar repuestos
+    if (selectedMantenimiento) {
+      await updateMantenimiento(selectedMantenimiento.id, { 
+        reporteGenerado: false,
+        repuestosUtilizados: [] // Limpiar repuestos utilizados
+      });
+    }
+    
+    toast.success('Reporte eliminado. Repuestos devueltos al stock.');
   };
 
   const abrirModalEliminarMantenimiento = (mantenimiento: any) => {
@@ -313,10 +361,44 @@ export default function EquipoDetailPage() {
       setReporteGenerado(reporteGenerado);
       setReporteListo(true);
       
-      // Marcar el mantenimiento como que ya tiene reporte generado y guardar el precio
+      // 🔧 Procesar repuestos utilizados - descontar del stock con trazabilidad completa
+      console.log('🔧 Repuestos utilizados al generar reporte:', repuestosUtilizados);
+      if (repuestosUtilizados.length > 0) {
+        const { registrarSalidaStockReporte } = useAppStore.getState();
+        
+        for (const repuesto of repuestosUtilizados) {
+          try {
+            console.log('🔧 Procesando repuesto con trazabilidad completa:', repuesto);
+            // 🎯 Usar la nueva función híbrida para salida con trazabilidad completa
+            await registrarSalidaStockReporte({
+              itemId: repuesto.id,
+              productoNombre: repuesto.nombre,
+              productoMarca: repuesto.marca,
+              productoModelo: repuesto.modelo,
+              cantidad: repuesto.cantidad,
+              cantidadAnterior: repuesto.stockAntes,
+              mantenimientoId: selectedMantenimiento.id,
+              equipoId: equipoId,
+              tecnicoResponsable: currentUser?.name || 'Sistema',
+              observaciones: `Utilizado en servicio técnico - ${equipo.cliente} - ${selectedMantenimiento.descripcion}`
+            });
+            
+            console.log(`✅ Stock actualizado con trazabilidad completa para: ${repuesto.nombre}`);
+            toast.success(`Repuesto utilizado: ${repuesto.nombre} (-${repuesto.cantidad})`, {
+              description: 'Stock actualizado con trazabilidad completa'
+            });
+          } catch (error) {
+            console.error(`❌ Error actualizando stock para ${repuesto.nombre}:`, error);
+            toast.error(`Error actualizando stock de ${repuesto.nombre}`);
+          }
+        }
+      }
+
+      // Marcar el mantenimiento como que ya tiene reporte generado, guardar precio y repuestos
       await updateMantenimiento(selectedMantenimiento.id, { 
         reporteGenerado: true,
-        precioServicio: parseFloat(precioServicio) || 0
+        precioServicio: parseFloat(precioServicio) || 0,
+        repuestosUtilizados: repuestosUtilizados // 🔧 Guardar repuestos utilizados
       });
       
       toast.success('¡Reporte generado exitosamente con IA!', {
@@ -1160,6 +1242,15 @@ export default function EquipoDetailPage() {
                             Precio formateado: {parseInt(precioServicio).toLocaleString('es-PY')} Gs.
                           </p>
                         )}
+                      </div>
+
+                      {/* 🔧 Selector de Repuestos Utilizados (NUEVO) */}
+                      <div className="border-t pt-4">
+                        <RepuestosSimpleSelector
+                          repuestos={repuestosUtilizados}
+                          onRepuestosChange={setRepuestosUtilizados}
+                          disabled={generandoReporte}
+                        />
                       </div>
 
                       <div className="flex space-x-3">

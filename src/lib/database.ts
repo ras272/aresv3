@@ -765,6 +765,16 @@ export async function getAllMantenimientos(): Promise<Mantenimiento[]> {
     reporteGenerado: m.reporte_generado || false,
     precioServicio: m.precio_servicio ? parseFloat(m.precio_servicio) : undefined, // 💰 Precio del servicio
     
+    // 🔧 Repuestos utilizados en el servicio
+    repuestosUtilizados: (() => {
+      try {
+        return m.repuestos_utilizados ? JSON.parse(m.repuestos_utilizados) : [];
+      } catch (error) {
+        console.warn('Error parsing repuestos_utilizados for mantenimiento:', m.id, error);
+        return [];
+      }
+    })(),
+    
     // 📋 Tracking de facturación externa
     estadoFacturacion: m.estado_facturacion || 'Pendiente',
     numeroFacturaExterna: m.numero_factura_externa,
@@ -808,6 +818,16 @@ export async function updateMantenimiento(mantenimientoId: string, updates: {
   reporteGenerado?: boolean
   precioServicio?: number // 💰 Precio del servicio en guaraníes
   
+  // 🔧 Repuestos utilizados en el servicio
+  repuestosUtilizados?: Array<{
+    id: string
+    nombre: string
+    marca: string
+    modelo: string
+    cantidad: number
+    stockAntes: number
+  }>
+  
   // 📋 Tracking de facturación externa
   estadoFacturacion?: 'Pendiente' | 'Facturado' | 'Enviado'
   numeroFacturaExterna?: string
@@ -832,6 +852,9 @@ export async function updateMantenimiento(mantenimientoId: string, updates: {
         comentarios: updates.comentarios,
         reporte_generado: updates.reporteGenerado,
         precio_servicio: updates.precioServicio, // 💰 Guardar precio del servicio
+        
+        // 🔧 Repuestos utilizados en el servicio
+        repuestos_utilizados: updates.repuestosUtilizados ? JSON.stringify(updates.repuestosUtilizados) : undefined,
         
         // 📋 Tracking de facturación externa
         estado_facturacion: updates.estadoFacturacion,
@@ -2557,33 +2580,46 @@ export async function registrarMovimientoStock(movimiento: {
   try {
     const valorTotal = movimiento.costoUnitario ? movimiento.costoUnitario * movimiento.cantidad : null;
 
+    // 🔧 SOLUCIÓN: Para componentes_disponibles, no usar stock_item_id
+    // La tabla movimientos_stock tiene una restricción que requiere que stock_item_id exista en stock_items
+    // Para componentes_disponibles, usaremos NULL en stock_item_id y guardaremos el ID en codigo_item
+    
+    const insertData: any = {
+      item_type: movimiento.itemType || 'stock_item',
+      producto_nombre: movimiento.productoNombre,
+      producto_marca: movimiento.productoMarca,
+      producto_modelo: movimiento.productoModelo,
+      tipo_movimiento: movimiento.tipoMovimiento,
+      cantidad: movimiento.cantidad,
+      cantidad_anterior: movimiento.cantidadAnterior,
+      cantidad_nueva: movimiento.cantidadNueva,
+      motivo: movimiento.motivo,
+      descripcion: movimiento.observaciones,
+      referencia_externa: movimiento.destinoOrigen,
+      usuario_responsable: movimiento.responsable,
+      codigo_carga_origen: movimiento.codigoCargaOrigen,
+      numero_factura: movimiento.numeroFactura,
+      cliente: movimiento.cliente,
+      costo_unitario: movimiento.costoUnitario,
+      valor_total: valorTotal,
+      carpeta_origen: movimiento.carpetaOrigen,
+      carpeta_destino: movimiento.carpetaDestino,
+      ubicacion_fisica: movimiento.ubicacionFisica,
+      fecha_movimiento: new Date().toISOString()
+    };
+
+    // Solo agregar stock_item_id si es realmente un stock_item
+    if (movimiento.itemType === 'stock_item' && movimiento.itemId) {
+      insertData.stock_item_id = movimiento.itemId;
+    } else if (movimiento.itemType === 'componente_disponible' && movimiento.itemId) {
+      // Para componentes_disponibles, guardar el ID en codigo_item para referencia
+      insertData.codigo_item = movimiento.itemId;
+      // stock_item_id se queda como NULL (permitido por la base de datos)
+    }
+
     const { data, error } = await supabase
       .from('movimientos_stock')
-      .insert({
-        stock_item_id: movimiento.itemId,
-        item_type: movimiento.itemType || 'stock_item',
-        producto_nombre: movimiento.productoNombre,
-        producto_marca: movimiento.productoMarca,
-        producto_modelo: movimiento.productoModelo,
-        codigo_item: movimiento.codigoItem,
-        tipo_movimiento: movimiento.tipoMovimiento,
-        cantidad: movimiento.cantidad,
-        cantidad_anterior: movimiento.cantidadAnterior,
-        cantidad_nueva: movimiento.cantidadNueva,
-        motivo: movimiento.motivo,
-        descripcion: movimiento.observaciones,
-        referencia_externa: movimiento.destinoOrigen,
-        usuario_responsable: movimiento.responsable,
-        codigo_carga_origen: movimiento.codigoCargaOrigen,
-        numero_factura: movimiento.numeroFactura,
-        cliente: movimiento.cliente,
-        costo_unitario: movimiento.costoUnitario,
-        valor_total: valorTotal,
-        carpeta_origen: movimiento.carpetaOrigen,
-        carpeta_destino: movimiento.carpetaDestino,
-        ubicacion_fisica: movimiento.ubicacionFisica,
-        fecha_movimiento: new Date().toISOString()
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -2593,7 +2629,8 @@ export async function registrarMovimientoStock(movimiento: {
       tipo: movimiento.tipoMovimiento,
       producto: movimiento.productoNombre,
       cantidad: movimiento.cantidad,
-      motivo: movimiento.motivo
+      motivo: movimiento.motivo,
+      itemType: movimiento.itemType
     });
 
     return data;
@@ -2826,6 +2863,149 @@ export async function getEstadisticasTrazabilidad() {
 
   } catch (error) {
     console.error('❌ Error obteniendo estadísticas de trazabilidad:', error);
+    throw error;
+  }
+}
+
+// ===============================================
+// 🎯 FUNCIÓN HÍBRIDA PARA REPORTES DE SERVICIO TÉCNICO
+// ===============================================
+
+export async function registrarSalidaStockReporte(salidaData: {
+  itemId: string;
+  productoNombre: string;
+  productoMarca?: string;
+  productoModelo?: string;
+  cantidad: number;
+  cantidadAnterior: number;
+  mantenimientoId?: string;
+  equipoId?: string;
+  tecnicoResponsable?: string;
+  observaciones?: string;
+}) {
+  try {
+    console.log('🔧 Registrando salida de stock para reporte de servicio técnico:', salidaData);
+
+    // 1. Actualizar stock en componentes_disponibles (simple y rápido)
+    const { error: updateError } = await supabase
+      .from('componentes_disponibles')
+      .update({
+        cantidad_disponible: salidaData.cantidadAnterior - salidaData.cantidad,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', salidaData.itemId);
+
+    if (updateError) throw updateError;
+
+    // 2. Registrar movimiento para trazabilidad completa
+    await registrarMovimientoStock({
+      itemId: salidaData.itemId,
+      itemType: 'componente_disponible',
+      productoNombre: salidaData.productoNombre,
+      productoMarca: salidaData.productoMarca,
+      productoModelo: salidaData.productoModelo,
+      tipoMovimiento: 'Salida',
+      cantidad: salidaData.cantidad,
+      cantidadAnterior: salidaData.cantidadAnterior,
+      cantidadNueva: salidaData.cantidadAnterior - salidaData.cantidad,
+      motivo: 'Reporte de Servicio Técnico',
+      destinoOrigen: salidaData.equipoId ? `Equipo ID: ${salidaData.equipoId}` : 'Servicio Técnico',
+      responsable: salidaData.tecnicoResponsable || 'Sistema',
+      observaciones: `Mantenimiento ID: ${salidaData.mantenimientoId}. ${salidaData.observaciones || ''}`,
+      carpetaOrigen: 'Servicio Técnico'
+    });
+
+    // 3. Si hay mantenimiento_id, también registrar en movimientos_stock con referencia
+    if (salidaData.mantenimientoId) {
+      const { error: movimientoError } = await supabase
+        .from('movimientos_stock')
+        .update({
+          mantenimiento_id: salidaData.mantenimientoId,
+          equipo_destino_id: salidaData.equipoId
+        })
+        .eq('stock_item_id', salidaData.itemId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (movimientoError) {
+        console.warn('⚠️ No se pudo vincular el movimiento con el mantenimiento:', movimientoError);
+      }
+    }
+
+    console.log('✅ Salida de stock para reporte registrada exitosamente:', {
+      producto: salidaData.productoNombre,
+      cantidad: salidaData.cantidad,
+      mantenimiento: salidaData.mantenimientoId,
+      trazabilidadCompleta: true
+    });
+
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error registrando salida de stock para reporte:', error);
+    throw error;
+  }
+}
+
+// ===============================================
+// 🔄 FUNCIÓN HÍBRIDA PARA DEVOLUCIÓN DE REPUESTOS
+// ===============================================
+
+export async function devolverRepuestosAlStockReporte(devolucionData: {
+  itemId: string;
+  productoNombre: string;
+  productoMarca?: string;
+  productoModelo?: string;
+  cantidad: number;
+  cantidadAnterior: number;
+  mantenimientoId?: string;
+  equipoId?: string;
+  tecnicoResponsable?: string;
+  observaciones?: string;
+}) {
+  try {
+    console.log('🔄 Devolviendo repuestos al stock desde reporte:', devolucionData);
+
+    // 1. Actualizar stock en componentes_disponibles (simple y rápido)
+    const { error: updateError } = await supabase
+      .from('componentes_disponibles')
+      .update({
+        cantidad_disponible: devolucionData.cantidadAnterior + devolucionData.cantidad,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', devolucionData.itemId);
+
+    if (updateError) throw updateError;
+
+    // 2. Registrar movimiento de devolución para trazabilidad completa
+    await registrarMovimientoStock({
+      itemId: devolucionData.itemId,
+      itemType: 'componente_disponible',
+      productoNombre: devolucionData.productoNombre,
+      productoMarca: devolucionData.productoMarca,
+      productoModelo: devolucionData.productoModelo,
+      tipoMovimiento: 'Entrada',
+      cantidad: devolucionData.cantidad,
+      cantidadAnterior: devolucionData.cantidadAnterior,
+      cantidadNueva: devolucionData.cantidadAnterior + devolucionData.cantidad,
+      motivo: 'Devolución de Reporte de Servicio Técnico',
+      destinoOrigen: 'Stock General',
+      responsable: devolucionData.tecnicoResponsable || 'Sistema',
+      observaciones: `Devolución de Mantenimiento ID: ${devolucionData.mantenimientoId}. ${devolucionData.observaciones || ''}`,
+      carpetaDestino: 'Servicio Técnico'
+    });
+
+    console.log('✅ Devolución de repuestos registrada exitosamente:', {
+      producto: devolucionData.productoNombre,
+      cantidad: devolucionData.cantidad,
+      mantenimiento: devolucionData.mantenimientoId,
+      trazabilidadCompleta: true
+    });
+
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error devolviendo repuestos al stock:', error);
     throw error;
   }
 }
