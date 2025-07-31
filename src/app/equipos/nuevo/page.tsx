@@ -198,7 +198,7 @@ export default function NuevoEquipoPage() {
                   <Label htmlFor="nombreEquipo">Nombre del Equipo *</Label>
                   <Input
                     id="nombreEquipo"
-                    placeholder="Ej: ECG-HC-001, MON-CSJ-002, DEF-CMU-003..."
+                    placeholder="Ej: Hydrafacial, CMSlim..."
                     {...register('nombreEquipo')}
                   />
                   {errors.nombreEquipo && (
@@ -229,7 +229,7 @@ export default function NuevoEquipoPage() {
                   <Label htmlFor="marca">Marca *</Label>
                   <Input
                     id="marca"
-                    placeholder="Ej: Philips, GE Healthcare, Zoll, Mindray..."
+                    placeholder="Ej: Classys, Coocon..."
                     {...register('marca')}
                   />
                   {errors.marca && (
@@ -241,7 +241,7 @@ export default function NuevoEquipoPage() {
                   <Label htmlFor="modelo">Modelo *</Label>
                   <Input
                     id="modelo"
-                    placeholder="Ej: PageWriter TC50, CARESCAPE B450, X Series..."
+                    placeholder="Ej: Ultraformer MPT..."
                     {...register('modelo')}
                   />
                   {errors.modelo && (
@@ -253,7 +253,7 @@ export default function NuevoEquipoPage() {
                   <Label htmlFor="numeroSerieBase">Número de Serie Base *</Label>
                   <Input
                     id="numeroSerieBase"
-                    placeholder="Ej: PH-2024-001, GE-2024-002, ZL-2024-003..."
+                    placeholder="Ej: CSU123456..."
                     {...register('numeroSerieBase')}
                   />
                   {errors.numeroSerieBase && (
@@ -265,7 +265,7 @@ export default function NuevoEquipoPage() {
                   <Label htmlFor="accesorios">Accesorios Incluidos *</Label>
                   <Textarea
                     id="accesorios"
-                    placeholder="Ej: Electrodos, cables ECG, manguito de presión, manual de usuario, batería de respaldo..."
+                    placeholder="Ej: Cable de Alimentancion, Soportes..."
                     {...register('accesorios')}
                     rows={3}
                   />
@@ -345,7 +345,7 @@ export default function NuevoEquipoPage() {
                       <div>
                         <Label>Número de Serie *</Label>
                         <Input
-                          placeholder="Ej: PH-2024-001-MAIN, GE-2024-002-SPO2..."
+                          placeholder="Ej: CSU123456..."
                           {...register(`componentes.${index}.numeroSerie`)}
                         />
                         {errors.componentes?.[index]?.numeroSerie && (

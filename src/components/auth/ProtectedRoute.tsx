@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,7 +15,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     // Si estamos en login, no verificar auth
-    if (pathname === '/login') {
+    if (pathname === "/login") {
       setIsLoading(false);
       setIsAuthenticated(true); // Permitir acceso a login
       return;
@@ -24,7 +24,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     // Verificar autenticación
     const checkAuth = () => {
       try {
-        const savedUser = localStorage.getItem('ares_current_user');
+        const savedUser = localStorage.getItem("ares_current_user");
         if (savedUser) {
           const user = JSON.parse(savedUser);
           if (user && user.id) {
@@ -33,16 +33,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
             return;
           }
         }
-        
+
         // No hay usuario válido, redirigir a login
         setIsAuthenticated(false);
         setIsLoading(false);
-        router.replace('/login');
+        router.replace("/login");
       } catch (error) {
-        console.error('Error checking auth:', error);
+        console.error("Error checking auth:", error);
         setIsAuthenticated(false);
         setIsLoading(false);
-        router.replace('/login');
+        router.replace("/login");
       }
     };
 
@@ -54,17 +54,30 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-white">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando sesión...</p>
+          {/* Logo de Ares */}
+          <div className="mb-6">
+            <div className="w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+              <img
+                src="/isologo-ares.png"
+                alt="ARES Paraguay"
+                className="w-full h-full object-contain opacity-90"
+              />
+            </div>
+          </div>
+
+          {/* Spinner simple */}
+          <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin mx-auto mb-4"></div>
+
+          <p className="text-gray-500 text-sm">Verificando sesión...</p>
         </div>
       </div>
     );
   }
 
   // Si no está autenticado y no estamos en login, no mostrar nada
-  if (!isAuthenticated && pathname !== '/login') {
+  if (!isAuthenticated && pathname !== "/login") {
     return null;
   }
 
