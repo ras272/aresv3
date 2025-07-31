@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import {
   Heart,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { toast } from "sonner";
 
 const navigation = [
   {
@@ -92,6 +94,7 @@ const navigation = [
     href: "/tareas",
     icon: CheckSquare,
     permission: "tareas" as const,
+    blocked: true, // 🚫 Página bloqueada - mostrar modal
   },
   {
     name: "Clínicas",
@@ -121,6 +124,14 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+
+  // 🚫 Función para manejar elementos bloqueados
+  const handleBlockedClick = (itemName: string) => {
+    toast.info(`${itemName} - Próximamente`, {
+      description: "Esta funcionalidad estará disponible en una próxima actualización.",
+      duration: 3000,
+    });
+  };
 
   // 🔧 Usar el sistema de autenticación real
   const canAccess = (permission: string) => {
@@ -253,25 +264,50 @@ export function Sidebar() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Link
-                href={item.href}
-                className={cn(
-                  "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon
+              {item.blocked ? (
+                // 🚫 Elemento bloqueado - mostrar toast
+                <button
+                  onClick={() => handleBlockedClick(item.name)}
                   className={cn(
-                    "mr-3 h-5 w-5 flex-shrink-0",
-                    isActive
-                      ? "text-sidebar-primary"
-                      : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
+                    "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full text-left",
+                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    "cursor-pointer"
                   )}
-                />
-                {item.name}
-              </Link>
+                >
+                  <item.icon
+                    className={cn(
+                      "mr-3 h-5 w-5 flex-shrink-0",
+                      "text-muted-foreground group-hover:text-sidebar-accent-foreground"
+                    )}
+                  />
+                  {item.name}
+                  {/* Indicador visual de que está bloqueado */}
+                  <span className="ml-auto text-xs text-muted-foreground opacity-60">
+                    🔒
+                  </span>
+                </button>
+              ) : (
+                // ✅ Elemento normal - navegar
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      "mr-3 h-5 w-5 flex-shrink-0",
+                      isActive
+                        ? "text-sidebar-primary"
+                        : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
+                    )}
+                  />
+                  {item.name}
+                </Link>
+              )}
             </motion.div>
           );
         })}
