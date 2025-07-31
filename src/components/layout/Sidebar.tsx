@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { useAppStore } from '@/store/useAppStore';
-import { 
-  Heart, 
-  FileText, 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
+import { useAppStore } from "@/store/useAppStore";
+import {
+  Heart,
+  FileText,
   Home,
   Plus,
   Package,
@@ -18,119 +18,197 @@ import {
   BarChart3,
   HardDrive,
   CheckSquare,
-  MessageCircle
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+  MessageCircle,
+  Users,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navigation = [
   {
-    name: 'Dashboard',
-    href: '/',
+    name: "Dashboard",
+    href: "/",
     icon: Home,
-    permission: 'dashboard' as const,
+    permission: "dashboard" as const,
   },
   {
-    name: 'Análisis',
-    href: '/analisis',
+    name: "Análisis",
+    href: "/analisis",
     icon: BarChart3,
-    permission: 'reportes' as const,
+    permission: "reportes" as const,
   },
   {
-    name: 'Equipos',
-    href: '/equipos',
+    name: "Equipos",
+    href: "/equipos",
     icon: Heart,
-    permission: 'equipos' as const,
+    permission: "equipos" as const,
   },
   {
-    name: 'Nuevo Equipo',
-    href: '/equipos/nuevo',
+    name: "Nuevo Equipo",
+    href: "/equipos/nuevo",
     icon: Plus,
-    permission: 'equipos' as const,
+    permission: "equipos" as const,
     requiresWrite: true, // Solo mostrar si tiene permisos de escritura
   },
   {
-    name: 'Inventario Técnico',
-    href: '/inventario-tecnico',
+    name: "Inventario Técnico",
+    href: "/inventario-tecnico",
     icon: Wrench,
-    permission: 'inventarioTecnico' as const,
+    permission: "inventarioTecnico" as const,
   },
   {
-    name: 'Calendario',
-    href: '/calendario',
+    name: "Calendario",
+    href: "/calendario",
     icon: Calendar,
-    permission: 'calendario' as const,
+    permission: "calendario" as const,
   },
   {
-    name: 'Ingreso de Mercaderías',
-    href: '/mercaderias',
+    name: "Ingreso de Mercaderías",
+    href: "/mercaderias",
     icon: Truck,
-    permission: 'mercaderias' as const,
+    permission: "mercaderias" as const,
   },
   {
-    name: 'Gestión Documental',
-    href: '/documentos',
+    name: "Gestión Documental",
+    href: "/documentos",
     icon: FileText,
-    permission: 'documentos' as const,
+    permission: "documentos" as const,
   },
   {
-    name: 'Remisiones',
-    href: '/remisiones',
+    name: "Remisiones",
+    href: "/remisiones",
     icon: Receipt,
-    permission: 'remisiones' as const,
+    permission: "remisiones" as const,
   },
 
   {
-    name: 'Sistema de Archivos',
-    href: '/archivos',
+    name: "Sistema de Archivos",
+    href: "/archivos",
     icon: HardDrive,
-    permission: 'archivos' as const,
+    permission: "archivos" as const,
   },
   {
-    name: 'Tareas',
-    href: '/tareas',
+    name: "Tareas",
+    href: "/tareas",
     icon: CheckSquare,
-    permission: 'tareas' as const,
+    permission: "tareas" as const,
   },
   {
-    name: 'Clínicas',
-    href: '/clinicas',
+    name: "Clínicas",
+    href: "/clinicas",
     icon: Building2,
-    permission: 'clinicas' as const,
+    permission: "clinicas" as const,
   },
   {
-    name: 'Stock',
-    href: '/stock',
+    name: "Stock",
+    href: "/stock",
     icon: Package,
-    permission: 'stock' as const,
+    permission: "stock" as const,
   },
   {
-    name: 'Reportes de Servicio',
-    href: '/reportes',
+    name: "Reportes de Servicio",
+    href: "/reportes",
     icon: FileText,
-    permission: 'reportes' as const,
+    permission: "reportes" as const,
   },
   {
-    name: 'WhatsApp',
-    href: '/whatsapp',
-    icon: MessageCircle,
-    permission: 'reportes' as const,
+    name: "Usuarios",
+    href: "/usuarios",
+    icon: Users,
+    permission: "usuarios" as const,
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { hasPermission, hasWritePermission, getCurrentUser } = useAppStore();
-  
+
+  // 🔧 Usar el sistema de autenticación real
+  const canAccess = (permission: string) => {
+    if (typeof window === "undefined") return false;
+
+    try {
+      const savedUser = localStorage.getItem("ares_current_user");
+      if (!savedUser) return false;
+
+      const user = JSON.parse(savedUser);
+      if (!user) return false;
+
+      // Super admin puede todo
+      if (user.role === "super_admin") return true;
+
+      // Definir permisos por rol
+      const permissions = {
+        admin: [
+          "dashboard",
+          "equipos",
+          "inventario",
+          "reportes",
+          "stock",
+          "remisiones",
+          "usuarios",
+          "calendario",
+          "inventarioTecnico",
+          "mercaderias",
+          "documentos",
+          "archivos",
+          "tareas",
+          "clinicas",
+        ],
+        gerente: [
+          "dashboard",
+          "equipos",
+          "inventario",
+          "reportes",
+          "stock",
+          "remisiones",
+          "calendario",
+          "inventarioTecnico",
+          "mercaderias",
+          "documentos",
+          "archivos",
+          "clinicas",
+        ],
+        contabilidad: [
+          "dashboard",
+          "reportes",
+          "remisiones",
+          "archivos",
+          "clinicas",
+          "documentos",
+          "tareas",
+        ],
+        tecnico: [
+          "dashboard",
+          "equipos",
+          "inventario",
+          "calendario",
+          "inventarioTecnico",
+          "reportes",
+          "stock",
+        ],
+        vendedor: [
+          "dashboard",
+          "equipos",
+          "reportes",
+          "remisiones",
+          "clinicas",
+          "mercaderias",
+        ],
+        cliente: ["dashboard", "equipos"],
+      };
+
+      const userPermissions =
+        permissions[user.role as keyof typeof permissions] || [];
+      return userPermissions.includes(permission);
+    } catch {
+      return false;
+    }
+  };
+
   // Filtrar navegación según permisos del usuario
-  const filteredNavigation = navigation.filter(item => {
-    // Verificar permiso de lectura básico
-    if (!hasPermission(item.permission)) return false;
-    
-    // Si requiere permisos de escritura, verificar también eso
-    if (item.requiresWrite && !hasWritePermission(item.permission)) return false;
-    
-    return true;
+  const filteredNavigation = navigation.filter((item) => {
+    // Verificar permiso usando el sistema de auth real
+    return canAccess(item.permission);
   });
 
   return (
@@ -143,16 +221,15 @@ export function Sidebar() {
           className="flex items-center space-x-3"
         >
           <div className="flex-shrink-0">
-            <img 
-              src="/logo-ares.png" 
-              alt="ARES Paraguay" 
+            <img
+              src="/isologo-ares.png"
+              alt="ARES Paraguay"
               className="h-12 w-auto object-contain"
             />
           </div>
           <div className="flex flex-col">
             <h1 className="text-sm font-bold text-sidebar-foreground">ARES</h1>
             <p className="text-xs text-muted-foreground">PARAGUAY</p>
-            <p className="text-xs text-muted-foreground opacity-75">Care Demo</p>
           </div>
         </motion.div>
       </div>
@@ -165,9 +242,10 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
         {filteredNavigation.map((item, index) => {
-          const isActive = pathname === item.href || 
-            (item.href !== '/' && pathname.startsWith(item.href));
-          
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname.startsWith(item.href));
+
           return (
             <motion.div
               key={item.name}
@@ -178,18 +256,18 @@ export function Sidebar() {
               <Link
                 href={item.href}
                 className={cn(
-                  'group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
               >
                 <item.icon
                   className={cn(
-                    'mr-3 h-5 w-5 flex-shrink-0',
+                    "mr-3 h-5 w-5 flex-shrink-0",
                     isActive
-                      ? 'text-sidebar-primary'
-                      : 'text-muted-foreground group-hover:text-sidebar-accent-foreground'
+                      ? "text-sidebar-primary"
+                      : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
                   )}
                 />
                 {item.name}
@@ -209,4 +287,4 @@ export function Sidebar() {
       </div>
     </div>
   );
-} 
+}

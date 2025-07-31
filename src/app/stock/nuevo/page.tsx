@@ -177,7 +177,7 @@ export default function NuevoStockPage() {
                     <Input
                       id="nombre"
                       {...register('nombre')}
-                      placeholder="Ej: Kit Hydra Clarify, Punta RF 3DEEP..."
+                      placeholder="Ej: Kit Hydra, Britenol..."
                     />
                     {errors.nombre && (
                       <p className="text-sm text-red-600 mt-1">{errors.nombre.message}</p>
@@ -230,7 +230,7 @@ export default function NuevoStockPage() {
                     <Input
                       id="modelo"
                       {...register('modelo')}
-                      placeholder="Ej: Pro Max, Standard, V2..."
+                      placeholder="Ej: indefinido por ahora..."
                     />
                     {errors.modelo && (
                       <p className="text-sm text-red-600 mt-1">{errors.modelo.message}</p>
@@ -266,7 +266,7 @@ export default function NuevoStockPage() {
                   <Input
                     id="numeroSerie"
                     {...register('numeroSerie')}
-                    placeholder="Ej: ABC123456, SN001..."
+                    placeholder="Ej: CSU123456..."
                   />
                 </div>
               </CardContent>
@@ -317,7 +317,7 @@ export default function NuevoStockPage() {
                   <Input
                     id="ubicacionFisica"
                     {...register('ubicacionFisica')}
-                    placeholder="Ej: Almacén A - Estante 3, Servicio Técnico..."
+                    placeholder="Ej: Deposito Principal - Showroom..."
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Si no se especifica, se asignará automáticamente según la marca
@@ -414,22 +414,7 @@ export default function NuevoStockPage() {
         </form>
 
         {/* Información de ayuda */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-4">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Información importante:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Los productos se organizarán automáticamente en carpetas según la marca</li>
-                  <li>Si no especificas una ubicación física, se asignará automáticamente</li>
-                  <li>La cantidad mínima se usa para alertas de stock bajo</li>
-                  <li>Este item aparecerá inmediatamente en el inventario general</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
       </div>
     </DashboardLayout>
   );

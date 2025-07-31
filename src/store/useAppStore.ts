@@ -1,7 +1,20 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { Equipo, Mantenimiento, ComponenteEquipo, CargaMercaderia, ProductoCarga, ComponenteDisponible, AsignacionComponente, PlanMantenimiento, Tecnico, AppState, PermisosRol, Usuario } from '@/types';
-import { EquipoFormData, CargaMercaderiaFormData } from '@/lib/schemas';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import {
+  Equipo,
+  Mantenimiento,
+  ComponenteEquipo,
+  CargaMercaderia,
+  ProductoCarga,
+  ComponenteDisponible,
+  AsignacionComponente,
+  PlanMantenimiento,
+  Tecnico,
+  AppState,
+  PermisosRol,
+  Usuario,
+} from "@/types";
+import { EquipoFormData, CargaMercaderiaFormData } from "@/lib/schemas";
 import {
   createCargaMercaderia,
   getAllCargas,
@@ -40,10 +53,12 @@ import {
   getMovimientosByCarpeta,
   getEstadisticasTrazabilidad,
   registrarSalidaStock,
-  type MovimientoStock
-} from '@/lib/database';
-import { procesarProductoParaStock } from '@/lib/stock-flow';
-import { supabase } from '@/lib/supabase';
+  registrarSalidaStockReporte,
+  devolverRepuestosAlStockReporte,
+  type MovimientoStock,
+} from "@/lib/database";
+import { procesarProductoParaStock } from "@/lib/stock-flow";
+import { supabase } from "@/lib/supabase";
 
 // Sistema inicializado vacío - Los datos se cargan desde Supabase
 export const useAppStore = create<AppState>()(
@@ -74,26 +89,39 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         loadAllData: async () => {
           const { isDataLoaded } = get();
-          
+
           // 🎯 Evitar cargas múltiples
           if (isDataLoaded) {
-            console.log('⚠️ Datos ya cargados, saltando carga...');
+            console.log("⚠️ Datos ya cargados, saltando carga...");
             return;
           }
-          
+
           try {
-            console.log('🔄 Cargando todos los datos desde Supabase...');
+            console.log("🔄 Cargando todos los datos desde Supabase...");
             set({ isDataLoaded: true }); // Marcar como cargado inmediatamente
-            
+
             // Intentar cargar datos reales, si falla usar datos de prueba
             let equipos = [];
             let mantenimientos = [];
-            
+
             try {
+              // 🔧 Cargar equipos y mantenimientos primero para debug
+              console.log("🔄 Cargando equipos desde la base de datos...");
+              const equiposDB = await getAllEquipos();
+              console.log("✅ Equipos cargados:", equiposDB.length, equiposDB);
+
+              const mantenimientosDB = await getAllMantenimientos();
+              console.log(
+                "✅ Mantenimientos cargados:",
+                mantenimientosDB.length
+              );
+
+              equipos = equiposDB;
+              mantenimientos = mantenimientosDB;
+
+              // Cargar el resto de datos
               const [
                 cargas,
-                equiposDB,
-                mantenimientosDB,
                 componentes,
                 historial,
                 clinicas,
@@ -101,11 +129,9 @@ export const useAppStore = create<AppState>()(
                 transacciones,
                 documentos,
                 stockItems,
-                movimientos
+                movimientos,
               ] = await Promise.all([
                 getAllCargas(),
-                getAllEquipos(),
-                getAllMantenimientos(),
                 getAllComponentesDisponibles(),
                 dbGetHistorialAsignaciones(),
                 getAllClinicas(),
@@ -113,11 +139,8 @@ export const useAppStore = create<AppState>()(
                 getAllTransaccionesStock(),
                 getAllDocumentosCarga(),
                 getAllStockItems(),
-                getAllMovimientosStock()
+                getAllMovimientosStock(),
               ]);
-
-              equipos = equiposDB;
-              mantenimientos = mantenimientosDB;
 
               set({
                 cargasMercaderia: cargas,
@@ -130,119 +153,22 @@ export const useAppStore = create<AppState>()(
                 transaccionesStock: transacciones,
                 documentosCarga: documentos,
                 stockItems: stockItems,
-                movimientosStock: movimientos
+                movimientosStock: movimientos,
               });
             } catch (dbError) {
-              console.warn('⚠️ Error cargando desde DB, usando datos de prueba:', dbError);
-              
-              // 🎯 DATOS DE PRUEBA PARA DESARROLLO
-              const equiposPrueba = [
-                {
-                  id: 'equipo-demo-1',
-                  nombreEquipo: 'Ultraformer III - Demo',
-                  cliente: 'Clínica Estética Bella',
-                  ubicacion: 'Asunción - Centro',
-                  tipoEquipo: 'Equipo de Ultrasonido Estético',
-                  marca: 'Classys',
-                  modelo: 'Ultraformer III',
-                  numeroSerieBase: 'UF3-2024-001',
-                  fechaEntrega: '2024-01-15',
-                  accesorios: 'Transductores 4MHz y 7MHz, Pedal de control, Manual técnico',
-                  observaciones: 'Equipo de demostración para pruebas del sistema',
-                  componentes: [
-                    {
-                      id: 'comp-1',
-                      nombre: 'Transductor 4MHz',
-                      numeroSerie: 'T4-001',
-                      estado: 'Operativo',
-                      observaciones: 'Componente principal'
-                    },
-                    {
-                      id: 'comp-2',
-                      nombre: 'Transductor 7MHz',
-                      numeroSerie: 'T7-001',
-                      estado: 'Operativo',
-                      observaciones: 'Componente secundario'
-                    },
-                    {
-                      id: 'comp-3',
-                      nombre: 'Pedal de control',
-                      numeroSerie: 'P-001',
-                      estado: 'En reparacion',
-                      observaciones: 'Requiere revisión'
-                    }
-                  ]
-                },
-                {
-                  id: 'equipo-demo-2',
-                  nombreEquipo: 'Hydrafacial MD - Demo',
-                  cliente: 'Centro Dermatológico Premium',
-                  ubicacion: 'San Lorenzo',
-                  tipoEquipo: 'Equipo de Hidrodermabrasión',
-                  marca: 'HydraFacial',
-                  modelo: 'MD Elite',
-                  numeroSerieBase: 'HF-2024-002',
-                  fechaEntrega: '2024-01-20',
-                  accesorios: 'Punta Aqua Peel, Kit de limpieza, Serums incluidos',
-                  observaciones: 'Equipo demo con todos los accesorios',
-                  componentes: [
-                    {
-                      id: 'comp-4',
-                      nombre: 'Punta Aqua Peel',
-                      numeroSerie: 'AP-001',
-                      estado: 'Operativo',
-                      observaciones: 'Punta principal'
-                    },
-                    {
-                      id: 'comp-5',
-                      nombre: 'Bomba de succión',
-                      numeroSerie: 'BS-001',
-                      estado: 'Operativo',
-                      observaciones: 'Sistema de succión'
-                    }
-                  ]
-                }
-              ];
+              console.warn(
+                "⚠️ Error cargando desde DB, usando datos de prueba:",
+                dbError
+              );
 
-              const mantenimientosPrueba = [
-                {
-                  id: 'mant-demo-1',
-                  equipoId: 'equipo-demo-1',
-                  componenteId: 'comp-3',
-                  fecha: '2024-01-22',
-                  descripcion: 'El pedal de control no responde correctamente',
-                  estado: 'Pendiente',
-                  comentarios: 'Revisar conexiones internas',
-                  reporteGenerado: false,
-                  precioServicio: undefined // Sin precio aún
-                },
-                {
-                  id: 'mant-demo-2',
-                  equipoId: 'equipo-demo-2',
-                  componenteId: 'comp-4',
-                  fecha: '2024-01-20',
-                  descripcion: 'Mantenimiento preventivo completado',
-                  estado: 'Finalizado',
-                  comentarios: 'Servicio completado exitosamente',
-                  reporteGenerado: true,
-                  precioServicio: 350000 // 💰 Precio de ejemplo para testing
-                },
-                {
-                  id: 'mant-demo-3',
-                  equipoId: 'equipo-demo-1',
-                  componenteId: 'comp-1',
-                  fecha: '2024-01-18',
-                  descripcion: 'Calibración de transductor',
-                  estado: 'Finalizado',
-                  comentarios: 'Calibración completada',
-                  reporteGenerado: true,
-                  precioServicio: 280000 // 💰 Otro precio de ejemplo
-                }
-              ];
+              // 🎯 DATOS DE PRUEBA PARA DESARROLLO
+              // 🚫 EQUIPOS DE DEMO ELIMINADOS - Solo cargar desde base de datos
+              const equiposReales = await getAllEquipos();
+              const mantenimientosReales = await getAllMantenimientos();
 
               set({
-                equipos: equiposPrueba,
-                mantenimientos: mantenimientosPrueba,
+                equipos: equiposReales,
+                mantenimientos: mantenimientosReales,
                 cargasMercaderia: [],
                 componentesDisponibles: [],
                 historialAsignaciones: [],
@@ -251,16 +177,16 @@ export const useAppStore = create<AppState>()(
                 transaccionesStock: [],
                 documentosCarga: [],
                 stockItems: [],
-                movimientosStock: []
+                movimientosStock: [],
               });
             }
-            
-            console.log('✅ Datos cargados exitosamente:', {
+
+            console.log("✅ Datos cargados Existosamente:", {
               equipos: equipos.length,
-              mantenimientos: mantenimientos.length
+              mantenimientos: mantenimientos.length,
             });
           } catch (error) {
-            console.error('❌ Error loading data:', error);
+            console.error("❌ Error loading data:", error);
           }
         },
 
@@ -269,43 +195,50 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         loadStock: async () => {
           try {
-            console.log('🔄 Cargando stock general desde Supabase...');
+            console.log("🔄 Cargando stock general desde Supabase...");
             const stockItems = await getAllStockItems();
             set({
-              stockItems: stockItems
+              stockItems: stockItems,
             });
-            console.log('✅ Stock general cargado exitosamente:', {
-              items: stockItems.length
+            console.log("✅ Stock general cargado exitosamente:", {
+              items: stockItems.length,
             });
           } catch (error) {
-            console.error('❌ Error loading stock:', error);
+            console.error("❌ Error loading stock:", error);
           }
         },
 
-        updateStockItem: async (itemId: string, nuevaCantidad: number, motivo: string) => {
+        updateStockItem: async (
+          itemId: string,
+          nuevaCantidad: number,
+          motivo: string
+        ) => {
           try {
             const { error } = await supabase
-              .from('componentes_disponibles')
+              .from("componentes_disponibles")
               .update({
                 cantidad_disponible: nuevaCantidad,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
               })
-              .eq('id', itemId);
+              .eq("id", itemId);
 
             if (error) throw error;
 
             // Recargar datos
             await get().loadStock();
-            console.log('✅ Stock item actualizado exitosamente');
+            console.log("✅ Stock item actualizado exitosamente");
           } catch (error) {
-            console.error('❌ Error updating stock item:', error);
+            console.error("❌ Error updating stock item:", error);
             throw error;
           }
         },
 
-        updateStockItemDetails: async (productId: string, updates: { imagen?: string; observaciones?: string }) => {
+        updateStockItemDetails: async (
+          productId: string,
+          updates: { imagen?: string; observaciones?: string }
+        ) => {
           try {
-            const { updateStockItemDetails } = await import('@/lib/database');
+            const { updateStockItemDetails } = await import("@/lib/database");
 
             // Actualizar solo en componentes_disponibles (donde están los datos reales)
             await updateStockItemDetails(productId, updates);
@@ -313,12 +246,12 @@ export const useAppStore = create<AppState>()(
             // Recargar datos
             await Promise.all([
               get().loadStock(),
-              get().loadInventarioTecnico()
+              get().loadInventarioTecnico(),
             ]);
 
-            console.log('✅ Detalles del producto actualizados exitosamente');
+            console.log("✅ Detalles del producto actualizados exitosamente");
           } catch (error) {
-            console.error('❌ Error updating product details:', error);
+            console.error("❌ Error updating product details:", error);
             throw error;
           }
         },
@@ -327,7 +260,7 @@ export const useAppStore = create<AppState>()(
           nombre: string;
           marca: string;
           modelo?: string;
-          tipoComponente: 'Insumo' | 'Repuesto' | 'Equipo Médico' | 'Accesorio';
+          tipoComponente: "Insumo" | "Repuesto" | "Equipo Médico" | "Accesorio";
           numeroSerie?: string;
           cantidad: number;
           cantidadMinima: number;
@@ -336,34 +269,41 @@ export const useAppStore = create<AppState>()(
           imagen?: string;
         }) => {
           try {
-            console.log('🔄 Creando item de stock manual...', itemData);
+            console.log("🔄 Creando item de stock manual...", itemData);
 
             // Determinar ubicación física automáticamente si no se proporciona
             let ubicacionFinal = itemData.ubicacionFisica;
             if (!ubicacionFinal) {
               // Usar la misma lógica que el sistema automático
-              const { determinarUbicacionPorMarca } = await import('@/lib/stock-flow');
-              ubicacionFinal = determinarUbicacionPorMarca(itemData.marca, 'stock');
+              const { determinarUbicacionPorMarca } = await import(
+                "@/lib/stock-flow"
+              );
+              ubicacionFinal = determinarUbicacionPorMarca(
+                itemData.marca,
+                "stock"
+              );
             }
 
             // Generar código único para el item
-            const codigoItem = `MANUAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const codigoItem = `MANUAL-${Date.now()}-${Math.random()
+              .toString(36)
+              .substr(2, 9)}`;
 
             // Crear el item en la base de datos
             const { data: nuevoItem, error } = await supabase
-              .from('stock_items')
+              .from("stock_items")
               .insert({
                 codigo_item: codigoItem,
                 nombre: itemData.nombre,
                 marca: itemData.marca,
-                modelo: itemData.modelo || '',
+                modelo: itemData.modelo || "",
                 numero_serie: itemData.numeroSerie || null,
                 cantidad_actual: itemData.cantidad,
                 cantidad_minima: itemData.cantidadMinima,
-                estado: 'Disponible',
+                estado: "Disponible",
                 observaciones: itemData.observaciones || null,
                 codigo_carga_origen: codigoItem,
-                fecha_ingreso: new Date().toISOString().split('T')[0]
+                fecha_ingreso: new Date().toISOString().split("T")[0],
               })
               .select()
               .single();
@@ -371,34 +311,37 @@ export const useAppStore = create<AppState>()(
             if (error) throw error;
 
             // Registrar movimiento para trazabilidad
-            await supabase
-              .from('movimientos_stock')
-              .insert({
-                item_id: nuevoItem.id,
-                producto_nombre: itemData.nombre,
-                producto_marca: itemData.marca,
-                producto_modelo: itemData.modelo || null,
-                tipo_movimiento: 'Entrada',
-                cantidad: itemData.cantidad,
-                cantidad_anterior: 0,
-                cantidad_nueva: itemData.cantidad,
-                motivo: 'Creación manual',
-                responsable: 'Sistema',
-                carpeta_destino: itemData.marca,
-                ubicacion_destino: ubicacionFinal,
-                observaciones: `Item creado manualmente: ${itemData.observaciones || ''}`
-              });
+            await supabase.from("movimientos_stock").insert({
+              item_id: nuevoItem.id,
+              producto_nombre: itemData.nombre,
+              producto_marca: itemData.marca,
+              producto_modelo: itemData.modelo || null,
+              tipo_movimiento: "Entrada",
+              cantidad: itemData.cantidad,
+              cantidad_anterior: 0,
+              cantidad_nueva: itemData.cantidad,
+              motivo: "Creación manual",
+              responsable: "Sistema",
+              carpeta_destino: itemData.marca,
+              ubicacion_destino: ubicacionFinal,
+              observaciones: `Item creado manualmente: ${
+                itemData.observaciones || ""
+              }`,
+            });
 
             // Recargar datos
             await Promise.all([
               get().loadStock(),
-              get().loadMovimientosStock()
+              get().loadMovimientosStock(),
             ]);
 
-            console.log('✅ Item de stock manual creado exitosamente:', nuevoItem);
+            console.log(
+              "✅ Item de stock manual creado exitosamente:",
+              nuevoItem
+            );
             return nuevoItem;
           } catch (error) {
-            console.error('❌ Error creating manual stock item:', error);
+            console.error("❌ Error creating manual stock item:", error);
             throw error;
           }
         },
@@ -407,15 +350,16 @@ export const useAppStore = create<AppState>()(
           const { stockItems } = get();
 
           const totalProductos = stockItems.length;
-          const productosConStockBajo = stockItems.filter(item =>
-            item.cantidadDisponible <= 5 && item.cantidadDisponible > 0
+          const productosConStockBajo = stockItems.filter(
+            (item) =>
+              item.cantidadDisponible <= 5 && item.cantidadDisponible > 0
           ).length;
 
           return {
             totalProductos,
             productosConStockBajo,
             entradasMes: 0,
-            salidasMes: 0
+            salidasMes: 0,
           };
         },
 
@@ -424,20 +368,29 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         loadMovimientosStock: async () => {
           try {
-            console.log('🔄 Cargando movimientos de stock desde Supabase...');
+            console.log("🔄 Cargando movimientos de stock desde Supabase...");
             const movimientos = await getAllMovimientosStock();
             set({ movimientosStock: movimientos });
-            console.log('✅ Movimientos de stock cargados exitosamente:', movimientos.length);
+            console.log(
+              "✅ Movimientos de stock cargados exitosamente:",
+              movimientos.length
+            );
           } catch (error) {
-            console.error('❌ Error loading movimientos stock:', error);
+            console.error("❌ Error loading movimientos stock:", error);
           }
         },
 
-        getMovimientosByProducto: async (productoNombre: string, productoMarca?: string) => {
+        getMovimientosByProducto: async (
+          productoNombre: string,
+          productoMarca?: string
+        ) => {
           try {
-            return await getMovimientosByProducto(productoNombre, productoMarca);
+            return await getMovimientosByProducto(
+              productoNombre,
+              productoMarca
+            );
           } catch (error) {
-            console.error('❌ Error getting movimientos by producto:', error);
+            console.error("❌ Error getting movimientos by producto:", error);
             return [];
           }
         },
@@ -446,7 +399,7 @@ export const useAppStore = create<AppState>()(
           try {
             return await getMovimientosByCarpeta(carpeta);
           } catch (error) {
-            console.error('❌ Error getting movimientos by carpeta:', error);
+            console.error("❌ Error getting movimientos by carpeta:", error);
             return [];
           }
         },
@@ -455,7 +408,7 @@ export const useAppStore = create<AppState>()(
           try {
             return await getEstadisticasTrazabilidad();
           } catch (error) {
-            console.error('❌ Error getting estadísticas trazabilidad:', error);
+            console.error("❌ Error getting estadísticas trazabilidad:", error);
             return {
               totalMovimientos: 0,
               movimientosHoy: 0,
@@ -464,7 +417,7 @@ export const useAppStore = create<AppState>()(
               salidas: { total: 0, mes: 0, valorTotal: 0 },
               ajustes: { total: 0, mes: 0 },
               productosConMasMovimientos: [],
-              carpetasConMasActividad: []
+              carpetasConMasActividad: [],
             };
           }
         },
@@ -490,12 +443,89 @@ export const useAppStore = create<AppState>()(
             // Recargar datos
             await Promise.all([
               get().loadStock(),
-              get().loadMovimientosStock()
+              get().loadMovimientosStock(),
             ]);
 
-            console.log('✅ Salida de stock registrada exitosamente');
+            console.log("✅ Salida de stock registrada exitosamente");
           } catch (error) {
-            console.error('❌ Error registrando salida stock:', error);
+            console.error("❌ Error registrando salida stock:", error);
+            throw error;
+          }
+        },
+
+        // 🎯 NUEVAS FUNCIONES HÍBRIDAS PARA REPORTES DE SERVICIO TÉCNICO
+        registrarSalidaStockReporte: async (salidaData: {
+          itemId: string;
+          productoNombre: string;
+          productoMarca?: string;
+          productoModelo?: string;
+          cantidad: number;
+          cantidadAnterior: number;
+          mantenimientoId?: string;
+          equipoId?: string;
+          tecnicoResponsable?: string;
+          observaciones?: string;
+        }) => {
+          try {
+            // 👤 Obtener usuario actual para tracking
+            const currentUser =
+              typeof window !== "undefined"
+                ? JSON.parse(
+                    localStorage.getItem("ares_current_user") || "null"
+                  )
+                : null;
+
+            const salidaDataConUsuario = {
+              ...salidaData,
+              tecnicoResponsable:
+                salidaData.tecnicoResponsable || currentUser?.name || "Sistema",
+            };
+
+            await registrarSalidaStockReporte(salidaDataConUsuario);
+
+            // Recargar datos para mantener consistencia
+            await Promise.all([
+              get().loadInventarioTecnico(),
+              get().loadMovimientosStock(),
+            ]);
+
+            console.log(
+              "✅ Salida de stock para reporte registrada exitosamente por:",
+              currentUser?.name
+            );
+          } catch (error) {
+            console.error(
+              "❌ Error registrando salida stock para reporte:",
+              error
+            );
+            throw error;
+          }
+        },
+
+        devolverRepuestosAlStockReporte: async (devolucionData: {
+          itemId: string;
+          productoNombre: string;
+          productoMarca?: string;
+          productoModelo?: string;
+          cantidad: number;
+          cantidadAnterior: number;
+          mantenimientoId?: string;
+          equipoId?: string;
+          tecnicoResponsable?: string;
+          observaciones?: string;
+        }) => {
+          try {
+            await devolverRepuestosAlStockReporte(devolucionData);
+
+            // Recargar datos para mantener consistencia
+            await Promise.all([
+              get().loadInventarioTecnico(),
+              get().loadMovimientosStock(),
+            ]);
+
+            console.log("✅ Devolución de repuestos registrada exitosamente");
+          } catch (error) {
+            console.error("❌ Error devolviendo repuestos al stock:", error);
             throw error;
           }
         },
@@ -503,27 +533,40 @@ export const useAppStore = create<AppState>()(
         getEstadisticasPorCarpeta: (carpeta: string) => {
           const { movimientosStock } = get();
 
-          const movimientosCarpeta = movimientosStock.filter(mov =>
-            mov.carpetaOrigen === carpeta || mov.carpetaDestino === carpeta
+          const movimientosCarpeta = movimientosStock.filter(
+            (mov) =>
+              mov.carpetaOrigen === carpeta || mov.carpetaDestino === carpeta
           );
 
-          const entradas = movimientosCarpeta.filter(mov => mov.tipoMovimiento === 'Entrada');
-          const salidas = movimientosCarpeta.filter(mov => mov.tipoMovimiento === 'Salida');
+          const entradas = movimientosCarpeta.filter(
+            (mov) => mov.tipoMovimiento === "Entrada"
+          );
+          const salidas = movimientosCarpeta.filter(
+            (mov) => mov.tipoMovimiento === "Salida"
+          );
 
           return {
             totalMovimientos: movimientosCarpeta.length,
             entradas: {
               total: entradas.length,
               cantidad: entradas.reduce((sum, mov) => sum + mov.cantidad, 0),
-              valorTotal: entradas.reduce((sum, mov) => sum + (mov.valorTotal || 0), 0)
+              valorTotal: entradas.reduce(
+                (sum, mov) => sum + (mov.valorTotal || 0),
+                0
+              ),
             },
             salidas: {
               total: salidas.length,
               cantidad: salidas.reduce((sum, mov) => sum + mov.cantidad, 0),
-              valorTotal: salidas.reduce((sum, mov) => sum + (mov.valorTotal || 0), 0)
+              valorTotal: salidas.reduce(
+                (sum, mov) => sum + (mov.valorTotal || 0),
+                0
+              ),
             },
-            productosUnicos: [...new Set(movimientosCarpeta.map(mov => mov.productoNombre))].length,
-            ultimoMovimiento: movimientosCarpeta[0]?.fechaMovimiento || null
+            productosUnicos: [
+              ...new Set(movimientosCarpeta.map((mov) => mov.productoNombre)),
+            ].length,
+            ultimoMovimiento: movimientosCarpeta[0]?.fechaMovimiento || null,
           };
         },
 
@@ -532,14 +575,14 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         addEquipo: async (equipoData: any) => {
           try {
-            console.log('🔄 Agregando equipo manual...', equipoData);
+            console.log("🔄 Agregando equipo manual...", equipoData);
             const equipoCreado = await createEquipo(equipoData);
             const equipos = await getAllEquipos();
             set({ equipos });
-            console.log('✅ Equipo agregado exitosamente y lista actualizada');
+            console.log("✅ Equipo agregado exitosamente y lista actualizada");
             return equipoCreado;
           } catch (error) {
-            console.error('❌ Error adding equipo:', error);
+            console.error("❌ Error adding equipo:", error);
             throw error;
           }
         },
@@ -551,15 +594,16 @@ export const useAppStore = create<AppState>()(
             set({ cargasMercaderia: cargas });
             return nuevaCarga;
           } catch (error) {
-            console.error('Error adding carga mercadería:', error);
+            console.error("Error adding carga mercadería:", error);
             throw error;
           }
         },
 
         getCargasMercaderia: () => {
           const { cargasMercaderia } = get();
-          return cargasMercaderia.sort((a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          return cargasMercaderia.sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         },
 
@@ -567,9 +611,12 @@ export const useAppStore = create<AppState>()(
           try {
             return await dbGenerateCodigoCarga();
           } catch (error) {
-            console.error('Error generating codigo carga:', error);
+            console.error("Error generating codigo carga:", error);
             const timestamp = Date.now();
-            const random = String(Math.floor(timestamp % 999) + 1).padStart(3, '0');
+            const random = String(Math.floor(timestamp % 999) + 1).padStart(
+              3,
+              "0"
+            );
             return `ENTRADA-FALLBACK-${random}`;
           }
         },
@@ -579,9 +626,9 @@ export const useAppStore = create<AppState>()(
             await deleteCargaMercaderia(cargaId);
             const cargas = await getAllCargas();
             set({ cargasMercaderia: cargas });
-            console.log('✅ Carga eliminada exitosamente');
+            console.log("✅ Carga eliminada exitosamente");
           } catch (error) {
-            console.error('❌ Error deleting carga:', error);
+            console.error("❌ Error deleting carga:", error);
             throw error;
           }
         },
@@ -591,9 +638,9 @@ export const useAppStore = create<AppState>()(
             await deleteEquipo(equipoId);
             const equipos = await getAllEquipos();
             set({ equipos });
-            console.log('✅ Equipo eliminado exitosamente');
+            console.log("✅ Equipo eliminado exitosamente");
           } catch (error) {
-            console.error('❌ Error deleting equipo:', error);
+            console.error("❌ Error deleting equipo:", error);
             throw error;
           }
         },
@@ -602,21 +649,30 @@ export const useAppStore = create<AppState>()(
           try {
             return await getEstadisticasDashboard();
           } catch (error) {
-            console.error('Error getting estadísticas:', error);
+            console.error("Error getting estadísticas:", error);
             const { cargasMercaderia } = get();
             const totalCargas = cargasMercaderia.length;
             const cargasHoy = cargasMercaderia.filter(
-              carga => carga.fechaIngreso === new Date().toISOString().split('T')[0]
+              (carga) =>
+                carga.fechaIngreso === new Date().toISOString().split("T")[0]
             ).length;
-            const totalProductos = cargasMercaderia.reduce((acc, carga) => acc + carga.productos.length, 0);
+            const totalProductos = cargasMercaderia.reduce(
+              (acc, carga) => acc + carga.productos.length,
+              0
+            );
             const equiposMedicos = cargasMercaderia.reduce((acc, carga) => {
-              return acc + carga.productos.filter(producto => producto.tipoProducto === 'Equipo Médico').length;
+              return (
+                acc +
+                carga.productos.filter(
+                  (producto) => producto.tipoProducto === "Equipo Médico"
+                ).length
+              );
             }, 0);
             return {
               totalCargas,
               cargasHoy,
               totalProductos,
-              equiposMedicos
+              equiposMedicos,
             };
           }
         },
@@ -626,21 +682,21 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         loadInventarioTecnico: async () => {
           try {
-            console.log('🔄 Cargando inventario técnico desde Supabase...');
+            console.log("🔄 Cargando inventario técnico desde Supabase...");
             const [componentes, historial] = await Promise.all([
               getAllComponentesDisponibles(),
-              dbGetHistorialAsignaciones()
+              dbGetHistorialAsignaciones(),
             ]);
             set({
               componentesDisponibles: componentes,
-              historialAsignaciones: historial
+              historialAsignaciones: historial,
             });
-            console.log('✅ Inventario técnico cargado exitosamente:', {
+            console.log("✅ Inventario técnico cargado exitosamente:", {
               componentes: componentes.length,
-              asignaciones: historial.length
+              asignaciones: historial.length,
             });
           } catch (error) {
-            console.error('❌ Error loading inventario técnico:', error);
+            console.error("❌ Error loading inventario técnico:", error);
           }
         },
 
@@ -664,35 +720,46 @@ export const useAppStore = create<AppState>()(
             const [componentes, historial, equipos] = await Promise.all([
               getAllComponentesDisponibles(),
               dbGetHistorialAsignaciones(),
-              getAllEquipos()
+              getAllEquipos(),
             ]);
             set({
               componentesDisponibles: componentes,
               historialAsignaciones: historial,
-              equipos: equipos
+              equipos: equipos,
             });
-            console.log('✅ Componente asignado exitosamente');
+            console.log("✅ Componente asignado exitosamente");
           } catch (error) {
-            console.error('❌ Error asignando componente:', error);
+            console.error("❌ Error asignando componente:", error);
             throw error;
           }
         },
 
         getComponentesDisponibles: () => {
           const { componentesDisponibles } = get();
-          return componentesDisponibles.filter(comp => comp.estado === 'Disponible' && comp.cantidadDisponible > 0);
+          return componentesDisponibles.filter(
+            (comp) =>
+              comp.estado === "Disponible" && comp.cantidadDisponible > 0
+          );
         },
 
-        getHistorialAsignaciones: (componenteId?: string, equipoId?: string) => {
+        getHistorialAsignaciones: (
+          componenteId?: string,
+          equipoId?: string
+        ) => {
           const { historialAsignaciones } = get();
           if (componenteId && equipoId) {
-            return historialAsignaciones.filter(asig =>
-              asig.componenteId === componenteId && asig.equipoId === equipoId
+            return historialAsignaciones.filter(
+              (asig) =>
+                asig.componenteId === componenteId && asig.equipoId === equipoId
             );
           } else if (componenteId) {
-            return historialAsignaciones.filter(asig => asig.componenteId === componenteId);
+            return historialAsignaciones.filter(
+              (asig) => asig.componenteId === componenteId
+            );
           } else if (equipoId) {
-            return historialAsignaciones.filter(asig => asig.equipoId === equipoId);
+            return historialAsignaciones.filter(
+              (asig) => asig.equipoId === equipoId
+            );
           }
           return historialAsignaciones;
         },
@@ -712,47 +779,47 @@ export const useAppStore = create<AppState>()(
 
         loadUsuarios: async () => {
           try {
-            console.log('🔄 Cargando usuarios desde Supabase...');
+            console.log("🔄 Cargando usuarios desde Supabase...");
             const { data, error } = await supabase
-              .from('sistema_usuarios')
-              .select('*')
-              .eq('activo', true)
-              .order('created_at', { ascending: false });
+              .from("sistema_usuarios")
+              .select("*")
+              .eq("activo", true)
+              .order("created_at", { ascending: false });
 
             if (error) throw error;
 
-            const usuarios = data.map(user => ({
+            const usuarios = data.map((user) => ({
               id: user.id,
               nombre: user.nombre,
               email: user.email,
-              rol: user.rol as Usuario['rol'],
+              rol: user.rol as Usuario["rol"],
               activo: user.activo,
               ultimoAcceso: user.ultimo_acceso,
               createdAt: user.created_at,
-              updatedAt: user.updated_at
+              updatedAt: user.updated_at,
             }));
 
             set({ usuarios });
-            console.log('✅ Usuarios cargados exitosamente:', usuarios.length);
+            console.log("✅ Usuarios cargados exitosamente:", usuarios.length);
           } catch (error) {
-            console.error('❌ Error loading usuarios:', error);
+            console.error("❌ Error loading usuarios:", error);
           }
         },
 
         login: async (email: string, password: string) => {
           try {
-            console.log('🔄 Intentando login...', { email });
+            console.log("🔄 Intentando login...", { email });
 
             // Buscar usuario en la base de datos
             const { data, error } = await supabase
-              .from('sistema_usuarios')
-              .select('*')
-              .eq('email', email)
-              .eq('activo', true)
+              .from("sistema_usuarios")
+              .select("*")
+              .eq("email", email)
+              .eq("activo", true)
               .single();
 
             if (error || !data) {
-              throw new Error('Usuario no encontrado o inactivo');
+              throw new Error("Usuario no encontrado o inactivo");
             }
 
             // En un sistema real, aquí verificarías el password hash
@@ -762,40 +829,45 @@ export const useAppStore = create<AppState>()(
               id: data.id,
               nombre: data.nombre,
               email: data.email,
-              rol: data.rol as Usuario['rol'],
+              rol: data.rol as Usuario["rol"],
               activo: data.activo,
               ultimoAcceso: data.ultimo_acceso,
               createdAt: data.created_at,
-              updatedAt: data.updated_at
+              updatedAt: data.updated_at,
             };
 
             // Actualizar último acceso
             await supabase
-              .from('sistema_usuarios')
+              .from("sistema_usuarios")
               .update({ ultimo_acceso: new Date().toISOString() })
-              .eq('id', data.id);
+              .eq("id", data.id);
 
             // Crear sesión
             const sesion: SesionUsuario = {
               usuario: usuario,
               token: `token-${Date.now()}`,
               fechaInicio: new Date().toISOString(),
-              activa: true
+              activa: true,
             };
 
             set({ sesionActual: sesion });
-            console.log('✅ Login exitoso:', usuario.nombre, 'Rol:', usuario.rol);
+            console.log(
+              "✅ Login exitoso:",
+              usuario.nombre,
+              "Rol:",
+              usuario.rol
+            );
 
             return sesion;
           } catch (error) {
-            console.error('❌ Error en login:', error);
+            console.error("❌ Error en login:", error);
             throw error;
           }
         },
 
         logout: () => {
           set({ sesionActual: null });
-          console.log('✅ Logout exitoso');
+          console.log("✅ Logout exitoso");
         },
 
         getCurrentUser: () => {
@@ -803,9 +875,9 @@ export const useAppStore = create<AppState>()(
           return sesionActual?.usuario || null;
         },
 
-        getUserPermissions: (rol: Usuario['rol']) => {
+        getUserPermissions: (rol: Usuario["rol"]) => {
           // Definición de permisos por rol según los requerimientos
-          const permisos: Record<Usuario['rol'], PermisosRol> = {
+          const permisos: Record<Usuario["rol"], PermisosRol> = {
             super_admin: {
               // Super Admin: Acceso completo a todo
               dashboard: { leer: true, escribir: true },
@@ -821,7 +893,7 @@ export const useAppStore = create<AppState>()(
               clinicas: { leer: true, escribir: true },
               stock: { leer: true, escribir: true },
               reportes: { leer: true, escribir: true },
-              configuracion: { leer: true, escribir: true }
+              configuracion: { leer: true, escribir: true },
             },
             contabilidad: {
               // Contabilidad: Facturación, archivos, gestión documental, clínicas, tareas
@@ -838,7 +910,7 @@ export const useAppStore = create<AppState>()(
               clinicas: { leer: true, escribir: true },
               stock: { leer: false, escribir: false },
               reportes: { leer: true, escribir: false },
-              configuracion: { leer: false, escribir: false }
+              configuracion: { leer: false, escribir: false },
             },
             tecnico: {
               // Técnico: Dashboard (solo lectura), equipos (solo lectura), inventario técnico (solo lectura), calendario
@@ -855,8 +927,8 @@ export const useAppStore = create<AppState>()(
               clinicas: { leer: false, escribir: false },
               stock: { leer: false, escribir: false },
               reportes: { leer: false, escribir: false },
-              configuracion: { leer: false, escribir: false }
-            }
+              configuracion: { leer: false, escribir: false },
+            },
           };
 
           return permisos[rol] || permisos.tecnico;
@@ -883,13 +955,15 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         addMantenimiento: async (mantenimientoData: any) => {
           try {
-            const nuevoMantenimiento = await createMantenimiento(mantenimientoData);
+            const nuevoMantenimiento = await createMantenimiento(
+              mantenimientoData
+            );
             set((state) => ({
-              mantenimientos: [...state.mantenimientos, nuevoMantenimiento]
+              mantenimientos: [...state.mantenimientos, nuevoMantenimiento],
             }));
             return nuevoMantenimiento;
           } catch (error) {
-            console.error('Error al crear mantenimiento:', error);
+            console.error("Error al crear mantenimiento:", error);
             throw error;
           }
         },
@@ -898,84 +972,91 @@ export const useAppStore = create<AppState>()(
             await dbUpdateMantenimiento(mantenimientoId, updates);
             const mantenimientos = await getAllMantenimientos();
             set({ mantenimientos });
-            console.log('✅ Mantenimiento actualizado exitosamente');
+            console.log("✅ Mantenimiento actualizado exitosamente");
           } catch (error) {
-            console.error('❌ Error updating mantenimiento:', error);
+            console.error("❌ Error updating mantenimiento:", error);
             throw error;
           }
         },
-        
+
         deleteMantenimiento: async (mantenimientoId: string) => {
           try {
             await dbDeleteMantenimiento(mantenimientoId);
             const mantenimientos = await getAllMantenimientos();
             set({ mantenimientos });
-            console.log('✅ Mantenimiento eliminado exitosamente');
+            console.log("✅ Mantenimiento eliminado exitosamente");
           } catch (error) {
-            console.error('❌ Error deleting mantenimiento:', error);
+            console.error("❌ Error deleting mantenimiento:", error);
             throw error;
           }
         },
-        
-        updateComponente: async (equipoId: string, componenteId: string, updates: any) => {
+
+        updateComponente: async (
+          equipoId: string,
+          componenteId: string,
+          updates: any
+        ) => {
           try {
             // La función dbUpdateComponente solo necesita componenteId y updates
             await dbUpdateComponente(componenteId, updates);
             const equipos = await getAllEquipos();
             set({ equipos });
-            console.log('✅ Componente actualizado exitosamente');
+            console.log("✅ Componente actualizado exitosamente");
           } catch (error) {
-            console.error('❌ Error updating componente:', error);
+            console.error("❌ Error updating componente:", error);
             throw error;
           }
         },
-        
+
         getMantenimientosByEquipo: (equipoId: string) => {
           const { mantenimientos } = get();
-          return mantenimientos.filter(m => m.equipoId === equipoId);
+          return mantenimientos.filter((m) => m.equipoId === equipoId);
         },
-        
+
         searchEquipos: (searchTerm: string) => {
           const { equipos } = get();
           const term = searchTerm.toLowerCase();
-          return equipos.filter(equipo =>
-            equipo.nombreEquipo.toLowerCase().includes(term) ||
-            equipo.cliente.toLowerCase().includes(term) ||
-            equipo.ubicacion.toLowerCase().includes(term) ||
-            equipo.marca.toLowerCase().includes(term) ||
-            equipo.modelo.toLowerCase().includes(term) ||
-            equipo.numeroSerieBase.toLowerCase().includes(term)
+          return equipos.filter(
+            (equipo) =>
+              equipo.nombreEquipo.toLowerCase().includes(term) ||
+              equipo.cliente.toLowerCase().includes(term) ||
+              equipo.ubicacion.toLowerCase().includes(term) ||
+              equipo.marca.toLowerCase().includes(term) ||
+              equipo.modelo.toLowerCase().includes(term) ||
+              equipo.numeroSerieBase.toLowerCase().includes(term)
           );
         },
-        loadTecnicos: async () => { },
-        addTecnico: async () => { },
-        updateTecnico: async () => { },
+        loadTecnicos: async () => {},
+        addTecnico: async () => {},
+        updateTecnico: async () => {},
         getTecnicosDisponibles: () => [],
-        loadPlanesMantenimiento: async () => { },
-        addPlanMantenimiento: async () => { },
-        addMantenimientoProgramado: async () => { },
+        loadPlanesMantenimiento: async () => {},
+        addPlanMantenimiento: async () => {},
+        addMantenimientoProgramado: async () => {},
         getMantenimientosProgramados: () => [],
         getMantenimientosByTecnico: () => [],
         getMantenimientosVencidos: () => [],
         loadClinicas: async () => {
           try {
-            console.log('🔄 Cargando clínicas desde Supabase...');
+            console.log("🔄 Cargando clínicas desde Supabase...");
             const clinicas = await getAllClinicas();
             set({ clinicas });
-            console.log('✅ Clínicas cargadas exitosamente:', clinicas.length);
+            console.log("✅ Clínicas cargadas exitosamente:", clinicas.length);
           } catch (error) {
-            console.error('❌ Error loading clínicas:', error);
+            console.error("❌ Error loading clínicas:", error);
           }
         },
-        addClinica: async (clinicaData: Omit<Clinica, 'id' | 'createdAt' | 'updatedAt'>) => {
+        addClinica: async (
+          clinicaData: Omit<Clinica, "id" | "createdAt" | "updatedAt">
+        ) => {
           try {
             const nuevaClinica = await createClinica(clinicaData);
             const clinicas = await getAllClinicas();
             set({ clinicas });
-            console.log('✅ Clínica agregada exitosamente');
+            console.log("✅ Clínica agregada exitosamente");
             return nuevaClinica;
           } catch (error) {
-            console.error('❌ Error adding clínica:', error);
+            console.error("❌ Error adding clínica:", error);
             throw error;
           }
         },
@@ -984,9 +1065,9 @@ export const useAppStore = create<AppState>()(
             await updateClinica(id, updates);
             const clinicas = await getAllClinicas();
             set({ clinicas });
-            console.log('✅ Clínica actualizada exitosamente');
+            console.log("✅ Clínica actualizada exitosamente");
           } catch (error) {
-            console.error('❌ Error updating clínica:', error);
+            console.error("❌ Error updating clínica:", error);
             throw error;
           }
         },
@@ -995,9 +1076,9 @@ export const useAppStore = create<AppState>()(
             await deleteClinica(id);
             const clinicas = await getAllClinicas();
             set({ clinicas });
-            console.log('✅ Clínica eliminada exitosamente');
+            console.log("✅ Clínica eliminada exitosamente");
           } catch (error) {
-            console.error('❌ Error deleting clínica:', error);
+            console.error("❌ Error deleting clínica:", error);
             throw error;
           }
         },
@@ -1007,10 +1088,10 @@ export const useAppStore = create<AppState>()(
         },
         getClinicasActivas: () => {
           const { clinicas } = get();
-          return (clinicas || []).filter(c => c.activa);
+          return (clinicas || []).filter((c) => c.activa);
         },
-        loadTransaccionesStock: async () => { },
-        addTransaccionStock: async () => { },
+        loadTransaccionesStock: async () => {},
+        addTransaccionStock: async () => {},
         getTransaccionesStock: () => [],
         getTransaccionesByComponente: () => [],
         getEstadisticasStock: () => ({
@@ -1019,7 +1100,7 @@ export const useAppStore = create<AppState>()(
           transaccionesHoy: 0,
           entradasMes: 0,
           salidasMes: 0,
-          valorTotalStock: 0
+          valorTotalStock: 0,
         }),
         procesarSalidaStock: async (
           itemId: string | null,
@@ -1031,19 +1112,21 @@ export const useAppStore = create<AppState>()(
           cliente?: string
         ) => {
           try {
-            console.log('🔄 Procesando salida de stock...', {
+            console.log("🔄 Procesando salida de stock...", {
               itemId,
               stockItemId,
               cantidad,
               motivo,
               numeroRemision,
-              cliente
+              cliente,
             });
 
             // Determinar si es del inventario técnico o stock general
             if (itemId) {
               // Es del inventario técnico (componentes_disponibles)
-              const componente = get().componentesDisponibles.find(c => c.id === itemId);
+              const componente = get().componentesDisponibles.find(
+                (c) => c.id === itemId
+              );
               if (componente) {
                 await get().registrarSalidaStock({
                   itemId: itemId,
@@ -1053,27 +1136,32 @@ export const useAppStore = create<AppState>()(
                   cantidad: cantidad,
                   cantidadAnterior: componente.cantidadDisponible,
                   motivo: motivo,
-                  destino: cliente || 'Cliente',
-                  responsable: 'Sistema - Remisión',
+                  destino: cliente || "Cliente",
+                  responsable: "Sistema - Remisión",
                   cliente: cliente,
                   numeroFactura: numeroFactura,
-                  observaciones: `Remisión: ${numeroRemision || 'N/A'}`,
-                  carpetaOrigen: componente.marca
+                  observaciones: `Remisión: ${numeroRemision || "N/A"}`,
+                  carpetaOrigen: componente.marca,
                 });
 
                 // Actualizar cantidad en componentes_disponibles
-                const nuevaCantidad = Math.max(0, componente.cantidadDisponible - cantidad);
+                const nuevaCantidad = Math.max(
+                  0,
+                  componente.cantidadDisponible - cantidad
+                );
                 await supabase
-                  .from('componentes_disponibles')
+                  .from("componentes_disponibles")
                   .update({
                     cantidad_disponible: nuevaCantidad,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
                   })
-                  .eq('id', itemId);
+                  .eq("id", itemId);
               }
             } else if (stockItemId) {
               // Es del stock general (stock_items)
-              const stockItem = get().stockItems.find(s => s.id === stockItemId);
+              const stockItem = get().stockItems.find(
+                (s) => s.id === stockItemId
+              );
               if (stockItem) {
                 await get().registrarSalidaStock({
                   itemId: stockItemId,
@@ -1083,23 +1171,26 @@ export const useAppStore = create<AppState>()(
                   cantidad: cantidad,
                   cantidadAnterior: stockItem.cantidadDisponible,
                   motivo: motivo,
-                  destino: cliente || 'Cliente',
-                  responsable: 'Sistema - Remisión',
+                  destino: cliente || "Cliente",
+                  responsable: "Sistema - Remisión",
                   cliente: cliente,
                   numeroFactura: numeroFactura,
-                  observaciones: `Remisión: ${numeroRemision || 'N/A'}`,
-                  carpetaOrigen: stockItem.marca
+                  observaciones: `Remisión: ${numeroRemision || "N/A"}`,
+                  carpetaOrigen: stockItem.marca,
                 });
 
                 // Actualizar cantidad en stock_items
-                const nuevaCantidad = Math.max(0, stockItem.cantidadDisponible - cantidad);
+                const nuevaCantidad = Math.max(
+                  0,
+                  stockItem.cantidadDisponible - cantidad
+                );
                 await supabase
-                  .from('stock_items')
+                  .from("stock_items")
                   .update({
                     cantidad_actual: nuevaCantidad,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
                   })
-                  .eq('id', stockItemId);
+                  .eq("id", stockItemId);
               }
             }
 
@@ -1107,106 +1198,116 @@ export const useAppStore = create<AppState>()(
             await Promise.all([
               get().loadInventarioTecnico(),
               get().loadStock(),
-              get().loadMovimientosStock()
+              get().loadMovimientosStock(),
             ]);
 
-            console.log('✅ Salida de stock procesada exitosamente');
+            console.log("✅ Salida de stock procesada exitosamente");
           } catch (error) {
-            console.error('❌ Error procesando salida stock:', error);
+            console.error("❌ Error procesando salida stock:", error);
             throw error;
           }
         },
         loadRemisiones: async () => {
           try {
-            console.log('🔄 Cargando remisiones desde Supabase...');
+            console.log("🔄 Cargando remisiones desde Supabase...");
             const remisiones = await getAllRemisiones();
             set({ remisiones });
-            console.log('✅ Remisiones cargadas exitosamente:', remisiones.length);
+            console.log(
+              "✅ Remisiones cargadas exitosamente:",
+              remisiones.length
+            );
           } catch (error) {
-            console.error('❌ Error loading remisiones:', error);
+            console.error("❌ Error loading remisiones:", error);
           }
         },
         addRemision: async (remisionData: any) => {
           try {
-            console.log('🔄 Creando nueva remisión...', remisionData);
+            console.log("🔄 Creando nueva remisión...", remisionData);
             const nuevaRemision = await createRemision(remisionData);
 
             // Recargar la lista de remisiones después de crear
             const remisiones = await getAllRemisiones();
             set({ remisiones });
 
-            console.log('✅ Remisión creada exitosamente:', nuevaRemision);
+            console.log("✅ Remisión creada exitosamente:", nuevaRemision);
             return nuevaRemision;
           } catch (error) {
-            console.error('❌ Error creating remisión:', error);
+            console.error("❌ Error creating remisión:", error);
             throw error;
           }
         },
         updateRemision: async (id: string, updates: any) => {
           try {
-            console.log('🔄 Actualizando remisión...', { id, updates });
+            console.log("🔄 Actualizando remisión...", { id, updates });
             await updateRemision(id, updates);
 
             // Recargar la lista de remisiones después de actualizar
             const remisiones = await getAllRemisiones();
             set({ remisiones });
 
-            console.log('✅ Remisión actualizada exitosamente');
+            console.log("✅ Remisión actualizada exitosamente");
           } catch (error) {
-            console.error('❌ Error updating remisión:', error);
+            console.error("❌ Error updating remisión:", error);
             throw error;
           }
         },
         deleteRemision: async (id: string) => {
           try {
-            console.log('🔄 Eliminando remisión...', id);
+            console.log("🔄 Eliminando remisión...", id);
             await deleteRemision(id);
 
             // Recargar la lista de remisiones después de eliminar
             const remisiones = await getAllRemisiones();
             set({ remisiones });
 
-            console.log('✅ Remisión eliminada exitosamente');
+            console.log("✅ Remisión eliminada exitosamente");
           } catch (error) {
-            console.error('❌ Error deleting remisión:', error);
+            console.error("❌ Error deleting remisión:", error);
             throw error;
           }
         },
         getRemisiones: () => {
           const { remisiones } = get();
-          return remisiones.sort((a, b) =>
-            new Date(b.createdAt || b.fecha).getTime() - new Date(a.createdAt || a.fecha).getTime()
+          return remisiones.sort(
+            (a, b) =>
+              new Date(b.createdAt || b.fecha).getTime() -
+              new Date(a.createdAt || a.fecha).getTime()
           );
         },
         getRemisionesByCliente: (cliente: string) => {
           const { remisiones } = get();
-          return remisiones.filter(r => r.cliente === cliente);
+          return remisiones.filter((r) => r.cliente === cliente);
         },
         generateNumeroRemision: async () => {
           try {
             return await generateNumeroRemision();
           } catch (error) {
-            console.error('❌ Error generating numero remision:', error);
+            console.error("❌ Error generating numero remision:", error);
             // Fallback: generar número local
             const timestamp = Date.now();
-            const random = String(Math.floor(timestamp % 999) + 1).padStart(3, '0');
+            const random = String(Math.floor(timestamp % 999) + 1).padStart(
+              3,
+              "0"
+            );
             return `REM-${random}`;
           }
         },
-        loadDocumentosCarga: async () => { },
-        addDocumentoCarga: async () => { return {} as any; },
-        deleteDocumentoCarga: async () => { },
+        loadDocumentosCarga: async () => {},
+        addDocumentoCarga: async () => {
+          return {} as any;
+        },
+        deleteDocumentoCarga: async () => {},
         getDocumentosByCarga: () => [],
-        getCargasConDocumentos: () => []
+        getCargasConDocumentos: () => [],
       };
     },
     {
-      name: 'app-store',
+      name: "app-store",
       partialize: (state) => ({
         sesionActual: state.sesionActual,
         planesMantenimiento: state.planesMantenimiento,
-        tecnicos: state.tecnicos
-      })
+        tecnicos: state.tecnicos,
+      }),
     }
   )
 );

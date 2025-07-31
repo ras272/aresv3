@@ -2,7 +2,7 @@
 
 import { AppInitializer } from './AppInitializer';
 import { HydrationErrorBoundary } from './HydrationErrorBoundary';
-import { AuthGuard } from './AuthGuard';
+import { ProtectedRoute } from './auth/ProtectedRoute';
 
 interface ClientLayoutWrapperProps {
   children: React.ReactNode;
@@ -12,9 +12,9 @@ export function ClientLayoutWrapper({ children }: ClientLayoutWrapperProps) {
   return (
     <HydrationErrorBoundary>
       <AppInitializer />
-      <AuthGuard>
+      <ProtectedRoute>
         {children}
-      </AuthGuard>
+      </ProtectedRoute>
     </HydrationErrorBoundary>
   );
 } 

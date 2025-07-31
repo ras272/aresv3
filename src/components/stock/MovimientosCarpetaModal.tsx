@@ -264,11 +264,29 @@ export function MovimientosCarpetaModal({
                             <p className="text-sm">
                               <strong>Motivo:</strong> {movimiento.motivo}
                             </p>
-                            {movimiento.descripcion && (
+                            
+                            {/* 🔧 Información mejorada para servicios técnicos */}
+                            {movimiento.motivo === 'Utilizado en servicio técnico' && movimiento.observaciones && (
+                              <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-xs font-medium text-blue-800 mb-1">📋 Detalles del Servicio:</p>
+                                <p className="text-xs text-blue-700">{movimiento.observaciones}</p>
+                              </div>
+                            )}
+                            
+                            {/* 🔄 Información para devoluciones por eliminación de reportes */}
+                            {(movimiento.motivo === 'Reporte eliminado completamente' || movimiento.motivo === 'Reporte eliminado desde equipo') && movimiento.observaciones && (
+                              <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
+                                <p className="text-xs font-medium text-green-800 mb-1">🔄 Devolución Automática:</p>
+                                <p className="text-xs text-green-700">{movimiento.observaciones}</p>
+                              </div>
+                            )}
+                            
+                            {movimiento.descripcion && movimiento.motivo !== 'Utilizado en servicio técnico' && (
                               <p className="text-sm text-muted-foreground">
                                 {movimiento.descripcion}
                               </p>
                             )}
+                            
                             {movimiento.cliente && (
                               <p className="text-sm">
                                 <strong>Cliente:</strong> {movimiento.cliente}

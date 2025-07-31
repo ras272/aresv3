@@ -137,7 +137,7 @@ export default function ModalClinica({ isOpen, onClose, clinica }: ModalClinicaP
                     id="nombre"
                     value={formData.nombre}
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
-                    placeholder="Hospital Central, Clínica San Roque..."
+                    placeholder="Ares Paraguay..."
                     required
                   />
                 </div>
@@ -160,7 +160,7 @@ export default function ModalClinica({ isOpen, onClose, clinica }: ModalClinicaP
                   id="direccion"
                   value={formData.direccion}
                   onChange={(e) => handleInputChange('direccion', e.target.value)}
-                  placeholder="Av. Mariscal López 1234, entre Brasilia y España"
+                  placeholder="Av. Mariscal López 1234"
                   required
                 />
               </div>
@@ -182,7 +182,7 @@ export default function ModalClinica({ isOpen, onClose, clinica }: ModalClinicaP
                       id="contactoPrincipal"
                       value={formData.contactoPrincipal}
                       onChange={(e) => handleInputChange('contactoPrincipal', e.target.value)}
-                      placeholder="Dr. Juan Pérez, Lic. María González..."
+                      placeholder="Dra. Nancy Galeano..."
                       className="pl-10"
                     />
                   </div>
@@ -196,7 +196,7 @@ export default function ModalClinica({ isOpen, onClose, clinica }: ModalClinicaP
                       id="telefono"
                       value={formData.telefono}
                       onChange={(e) => handleInputChange('telefono', e.target.value)}
-                      placeholder="021-123456, 0981-123456"
+                      placeholder="0981-123456"
                       className="pl-10"
                     />
                   </div>

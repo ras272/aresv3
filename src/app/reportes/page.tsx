@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { WhatsAppReportModal } from '@/components/reportes/WhatsAppReportModal';
+import { RepuestosViewer } from '@/components/reportes/RepuestosViewer';
 
 export default function ReportesPage() {
   const { mantenimientos, equipos, updateMantenimiento, deleteMantenimiento } = useAppStore();
@@ -241,6 +242,37 @@ export default function ReportesPage() {
 
     setEliminando(true);
     try {
+      // 🔧 Devolver repuestos al stock antes de eliminar el reporte completamente
+      if (reporteParaEliminar.repuestosUtilizados && reporteParaEliminar.repuestosUtilizados.length > 0) {
+        const { devolverRepuestosAlStockReporte } = useAppStore.getState();
+        
+        for (const repuesto of reporteParaEliminar.repuestosUtilizados) {
+          try {
+            // 🎯 Usar la nueva función híbrida para devolución con trazabilidad completa
+            await devolverRepuestosAlStockReporte({
+              itemId: repuesto.id,
+              productoNombre: repuesto.nombre,
+              productoMarca: repuesto.marca,
+              productoModelo: repuesto.modelo,
+              cantidad: repuesto.cantidad,
+              cantidadAnterior: repuesto.stockAntes - repuesto.cantidad, // Stock actual antes de devolver
+              mantenimientoId: reporteParaEliminar.id,
+              equipoId: reporteParaEliminar.equipoId,
+              tecnicoResponsable: 'Sistema',
+              observaciones: `Devolución automática por eliminación de reporte - ${reporteParaEliminar.descripcion}`
+            });
+            
+            console.log(`✅ Repuesto devuelto al stock con trazabilidad completa: ${repuesto.nombre} (+${repuesto.cantidad})`);
+          } catch (error) {
+            console.error(`❌ Error devolviendo repuesto ${repuesto.nombre}:`, error);
+          }
+        }
+        
+        toast.success(`Repuestos devueltos al stock: ${reporteParaEliminar.repuestosUtilizados.length} items`, {
+          description: 'Stock actualizado con trazabilidad completa'
+        });
+      }
+
       await deleteMantenimiento(reporteParaEliminar.id);
       toast.success('Reporte eliminado exitosamente');
       setModalConfirmarEliminacion(false);
@@ -781,6 +813,13 @@ export default function ReportesPage() {
                       <p className="text-purple-800 text-sm leading-relaxed">
                         {reporteParaVer.comentarios}
                       </p>
+                    </div>
+                  )}
+
+                  {/* 🔧 Fila 4.5: Repuestos Utilizados */}
+                  {reporteParaVer.repuestosUtilizados && reporteParaVer.repuestosUtilizados.length > 0 && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <RepuestosViewer repuestos={reporteParaVer.repuestosUtilizados} />
                     </div>
                   )}
 
