@@ -2468,7 +2468,7 @@ export async function getAllStockItems() {
       rutaCarpeta: item.ruta_carpeta || item.marca,
       tipoDestino: item.tipo_destino || 'stock',
       fechaIngreso: item.fecha_ingreso,
-      imagen: null,
+      imagen: item.imagen,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
       fuente: 'componentes_disponibles'
@@ -2525,6 +2525,8 @@ export async function updateStockItemDetails(productId: string, updates: {
   observaciones?: string;
 }) {
   try {
+    console.log('🔍 Buscando producto con ID:', productId);
+    
     // Encontrar todos los componentes que corresponden a este producto agrupado
     const { data: componentes, error: fetchError } = await supabase
       .from('componentes_disponibles')
@@ -2535,21 +2537,40 @@ export async function updateStockItemDetails(productId: string, updates: {
     // Filtrar los items que corresponden al producto
     const itemsDelProducto = componentes.filter(item => {
       const productoId = `${item.nombre}-${item.marca}-${item.modelo}`.toLowerCase().replace(/\s+/g, '-');
+      console.log('🔍 Comparando:', { 
+        generado: productoId, 
+        buscado: productId, 
+        coincide: productoId === productId,
+        item: { nombre: item.nombre, marca: item.marca, modelo: item.modelo }
+      });
       return productoId === productId;
     });
+
+    console.log('🔍 Items encontrados:', itemsDelProducto.length);
 
     if (itemsDelProducto.length === 0) {
       throw new Error('Producto no encontrado en stock');
     }
 
     // Actualizar todos los items relacionados
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    // Solo incluir campos que no sean undefined
+    if (updates.imagen !== undefined) {
+      updateData.imagen = updates.imagen;
+    }
+    if (updates.observaciones !== undefined) {
+      updateData.observaciones = updates.observaciones;
+    }
+
+    console.log('🔄 Datos a actualizar:', updateData);
+
     const updatePromises = itemsDelProducto.map(item =>
       supabase
         .from('componentes_disponibles')
-        .update({
-          observaciones: updates.observaciones,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', item.id)
     );
 

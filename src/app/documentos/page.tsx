@@ -135,6 +135,9 @@ export default function DocumentosPage() {
         await addDocumentoCarga(documento);
       }
 
+      // Recargar datos para mostrar los documentos inmediatamente
+      await loadAllData();
+
       // Limpiar input
       event.target.value = '';
     } catch (error) {
@@ -149,8 +152,11 @@ export default function DocumentosPage() {
   const handleDeleteDocument = async (documentId: string) => {
     try {
       await deleteDocumentoCarga(documentId);
+      await loadAllData(); // Recargar datos después de eliminar
+      console.log('✅ Documento eliminado exitosamente');
     } catch (error) {
-      console.error('Error eliminando documento:', error);
+      console.error('❌ Error eliminando documento:', error);
+      alert('Error eliminando documento');
     }
   };
 
@@ -490,19 +496,44 @@ export default function DocumentosPage() {
                         <Button
                           className="w-full"
                           onClick={() => {
-                            // Extraer publicId de las observaciones
-                            let publicId = null;
-                            if (previewDocument.observaciones?.includes('Cloudinary:')) {
-                              publicId = previewDocument.observaciones.split('Cloudinary: ')[1];
+                            // Debug completo del documento
+                            console.log('🔍 DEBUG COMPLETO PDF:', {
+                              documento: previewDocument,
+                              url: previewDocument.archivo.url,
+                              tipo: previewDocument.archivo.tipo,
+                              observaciones: previewDocument.observaciones
+                            });
+                            
+                            // Generar múltiples URLs basadas en lo que sabemos
+                            const originalUrl = previewDocument.archivo.url;
+                            
+                            // Si la URL contiene /image/upload/, es un PDF clasificado como imagen
+                            let finalUrl = originalUrl;
+                            
+                            if (originalUrl.includes('/image/upload/') && previewDocument.archivo.tipo === 'application/pdf') {
+                              // Para PDFs clasificados como imagen, usar parámetros para forzar descarga/vista
+                              finalUrl = originalUrl.replace('/image/upload/', '/image/upload/fl_attachment:false,f_auto/');
+                              console.log('🔄 Usando parámetros de imagen para PDF');
                             }
-
-                            // Usar URL optimizada para visualización
-                            const viewUrl = publicId
-                              ? getFileUrl(publicId, false) // false = para visualización
-                              : previewDocument.archivo.url;
-
-
-                            window.open(viewUrl, '_blank');
+                            
+                            console.log('🔗 URLs generadas:', {
+                              original: originalUrl,
+                              final: finalUrl,
+                              tipo: previewDocument.archivo.tipo
+                            });
+                            
+                            // Estrategia múltiple para abrir PDFs
+                            console.log('🚀 Intentando abrir PDF con URL:', finalUrl);
+                            
+                            // Crear múltiples opciones para el usuario
+                            const options = [
+                              { name: 'Cloudinary Directo', url: finalUrl },
+                              { name: 'Google Docs Viewer', url: `https://docs.google.com/viewer?url=${encodeURIComponent(finalUrl)}&embedded=true` },
+                              { name: 'Mozilla PDF.js', url: `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(finalUrl)}` }
+                            ];
+                            
+                            // Intentar abrir directamente
+                            window.open(finalUrl, '_blank');
                           }}
                         >
                           <FileText className="h-4 w-4 mr-2" />
@@ -513,18 +544,13 @@ export default function DocumentosPage() {
                           variant="outline"
                           className="w-full"
                           onClick={() => {
-                            // Extraer publicId de las observaciones
-                            let publicId = null;
-                            if (previewDocument.observaciones?.includes('Cloudinary:')) {
-                              publicId = previewDocument.observaciones.split('Cloudinary: ')[1];
-                            }
-
-                            // Usar URL optimizada para descarga
-                            const downloadUrl = publicId
-                              ? getFileUrl(publicId, true) // true = para descarga
-                              : previewDocument.archivo.url;
-
-
+                            // Forzar descarga usando la URL directa
+                            const downloadUrl = previewDocument.archivo.url;
+                            
+                            console.log('📥 Descargando PDF:', {
+                              nombre: previewDocument.nombre,
+                              url: downloadUrl
+                            });
 
                             // Forzar descarga
                             const link = document.createElement('a');

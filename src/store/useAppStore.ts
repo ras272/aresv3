@@ -45,10 +45,6 @@ import {
   generateNumeroRemision,
   getAllTransaccionesStock,
   createTransaccionStock,
-  createDocumentoCarga,
-  getAllDocumentosCarga,
-  getDocumentosByCarga,
-  deleteDocumentoCarga as dbDeleteDocumentoCarga,
   getAllMovimientosStock,
   getMovimientosByProducto,
   getMovimientosByCarpeta,
@@ -58,6 +54,12 @@ import {
   devolverRepuestosAlStockReporte,
   type MovimientoStock,
 } from "@/lib/database";
+import { 
+  createDocumentoCarga,
+  getAllDocumentosCarga,
+  deleteDocumentoCarga,
+  DocumentoCarga,
+} from "@/lib/documentos-database";
 import { procesarProductoParaStock } from "@/lib/stock-flow";
 import { supabase } from "@/lib/supabase";
 
@@ -1336,11 +1338,44 @@ export const useAppStore = create<AppState>()(
           }
         },
         loadDocumentosCarga: async () => {},
-        addDocumentoCarga: async () => {
-          return {} as any;
+        addDocumentoCarga: async (documento: DocumentoCarga) => {
+          try {
+            console.log('📄 Agregando documento a la carga:', documento);
+            const nuevoDocumento = await createDocumentoCarga(documento);
+            
+            // Recargar documentos
+            const documentos = await getAllDocumentosCarga();
+            set({ documentosCarga: documentos });
+            
+            console.log('✅ Documento agregado exitosamente');
+            return nuevoDocumento;
+          } catch (error) {
+            console.error('❌ Error agregando documento:', error);
+            throw error;
+          }
         },
         deleteDocumentoCarga: async () => {},
-        getDocumentosByCarga: () => [],
+        getDocumentosByCarga: (cargaId: string) => {
+          const { documentosCarga } = get();
+          return documentosCarga
+            .filter(doc => doc.carga_id === cargaId)
+            .map(doc => ({
+              id: doc.id,
+              cargaId: doc.carga_id,
+              codigoCarga: doc.codigo_carga,
+              nombre: doc.nombre,
+              tipoDocumento: doc.tipo_documento,
+              archivo: {
+                nombre: doc.archivo_nombre,
+                tamaño: doc.archivo_tamaño,
+                tipo: doc.archivo_tipo,
+                url: doc.archivo_url
+              },
+              observaciones: doc.observaciones,
+              fechaSubida: doc.fecha_subida,
+              subidoPor: doc.subido_por
+            }));
+        },
         getCargasConDocumentos: () => [],
       };
     },
