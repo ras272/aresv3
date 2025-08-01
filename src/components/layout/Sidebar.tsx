@@ -71,6 +71,12 @@ const navigation = [
     permission: "mercaderias" as const,
   },
   {
+    name: "Catálogo de Productos",
+    href: "/productos",
+    icon: Package,
+    permission: "mercaderias" as const,
+  },
+  {
     name: "Gestión Documental",
     href: "/documentos",
     icon: FileText,

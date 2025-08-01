@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { registrarMovimientoStock } from './database';
 import {
   ejecutarConManejoErrores,
   validarDatosProducto,
@@ -251,6 +252,22 @@ async function procesarProductoIndividualConCarpeta(cargaId: string, producto: a
       }
 
       console.log(`✅ Stock actualizado en componentes_disponibles: ${producto.producto} (${existenteComponente.cantidad_disponible} → ${nuevaCantidad}) en carpeta ${carpetaInfo.rutaCompleta}`);
+      
+      // 📊 REGISTRAR MOVIMIENTO DE ENTRADA (producto existente)
+      await registrarMovimientoStock({
+        itemId: existenteComponente.id,
+        itemType: 'componente_disponible',
+        tipoMovimiento: 'Entrada',
+        cantidad: producto.cantidad,
+        cantidadAnterior: existenteComponente.cantidad_disponible,
+        cantidadNueva: nuevaCantidad,
+        motivo: `Entrada desde carga: ${cargaId}`,
+        productoNombre: producto.producto,
+        productoMarca: producto.marca,
+        carpetaOrigen: carpetaInfo.rutaCompleta,
+        carpetaDestino: carpetaInfo.rutaCompleta,
+        codigoCargaOrigen: cargaId
+      });
     } else {
       // ✅ NO EXISTE: Crear nuevo item en componentes_disponibles
       const nuevoComponente = {
@@ -285,6 +302,22 @@ async function procesarProductoIndividualConCarpeta(cargaId: string, producto: a
       }
 
       console.log(`✅ Nuevo producto en componentes_disponibles: ${producto.producto} (${producto.cantidad} unidades) organizado en carpeta ${carpetaInfo.rutaCompleta}`);
+      
+      // 📊 REGISTRAR MOVIMIENTO DE ENTRADA (producto nuevo)
+      await registrarMovimientoStock({
+        itemId: nuevoItem.id,
+        itemType: 'componente_disponible',
+        tipoMovimiento: 'Entrada',
+        cantidad: producto.cantidad,
+        cantidadAnterior: 0,
+        cantidadNueva: producto.cantidad,
+        motivo: `Entrada inicial desde carga: ${cargaId}`,
+        productoNombre: producto.producto,
+        productoMarca: producto.marca,
+        carpetaOrigen: null,
+        carpetaDestino: carpetaInfo.rutaCompleta,
+        codigoCargaOrigen: cargaId
+      });
     }
 
     // 🎯 TODOS LOS EQUIPOS MÉDICOS VAN AL STOCK Y AL MÓDULO DE EQUIPOS

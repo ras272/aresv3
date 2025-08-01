@@ -41,6 +41,7 @@ import {
   createRemision,
   updateRemision,
   deleteRemision,
+  deleteRemisionConRestauracion,
   generateNumeroRemision,
   getAllTransaccionesStock,
   createTransaccionStock,
@@ -214,10 +215,20 @@ export const useAppStore = create<AppState>()(
           motivo: string
         ) => {
           try {
+            // 🔧 DETECCIÓN AUTOMÁTICA: Copiar lógica de registrarSalidaStock
+            const { data: stockItem } = await supabase
+              .from('stock_items')
+              .select('id')
+              .eq('id', itemId)
+              .single();
+
+            const tableName = stockItem ? 'stock_items' : 'componentes_disponibles';
+            const cantidadField = stockItem ? 'cantidad_actual' : 'cantidad_disponible';
+
             const { error } = await supabase
-              .from("componentes_disponibles")
+              .from(tableName)
               .update({
-                cantidad_disponible: nuevaCantidad,
+                [cantidadField]: nuevaCantidad,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", itemId);
@@ -592,6 +603,19 @@ export const useAppStore = create<AppState>()(
             const nuevaCarga = await createCargaMercaderia(cargaData);
             const cargas = await getAllCargas();
             set({ cargasMercaderia: cargas });
+            
+            // 🔄 RECARGAR STOCK Y MOVIMIENTOS después de agregar carga para que aparezca inmediatamente
+            console.log('🔄 Recargando stock y movimientos después de agregar carga...');
+            const [stockItems, movimientos] = await Promise.all([
+              getAllStockItems(),
+              getAllMovimientosStock()
+            ]);
+            set({ 
+              stockItems: stockItems,
+              movimientosStock: movimientos 
+            });
+            console.log('✅ Stock y movimientos recargados exitosamente después de agregar carga');
+            
             return nuevaCarga;
           } catch (error) {
             console.error("Error adding carga mercadería:", error);
@@ -699,6 +723,8 @@ export const useAppStore = create<AppState>()(
             console.error("❌ Error loading inventario técnico:", error);
           }
         },
+
+
 
         asignarComponente: async (
           componenteId: string,
@@ -955,12 +981,18 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         addMantenimiento: async (mantenimientoData: any) => {
           try {
+            console.log('🔄 Store: Creando mantenimiento en BD...', mantenimientoData);
             const nuevoMantenimiento = await createMantenimiento(
               mantenimientoData
             );
-            set((state) => ({
-              mantenimientos: [...state.mantenimientos, nuevoMantenimiento],
-            }));
+            console.log('✅ Store: Mantenimiento creado en BD:', nuevoMantenimiento);
+            
+            // 🔧 CAMBIO: Recargar todos los mantenimientos desde la BD (más seguro)
+            console.log('🔄 Store: Recargando todos los mantenimientos desde BD...');
+            const mantenimientos = await getAllMantenimientos();
+            set({ mantenimientos });
+            console.log('✅ Store: Mantenimientos recargados:', mantenimientos.length);
+            
             return nuevoMantenimiento;
           } catch (error) {
             console.error("Error al crear mantenimiento:", error);
@@ -1124,11 +1156,13 @@ export const useAppStore = create<AppState>()(
             // Determinar si es del inventario técnico o stock general
             if (itemId) {
               // Es del inventario técnico (componentes_disponibles)
-              const componente = get().componentesDisponibles.find(
-                (c) => c.id === itemId
-              );
+              const componente = get().componentesDisponibles.find((c) => c.id === itemId);
+              
               if (componente) {
-                await get().registrarSalidaStock({
+                console.log("🔍 Procesando salida para componente:", componente);
+                
+                // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
+                await registrarSalidaStock({
                   itemId: itemId,
                   productoNombre: componente.nombre,
                   productoMarca: componente.marca,
@@ -1144,26 +1178,20 @@ export const useAppStore = create<AppState>()(
                   carpetaOrigen: componente.marca,
                 });
 
-                // Actualizar cantidad en componentes_disponibles
-                const nuevaCantidad = Math.max(
-                  0,
-                  componente.cantidadDisponible - cantidad
-                );
-                await supabase
-                  .from("componentes_disponibles")
-                  .update({
-                    cantidad_disponible: nuevaCantidad,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", itemId);
+                console.log("✅ Movimiento de stock registrado para:", componente.nombre);
+              } else {
+                console.error("❌ No se encontró el componente con ID:", itemId);
+                throw new Error(`Componente no encontrado: ${itemId}`);
               }
             } else if (stockItemId) {
               // Es del stock general (stock_items)
-              const stockItem = get().stockItems.find(
-                (s) => s.id === stockItemId
-              );
+              const stockItem = get().stockItems.find((s) => s.id === stockItemId);
+              
               if (stockItem) {
-                await get().registrarSalidaStock({
+                console.log("🔍 Procesando salida para stock item:", stockItem);
+                
+                // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
+                await registrarSalidaStock({
                   itemId: stockItemId,
                   productoNombre: stockItem.nombre,
                   productoMarca: stockItem.marca,
@@ -1179,18 +1207,10 @@ export const useAppStore = create<AppState>()(
                   carpetaOrigen: stockItem.marca,
                 });
 
-                // Actualizar cantidad en stock_items
-                const nuevaCantidad = Math.max(
-                  0,
-                  stockItem.cantidadDisponible - cantidad
-                );
-                await supabase
-                  .from("stock_items")
-                  .update({
-                    cantidad_actual: nuevaCantidad,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", stockItemId);
+                console.log("✅ Movimiento de stock registrado para:", stockItem.nombre);
+              } else {
+                console.error("❌ No se encontró el stock item con ID:", stockItemId);
+                throw new Error(`Stock item no encontrado: ${stockItemId}`);
               }
             }
 
@@ -1263,6 +1283,29 @@ export const useAppStore = create<AppState>()(
             console.log("✅ Remisión eliminada exitosamente");
           } catch (error) {
             console.error("❌ Error deleting remisión:", error);
+            throw error;
+          }
+        },
+
+        // 🆕 Nueva función para eliminar remisión con motivo y restauración de stock
+        deleteRemisionConMotivo: async (id: string, motivo: string) => {
+          try {
+            console.log("🔄 Eliminando remisión con restauración de stock...", id);
+            const resultado = await deleteRemisionConRestauracion(id, motivo);
+
+            // Recargar datos
+            await Promise.all([
+              get().loadStock(),
+              get().loadMovimientosStock(),
+            ]);
+
+            const remisiones = await getAllRemisiones();
+            set({ remisiones });
+
+            console.log("✅ Remisión eliminada con restauración exitosa:", resultado);
+            return resultado;
+          } catch (error) {
+            console.error("❌ Error deleting remisión con motivo:", error);
             throw error;
           }
         },

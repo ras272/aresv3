@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import ModalRemision from '@/components/remisiones/ModalRemision';
+import ModalEliminarRemision from '@/components/remisiones/ModalEliminarRemision';
 import {
   FileText,
   Plus,
@@ -30,21 +31,22 @@ export default function RemisionesPage() {
   const {
     remisiones,
     getRemisiones,
-    deleteRemision,
-    loadInventarioTecnico
+    deleteRemisionConMotivo,
+    loadStock
   } = useAppStore();
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalVerRemision, setModalVerRemision] = useState(false);
   const [modalEditarRemision, setModalEditarRemision] = useState(false);
+  const [modalEliminarRemision, setModalEliminarRemision] = useState(false);
   const [remisionSeleccionada, setRemisionSeleccionada] = useState<Remision | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    loadInventarioTecnico();
-  }, [loadInventarioTecnico]);
+    loadStock();
+  }, [loadStock]);
 
   // Filtrar remisiones
   const remisionesFiltradas = getRemisiones().filter(remision => {
@@ -111,15 +113,31 @@ export default function RemisionesPage() {
     }
   };
 
-  // Eliminar remisión
-  const handleEliminarRemision = async (id: string, numeroRemision: string) => {
-    if (confirm(`¿Estás seguro de eliminar la remisión ${numeroRemision}?`)) {
-      try {
-        await deleteRemision(id);
-        toast.success('Remisión eliminada exitosamente');
-      } catch (error) {
-        toast.error('Error al eliminar la remisión');
+  // Abrir modal de eliminación
+  const handleEliminarRemision = (remision: Remision) => {
+    setRemisionSeleccionada(remision);
+    setModalEliminarRemision(true);
+  };
+
+  // Confirmar eliminación con motivo
+  const handleConfirmarEliminacion = async (motivo: string) => {
+    if (!remisionSeleccionada) return;
+
+    try {
+      const resultado = await deleteRemisionConMotivo(remisionSeleccionada.id, motivo);
+      
+      if (resultado.productosRestaurados > 0) {
+        toast.success(
+          `Remisión ${resultado.numeroRemision} eliminada exitosamente. ` +
+          `Se restauraron ${resultado.productosRestaurados} productos al stock.`
+        );
+      } else {
+        toast.success(`Remisión ${resultado.numeroRemision} eliminada exitosamente.`);
       }
+    } catch (error) {
+      console.error('Error al eliminar remisión:', error);
+      toast.error('Error al eliminar la remisión');
+      throw error;
     }
   };
 
@@ -294,7 +312,7 @@ export default function RemisionesPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEliminarRemision(remision.id, remision.numeroRemision)}
+                            onClick={() => handleEliminarRemision(remision)}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             title="Eliminar remisión"
                           >
@@ -542,6 +560,17 @@ export default function RemisionesPage() {
             setRemisionSeleccionada(null);
           }}
           remisionParaEditar={remisionSeleccionada}
+        />
+
+        {/* Modal para eliminar remisión */}
+        <ModalEliminarRemision
+          isOpen={modalEliminarRemision}
+          onClose={() => {
+            setModalEliminarRemision(false);
+            setRemisionSeleccionada(null);
+          }}
+          remision={remisionSeleccionada}
+          onConfirm={handleConfirmarEliminacion}
         />
       </div>
     </DashboardLayout>

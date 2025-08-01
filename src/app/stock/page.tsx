@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EditProductModal } from "@/components/inventory/EditProductModal";
 import { TrazabilidadStats } from "@/components/stock/TrazabilidadStats";
 import { MovimientosCarpetaModal } from "@/components/stock/MovimientosCarpetaModal";
+import { MovimientosStock } from "@/components/stock/MovimientosStock";
 import { RegistrarSalidaModal } from "@/components/stock/RegistrarSalidaModal";
 import {
   Package,
@@ -80,6 +82,9 @@ export default function StockPage() {
   const [modalSalidaOpen, setModalSalidaOpen] = useState(false);
   const [productoParaSalida, setProductoParaSalida] =
     useState<ProductoAgrupado | null>(null);
+  
+  // Estado para modal de movimientos generales
+  const [modalMovimientosGeneralOpen, setModalMovimientosGeneralOpen] = useState(false);
 
   // Estados para crear carpeta manualmente
   const [modalCrearCarpeta, setModalCrearCarpeta] = useState(false);
@@ -366,6 +371,14 @@ export default function StockPage() {
                 />
               </div>
               <div className="flex items-center space-x-2">
+                <Button
+                  onClick={() => setModalMovimientosGeneralOpen(true)}
+                  variant="outline"
+                  className="flex items-center space-x-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Movimientos Recientes</span>
+                </Button>
                 <Button
                   onClick={() => (window.location.href = "/stock/nuevo")}
                   className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
@@ -761,6 +774,21 @@ export default function StockPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal de Movimientos Generales */}
+      <Dialog open={modalMovimientosGeneralOpen} onOpenChange={setModalMovimientosGeneralOpen}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-500" />
+              Movimientos Recientes del Stock
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[80vh]">
+            <MovimientosStock />
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

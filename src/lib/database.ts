@@ -1,6 +1,8 @@
 import { supabase } from './supabase'
 import type { CargaMercaderia, ProductoCarga, SubItem, Equipo, ComponenteEquipo, Mantenimiento, DocumentoCarga } from '@/types'
 import { procesarProductoParaStock } from './stock-flow'
+import { error } from 'console'
+import { error } from 'console'
 
 // ===============================================
 // FUNCIONES PARA CARGAS DE MERCADERÍA
@@ -135,10 +137,10 @@ export async function createCargaMercaderia(cargaData: {
         console.log('✅ Equipo médico también procesado para stock como componente disponible')
       }
 
-      // 🎯 SOLO SI ESTÁ MARCADO EL CHECKBOX: enviar TAMBIÉN al inventario técnico
+      // 🎯 SOLO SI ESTÁ MARCADO EL CHECKBOX DE SERVICIO TÉCNICO: enviar TAMBIÉN al inventario técnico
       if (producto.paraServicioTecnico) {
         if (producto.tipoProducto === 'Equipo Médico') {
-          // Ya se procesó arriba, no hacer nada adicional
+          // Ya se procesó arriba como equipo, no hacer nada adicional
           console.log('✅ Equipo médico ya está en el módulo de equipos')
           
           // Procesar subitems marcados para inventario técnico
@@ -157,14 +159,14 @@ export async function createCargaMercaderia(cargaData: {
             }
           }
         } else {
-          // Componentes/Repuestos marcados van al inventario técnico
+          // 🔧 SOLO productos NO médicos marcados para servicio técnico van al inventario técnico
           const componenteCreado = await createComponenteInventarioTecnico(productoDB, carga)
           if (componenteCreado) {
-            console.log('✅ Componente enviado TAMBIÉN al Inventario Técnico:', producto.producto)
+            console.log('🔧 Componente enviado al Inventario Técnico (marcado para servicio):', producto.producto)
           }
         }
       } else {
-        console.log('⏭️ Producto NO marcado para inventario técnico, solo va al stock:', producto.producto)
+        console.log('⏭️ Producto NO marcado para servicio técnico, solo va al stock normal:', producto.producto)
       }
     }
 
@@ -1233,6 +1235,7 @@ export async function getAllComponentesDisponibles() {
           )
         )
       `)
+      .or('carpeta_principal.eq.Servicio Técnico,marca.eq.Servicio Técnico')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -1251,18 +1254,18 @@ export async function getAllComponentesDisponibles() {
       observaciones: comp.observaciones,
       fechaIngreso: comp.fecha_ingreso,
       codigoCargaOrigen: comp.codigo_carga_origen,
-      cargaInfo: comp.productos_carga?.cargas_mercaderia ? {
-        codigoCarga: comp.productos_carga.cargas_mercaderia.codigo_carga,
-        fechaIngreso: comp.productos_carga.cargas_mercaderia.fecha_ingreso
-      } : null,
+      carpetaPrincipal: comp.carpeta_principal,
+      rutaCarpeta: comp.ruta_carpeta,
+      tipoDestino: comp.tipo_destino,
       createdAt: comp.created_at
     }))
-
   } catch (error) {
-    console.error('Error getting componentes disponibles:', error)
+    console.error('Error fetching componentes disponibles:', error)
     throw error
   }
 }
+
+
 
 export async function asignarComponenteAEquipo(
   componenteId: string,
@@ -1748,7 +1751,8 @@ export async function createRemision(remisionData: {
     // 3. Crear productos de la remisión
     const productosParaInsertar = remisionData.productos.map(producto => ({
       remision_id: remision.id,
-      componente_id: producto.componenteId, // Puede ser null para productos del stock general
+      // 🔧 CORRECCIÓN: Usar componenteId O stockItemId según corresponda
+      componente_id: producto.componenteId || producto.stockItemId, // Usar el ID correcto
       nombre: producto.nombre,
       marca: producto.marca,
       modelo: producto.modelo,
@@ -1878,6 +1882,119 @@ export async function deleteRemision(remisionId: string) {
   } catch (error) {
     console.error('❌ Error deleting remisión:', error)
     throw error
+  }
+}
+
+// 🆕 Nueva función para eliminar remisión con motivo y restauración de stock
+export async function deleteRemisionConRestauracion(remisionId: string, motivo: string) {
+  try {
+    console.log('🔄 Iniciando eliminación de remisión con restauración de stock...', remisionId);
+
+    // 1. Obtener la remisión completa con sus productos
+    const { data: remision, error: remisionError } = await supabase
+      .from('remisiones')
+      .select(`
+        *,
+        productos_remision (
+          id,
+          componente_id,
+          nombre,
+          marca,
+          modelo,
+          cantidad_solicitada
+        )
+      `)
+      .eq('id', remisionId)
+      .single();
+
+    if (remisionError) throw remisionError;
+    if (!remision) throw new Error('Remisión no encontrada');
+
+    // 2. Restaurar stock de productos que tengan componente_id
+    const productosConStock = remision.productos_remision.filter(p => p.componente_id);
+    
+    for (const producto of productosConStock) {
+      console.log(`🔄 Restaurando stock para producto: ${producto.nombre}`);
+      
+      // Detectar automáticamente la tabla origen (igual que en otras funciones)
+      const { data: stockItem } = await supabase
+        .from('stock_items')
+        .select('id, cantidad_actual')
+        .eq('id', producto.componente_id)
+        .single();
+
+      const tableName = stockItem ? 'stock_items' : 'componentes_disponibles';
+      const cantidadField = stockItem ? 'cantidad_actual' : 'cantidad_disponible';
+
+      // Obtener cantidad actual
+      const { data: currentItem, error: getCurrentError } = await supabase
+        .from(tableName)
+        .select(cantidadField)
+        .eq('id', producto.componente_id)
+        .single();
+
+      if (getCurrentError) {
+        console.error(`❌ Error obteniendo cantidad actual para ${producto.nombre}:`, getCurrentError);
+        continue;
+      }
+
+      const cantidadActual = currentItem[cantidadField];
+      const nuevaCantidad = cantidadActual + producto.cantidad_solicitada;
+
+      // Actualizar cantidad en la tabla correcta
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({
+          [cantidadField]: nuevaCantidad,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', producto.componente_id);
+
+      if (updateError) {
+        console.error(`❌ Error actualizando stock para ${producto.nombre}:`, updateError);
+        continue;
+      }
+
+      // 3. Registrar movimiento de restauración
+      await registrarMovimientoStock({
+        itemId: producto.componente_id,
+        itemType: stockItem ? 'stock_item' : 'componente_disponible',
+        productoNombre: producto.nombre,
+        productoMarca: producto.marca,
+        productoModelo: producto.modelo,
+        tipoMovimiento: 'Entrada',
+        cantidad: producto.cantidad_solicitada,
+        cantidadAnterior: cantidadActual,
+        cantidadNueva: nuevaCantidad,
+        motivo: `Restauración por cancelación de remisión ${remision.numero_remision}`,
+        destinoOrigen: 'Stock General',
+        responsable: 'Sistema',
+        observaciones: `Motivo de cancelación: ${motivo}`
+      });
+
+      console.log(`✅ Stock restaurado para ${producto.nombre}: ${cantidadActual} → ${nuevaCantidad}`);
+    }
+
+    // 4. Eliminar la remisión (los productos se eliminan automáticamente por CASCADE)
+    const { error: deleteError } = await supabase
+      .from('remisiones')
+      .delete()
+      .eq('id', remisionId);
+
+    if (deleteError) throw deleteError;
+
+    console.log(`✅ Remisión ${remision.numero_remision} eliminada exitosamente con restauración de stock`);
+    console.log(`📊 Productos restaurados: ${productosConStock.length}`);
+    
+    return {
+      success: true,
+      productosRestaurados: productosConStock.length,
+      numeroRemision: remision.numero_remision
+    };
+
+  } catch (error) {
+    console.error('❌ Error eliminando remisión con restauración:', error);
+    throw error;
   }
 }
 
@@ -2745,7 +2862,7 @@ export async function getMovimientosByCarpeta(carpeta: string): Promise<Movimien
     const { data, error } = await supabase
       .from('movimientos_stock')
       .select('*')
-      .or(`carpeta_origen.eq.${carpeta},carpeta_destino.eq.${carpeta}`)
+      .or(`carpeta_origen.eq.${carpeta},carpeta_destino.eq.${carpeta},producto_marca.eq.${carpeta}`)
       .order('fecha_movimiento', { ascending: false });
 
     if (error) throw error;
@@ -3026,10 +3143,23 @@ export async function registrarSalidaStock(salidaData: {
   carpetaOrigen?: string;
 }) {
   try {
+    // 🔧 CORRECCIÓN: Detectar automáticamente si el producto está en stock_items o componentes_disponibles
+    const { data: stockItem } = await supabase
+      .from('stock_items')
+      .select('id')
+      .eq('id', salidaData.itemId)
+      .single();
+
+    const itemType = stockItem ? 'stock_item' : 'componente_disponible';
+    const tableName = stockItem ? 'stock_items' : 'componentes_disponibles';
+    const cantidadField = stockItem ? 'cantidad_actual' : 'cantidad_disponible';
+
+
+
     // 1. Registrar el movimiento de salida
     await registrarMovimientoStock({
       itemId: salidaData.itemId,
-      itemType: 'stock_item',
+      itemType: itemType,
       productoNombre: salidaData.productoNombre,
       productoMarca: salidaData.productoMarca,
       productoModelo: salidaData.productoModelo,
@@ -3046,11 +3176,11 @@ export async function registrarSalidaStock(salidaData: {
       carpetaOrigen: salidaData.carpetaOrigen
     });
 
-    // 2. Actualizar la cantidad en stock_items
+    // 2. Actualizar la cantidad en la tabla correcta
     const { error: updateError } = await supabase
-      .from('stock_items')
+      .from(tableName)
       .update({
-        cantidad_actual: salidaData.cantidadAnterior - salidaData.cantidad,
+        [cantidadField]: salidaData.cantidadAnterior - salidaData.cantidad,
         updated_at: new Date().toISOString()
       })
       .eq('id', salidaData.itemId);

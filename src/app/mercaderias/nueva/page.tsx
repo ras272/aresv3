@@ -17,6 +17,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Package, Zap, ShoppingCart, Trash2, Save, Heart, Plus, Upload, AlertCircle, Building, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProductSelectorSimple as ProductSelector } from '@/components/mercaderias/ProductSelectorSimple';
+import { createProductoCatalogo } from '@/lib/catalogo-productos';
+import { supabase } from '@/lib/supabase';
 
 // Componente ClienteSelector para dropdown de clínicas
 function ClienteSelector({ value, onChange, error }: {
@@ -387,13 +390,45 @@ export default function NuevaCargaPage() {
   // Estados para equipos médicos complejos
   const [imagenEquipo, setImagenEquipo] = useState<string>('');
 
+  // Estado para marcas dinámicas del catálogo
+  const [marcasDisponibles, setMarcasDisponibles] = useState<string[]>([]);
+  const [cargandoMarcas, setCargandoMarcas] = useState(true);
+
+  // Función para cargar marcas desde el catálogo
+  const cargarMarcasDelCatalogo = async () => {
+    try {
+      setCargandoMarcas(true);
+      const { data, error } = await supabase
+        .from('catalogo_productos')
+        .select('marca')
+        .eq('activo', true);
+
+      if (error) throw error;
+
+      // Obtener marcas únicas y ordenarlas
+      const marcasUnicas = [...new Set(data?.map(item => item.marca) || [])].sort();
+      setMarcasDisponibles(marcasUnicas);
+      console.log('✅ Marcas cargadas desde catálogo:', marcasUnicas);
+    } catch (error) {
+      console.error('❌ Error cargando marcas del catálogo:', error);
+      // Fallback a marcas estáticas si hay error
+      setMarcasDisponibles(MARCAS_ESTETICAS);
+      toast.error('Error cargando marcas del catálogo, usando marcas por defecto');
+    } finally {
+      setCargandoMarcas(false);
+    }
+  };
+
   // Generar código de carga y cargar clínicas al cargar el componente
   useEffect(() => {
     const inicializar = async () => {
       try {
         const codigo = await generateCodigoCarga();
         setCodigoCarga(codigo);
-        await loadClinicas(); // Cargar clínicas para el dropdown
+        await Promise.all([
+          loadClinicas(), // Cargar clínicas para el dropdown
+          cargarMarcasDelCatalogo() // Cargar marcas desde el catálogo
+        ]);
       } catch (error) {
         setCodigoCarga('Error al generar código');
       }
@@ -916,11 +951,21 @@ export default function NuevaCargaPage() {
                             <SelectValue placeholder="Seleccionar marca..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {MARCAS_ESTETICAS.map(marca => (
-                              <SelectItem key={marca} value={marca}>
-                                {marca}
-                              </SelectItem>
-                            ))}
+                            {cargandoMarcas ? (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                Cargando marcas...
+                              </div>
+                            ) : marcasDisponibles.length > 0 ? (
+                              marcasDisponibles.map(marca => (
+                                <SelectItem key={marca} value={marca}>
+                                  {marca}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No hay marcas disponibles en el catálogo
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -976,21 +1021,25 @@ export default function NuevaCargaPage() {
                         </Label>
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                           <div className="md:col-span-4">
-                            <Label htmlFor="nombreProducto" className="text-xs text-gray-600">
-                              Nombre del Producto *
-                            </Label>
-                            <Input
-                              id="nombreProducto"
+                            <ProductSelector
+                              marca={marcaSeleccionada}
                               value={nombreProducto}
-                              onChange={(e) => setNombreProducto(e.target.value)}
-                              placeholder="Ej: Kit hydra, Componentes MPT, Cables de Encendido..."
-                              className="h-10"
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  agregarProductoManual();
+                              onChange={setNombreProducto}
+                              onCreateNew={async (nombre) => {
+                                try {
+                                  await createProductoCatalogo({
+                                    marca: marcaSeleccionada,
+                                    nombre: nombre,
+                                    descripcion: `Creado desde ingreso de mercaderías - ${new Date().toLocaleDateString()}`
+                                  });
+                                  setNombreProducto(nombre);
+                                  toast.success(`Producto "${nombre}" agregado al catálogo de ${marcaSeleccionada}`);
+                                } catch (error) {
+                                  console.error('Error creando producto:', error);
+                                  toast.error('Error al agregar producto al catálogo');
                                 }
                               }}
+                              placeholder="Seleccionar producto de la marca..."
                             />
                           </div>
                           <div className="md:col-span-3">
@@ -1220,11 +1269,21 @@ export default function NuevaCargaPage() {
                                   <SelectValue placeholder="Seleccionar marca..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {MARCAS_ESTETICAS.map(marca => (
-                                    <SelectItem key={marca} value={marca}>
-                                      {marca}
-                                    </SelectItem>
-                                  ))}
+                                  {cargandoMarcas ? (
+                                    <div className="px-3 py-2 text-sm text-gray-500">
+                                      Cargando marcas...
+                                    </div>
+                                  ) : marcasDisponibles.length > 0 ? (
+                                    marcasDisponibles.map(marca => (
+                                      <SelectItem key={marca} value={marca}>
+                                        {marca}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    <div className="px-3 py-2 text-sm text-gray-500">
+                                      No hay marcas disponibles en el catálogo
+                                    </div>
+                                  )}
                                 </SelectContent>
                               </Select>
                               {errors.productos?.[productoIndex]?.marca && (

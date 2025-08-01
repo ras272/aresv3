@@ -105,7 +105,17 @@ export default function EquipoDetailPage() {
   };
 
   const equipo = equipos.find(e => e.id === equipoId);
-  const mantenimientos = getMantenimientosByEquipo(equipoId);
+  // 🔧 CORRECCIÓN: Obtener mantenimientos del store de forma reactiva
+  const { mantenimientos: todosLosMantenimientos } = useAppStore();
+  const mantenimientos = todosLosMantenimientos.filter(m => m.equipoId === equipoId);
+  
+  // 🔍 DEBUG: Log para ver el estado actual
+  console.log('🔍 DEBUG - Mantenimientos del equipo:', {
+    equipoId,
+    totalMantenimientos: todosLosMantenimientos.length,
+    mantenimientosDelEquipo: mantenimientos.length,
+    mantenimientos: mantenimientos.map(m => ({ id: m.id, descripcion: m.descripcion, fecha: m.fecha }))
+  });
   
   // 🎯 Verificar si el usuario actual es técnico
   const currentUser = getCurrentUser();
@@ -165,7 +175,9 @@ export default function EquipoDetailPage() {
         } : undefined,
       };
       
-      addMantenimiento(mantenimientoData);
+      console.log('🔄 Creando mantenimiento...', mantenimientoData);
+      const nuevoMantenimiento = await addMantenimiento(mantenimientoData);
+      console.log('✅ Mantenimiento creado:', nuevoMantenimiento);
       
       toast.success('Mantenimiento registrado correctamente');
       setShowNewMantenimiento(false);

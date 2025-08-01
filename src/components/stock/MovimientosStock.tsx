@@ -27,7 +27,7 @@ interface Movimiento {
   id: string
   fecha_movimiento: string
   tipo_movimiento: string
-  item_nombre: string
+  producto_nombre: string
   codigo_item: string
   cantidad: number
   cantidad_anterior: number
@@ -36,7 +36,9 @@ interface Movimiento {
   ubicacion_destino?: string
   motivo?: string
   usuario_responsable: string
-  equipo_cliente?: string
+  referencia_externa?: string
+  descripcion?: string
+  cliente?: string
 }
 
 export function MovimientosStock() {
@@ -62,8 +64,22 @@ export function MovimientosStock() {
       setCargando(true)
       
       const { data, error } = await supabase
-        .from('vista_movimientos_recientes')
-        .select('*')
+        .from('movimientos_stock')
+        .select(`
+          id,
+          fecha_movimiento,
+          tipo_movimiento,
+          producto_nombre,
+          codigo_item,
+          cantidad,
+          cantidad_anterior,
+          cantidad_nueva,
+          motivo,
+          usuario_responsable,
+          referencia_externa,
+          descripcion,
+          cliente
+        `)
         .order('fecha_movimiento', { ascending: false })
         .limit(1000) // Limitar para performance
 
@@ -84,7 +100,7 @@ export function MovimientosStock() {
     if (busqueda.trim()) {
       const termino = busqueda.toLowerCase()
       filtrados = filtrados.filter(mov => 
-        mov.item_nombre.toLowerCase().includes(termino) ||
+        mov.producto_nombre.toLowerCase().includes(termino) ||
         mov.codigo_item.toLowerCase().includes(termino) ||
         mov.usuario_responsable.toLowerCase().includes(termino) ||
         mov.motivo?.toLowerCase().includes(termino)
@@ -184,7 +200,7 @@ export function MovimientosStock() {
       ...movimientosFiltrados.map(mov => [
         formatearFecha(mov.fecha_movimiento),
         mov.tipo_movimiento,
-        `"${mov.item_nombre}"`,
+        `"${mov.producto_nombre}"`,
         mov.codigo_item,
         mov.cantidad,
         mov.cantidad_anterior,
@@ -325,7 +341,7 @@ export function MovimientosStock() {
                       
                       <TableCell>
                         <div>
-                          <div className="font-medium">{movimiento.item_nombre}</div>
+                          <div className="font-medium">{movimiento.producto_nombre}</div>
                           <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">
                             {movimiento.codigo_item}
                           </code>
