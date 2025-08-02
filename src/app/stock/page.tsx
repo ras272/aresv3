@@ -141,6 +141,11 @@ export default function StockPage() {
 
       // Agregar cantidad
       productoExistente.cantidadTotal += componente.cantidadDisponible;
+      
+      // Actualizar imagen si el componente actual tiene una y el producto agrupado no
+      if (componente.imagen && !productoExistente.imagen) {
+        productoExistente.imagen = componente.imagen;
+      }
 
       // Manejar ubicaciones
       const ubicacionExistente = productoExistente.ubicaciones.find(
@@ -534,13 +539,24 @@ export default function StockPage() {
                             >
                               <CardContent className="p-4">
                                 {/* Imagen del producto - Más grande y prominente */}
-                                {producto.imagen && (
+                                {producto.imagen ? (
                                   <div className="mb-4">
                                     <img
                                       src={producto.imagen}
                                       alt={producto.nombre}
                                       className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                      onError={(e) => {
+                                        console.error('❌ Error cargando imagen:', producto.imagen);
+                                        e.currentTarget.style.display = 'none';
+                                      }}
+                                      onLoad={() => {
+                                        console.log('✅ Imagen cargada correctamente:', producto.imagen);
+                                      }}
                                     />
+                                  </div>
+                                ) : (
+                                  <div className="mb-4 text-center text-xs text-gray-400">
+                                    Sin imagen
                                   </div>
                                 )}
 

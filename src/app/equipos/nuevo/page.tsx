@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,8 +63,9 @@ const tiposComponentes = [
 
 export default function NuevoEquipoPage() {
   const router = useRouter();
-  const { addEquipo } = useAppStore();
+  const { addEquipo, clinicas, loadAllData } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedClinica, setSelectedClinica] = useState<string>('');
 
   const {
     register,
@@ -93,14 +94,62 @@ export default function NuevoEquipoPage() {
     name: 'componentes',
   });
 
+  // Cargar clínicas al montar el componente
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  // Manejar selección de clínica y auto-completar ubicación
+  const handleClinicaChange = (clinicaId: string) => {
+    setSelectedClinica(clinicaId);
+    const clinica = clinicas.find(c => c.id === clinicaId);
+    if (clinica) {
+      setValue('cliente', clinica.contacto_principal || clinica.nombre);
+      setValue('ubicacion', `${clinica.ciudad} - ${clinica.direccion}`);
+    }
+  };
+
   const onSubmit = async (data: EquipoFormData) => {
+    console.log('🔄 Iniciando envío del formulario...', data);
     setIsLoading(true);
     
     try {
-      // Simular delay de guardado
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Importar la función createEquipo
+      const { createEquipo } = await import('@/lib/database');
       
-      addEquipo(data);
+      console.log('🔄 Llamando a createEquipo con datos:', {
+        cliente: data.cliente,
+        ubicacion: data.ubicacion,
+        nombreEquipo: data.nombreEquipo,
+        tipoEquipo: data.tipoEquipo,
+        marca: data.marca,
+        modelo: data.nombreEquipo,
+        numeroSerieBase: data.numeroSerieBase,
+        componentes: data.componentes,
+        accesorios: data.accesorios || '',
+        fechaEntrega: data.fechaEntrega,
+        observaciones: data.observaciones
+      });
+      
+      // Crear el equipo en la base de datos
+      const resultado = await createEquipo({
+        cliente: data.cliente,
+        ubicacion: data.ubicacion,
+        nombreEquipo: data.nombreEquipo,
+        tipoEquipo: data.tipoEquipo,
+        marca: data.marca,
+        modelo: data.nombreEquipo, // Usar nombreEquipo como modelo ya que simplificamos
+        numeroSerieBase: data.numeroSerieBase,
+        componentes: data.componentes,
+        accesorios: data.accesorios || '',
+        fechaEntrega: data.fechaEntrega,
+        observaciones: data.observaciones
+      });
+      
+      console.log('✅ Equipo creado exitosamente:', resultado);
+      
+      // Recargar datos en el store
+      await loadAllData();
       
       toast.success('Equipo registrado correctamente', {
         description: `${data.nombreEquipo} - ${data.cliente}`,
@@ -108,7 +157,8 @@ export default function NuevoEquipoPage() {
       
       router.push('/equipos');
     } catch (error) {
-      toast.error('Error al registrar el equipo');
+      console.error('❌ Error al registrar el equipo:', error);
+      toast.error(`Error al registrar el equipo: ${error.message || 'Error desconocido'}`);
     } finally {
       setIsLoading(false);
     }
@@ -155,12 +205,22 @@ export default function NuevoEquipoPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cliente">Cliente *</Label>
-                  <Input
-                    id="cliente"
-                    placeholder="Ej: Ares, Clínica Principal..."
-                    {...register('cliente')}
-                  />
+                  <Label htmlFor="clinica">Clínica/Cliente *</Label>
+                  <Select onValueChange={handleClinicaChange} value={selectedClinica}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar clínica..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clinicas.map((clinica) => (
+                        <SelectItem key={clinica.id} value={clinica.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{clinica.contacto_principal || clinica.nombre}</span>
+                            <span className="text-xs text-gray-500">{clinica.ciudad} - {clinica.direccion}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {errors.cliente && (
                     <p className="text-sm text-red-600 mt-1">{errors.cliente.message}</p>
                   )}
@@ -170,12 +230,16 @@ export default function NuevoEquipoPage() {
                   <Label htmlFor="ubicacion">Ubicación Específica *</Label>
                   <Input
                     id="ubicacion"
-                    placeholder="Ej: Asuncion - Sala Principal, Área de Tratamientos..."
+                    placeholder="Se completará automáticamente al seleccionar la clínica..."
                     {...register('ubicacion')}
+                    className="bg-gray-50"
                   />
                   {errors.ubicacion && (
                     <p className="text-sm text-red-600 mt-1">{errors.ubicacion.message}</p>
                   )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Puedes editar la ubicación después de seleccionar la clínica
+                  </p>
                 </div>
               </div>
             </Card>
@@ -195,10 +259,22 @@ export default function NuevoEquipoPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="nombreEquipo">Nombre del Equipo *</Label>
+                  <Label htmlFor="marca">Marca *</Label>
+                  <Input
+                    id="marca"
+                    placeholder="Ej: Classys, Coocon, Edge Systems..."
+                    {...register('marca')}
+                  />
+                  {errors.marca && (
+                    <p className="text-sm text-red-600 mt-1">{errors.marca.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label htmlFor="nombreEquipo">Modelo/Nombre *</Label>
                   <Input
                     id="nombreEquipo"
-                    placeholder="Ej: Hydrafacial, CMSlim..."
+                    placeholder="Ej: Ultraformer MPT, CMSlim Neo, Hydrafacial MD..."
                     {...register('nombreEquipo')}
                   />
                   {errors.nombreEquipo && (
@@ -222,30 +298,6 @@ export default function NuevoEquipoPage() {
                   </Select>
                   {errors.tipoEquipo && (
                     <p className="text-sm text-red-600 mt-1">{errors.tipoEquipo.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="marca">Marca *</Label>
-                  <Input
-                    id="marca"
-                    placeholder="Ej: Classys, Coocon..."
-                    {...register('marca')}
-                  />
-                  {errors.marca && (
-                    <p className="text-sm text-red-600 mt-1">{errors.marca.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="modelo">Modelo *</Label>
-                  <Input
-                    id="modelo"
-                    placeholder="Ej: Ultraformer MPT..."
-                    {...register('modelo')}
-                  />
-                  {errors.modelo && (
-                    <p className="text-sm text-red-600 mt-1">{errors.modelo.message}</p>
                   )}
                 </div>
                 

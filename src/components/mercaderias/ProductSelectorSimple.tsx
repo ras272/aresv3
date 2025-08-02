@@ -1,19 +1,22 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Check, ChevronsUpDown, Plus, Package, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { getProductosByMarca, ProductoCatalogo } from '@/lib/catalogo-productos';
-import { toast } from 'sonner';
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, Plus, Package, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  getProductosByMarca,
+  ProductoCatalogo,
+} from "@/lib/catalogo-productos";
+import { toast } from "sonner";
 
 interface ProductSelectorProps {
   marca: string;
@@ -24,18 +27,18 @@ interface ProductSelectorProps {
   error?: string;
 }
 
-export function ProductSelectorSimple({ 
-  marca, 
-  value, 
-  onChange, 
+export function ProductSelectorSimple({
+  marca,
+  value,
+  onChange,
   onCreateNew,
   placeholder = "Seleccionar producto...",
-  error 
+  error,
 }: ProductSelectorProps) {
   const [open, setOpen] = useState(false);
   const [productos, setProductos] = useState<ProductoCatalogo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     if (marca && open) {
@@ -45,38 +48,38 @@ export function ProductSelectorSimple({
 
   const cargarProductosPorMarca = async () => {
     if (!marca) return;
-    
+
     try {
       setLoading(true);
-      console.log('🔄 Cargando productos para marca:', marca);
+      console.log("🔄 Cargando productos para marca:", marca);
       const productosData = await getProductosByMarca(marca);
-      console.log('✅ Productos cargados:', productosData);
+      console.log("✅ Productos cargados:", productosData);
       setProductos(productosData);
     } catch (error) {
-      console.error('❌ Error cargando productos:', error);
-      toast.error('Error al cargar productos de la marca');
+      console.error("❌ Error cargando productos:", error);
+      toast.error("Error al cargar productos de la marca");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSelect = (producto: ProductoCatalogo) => {
-    console.log('🎯 Producto seleccionado (simple):', producto.nombre);
+    console.log("🎯 Producto seleccionado (simple):", producto.nombre);
     onChange(producto.nombre);
     setOpen(false);
-    setSearchValue('');
+    setSearchValue("");
   };
 
   const handleCreateNew = () => {
     if (searchValue.trim() && onCreateNew) {
       onCreateNew(searchValue.trim());
       setOpen(false);
-      setSearchValue('');
+      setSearchValue("");
     }
   };
 
-  const productoSeleccionado = productos.find(p => p.nombre === value);
-  const productosDisponibles = productos.filter(p => 
+  const productoSeleccionado = productos.find((p) => p.nombre === value);
+  const productosDisponibles = productos.filter((p) =>
     p.nombre.toLowerCase().includes(searchValue.toLowerCase())
   );
 
@@ -111,7 +114,9 @@ export function ProductSelectorSimple({
               <Package className="h-4 w-4 text-gray-400" />
               {productoSeleccionado ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-900">{productoSeleccionado.nombre}</span>
+                  <span className="text-gray-900">
+                    {productoSeleccionado.nombre}
+                  </span>
                   <Badge variant="outline" className="text-xs">
                     {marca}
                   </Badge>
@@ -135,7 +140,7 @@ export function ProductSelectorSimple({
               />
             </div>
           </div>
-          
+
           <div className="max-h-[300px] overflow-y-auto">
             {loading ? (
               <div className="p-4 text-center text-sm text-gray-500">
@@ -175,7 +180,9 @@ export function ProductSelectorSimple({
                       )}
                     />
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{producto.nombre}</div>
+                      <div className="font-medium text-sm">
+                        {producto.nombre}
+                      </div>
                       {producto.descripcion && (
                         <div className="text-xs text-gray-500">
                           {producto.descripcion}
@@ -184,30 +191,30 @@ export function ProductSelectorSimple({
                     </div>
                   </div>
                 ))}
-                
-                {searchValue.trim() && 
-                 !productosDisponibles.some(p => 
-                   p.nombre.toLowerCase() === searchValue.toLowerCase()
-                 ) && 
-                 onCreateNew && (
-                  <div
-                    onClick={handleCreateNew}
-                    className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer rounded-sm border-t"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="text-sm">Crear "{searchValue}" en {marca}</span>
-                  </div>
-                )}
+
+                {searchValue.trim() &&
+                  !productosDisponibles.some(
+                    (p) => p.nombre.toLowerCase() === searchValue.toLowerCase()
+                  ) &&
+                  onCreateNew && (
+                    <div
+                      onClick={handleCreateNew}
+                      className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer rounded-sm border-t"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="text-sm">
+                        Crear "{searchValue}" en {marca}
+                      </span>
+                    </div>
+                  )}
               </div>
             )}
           </div>
         </PopoverContent>
       </Popover>
-      
-      {error && (
-        <p className="text-red-500 text-xs mt-1">{error}</p>
-      )}
-      
+
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+
       {productoSeleccionado?.descripcion && (
         <p className="text-gray-500 text-xs mt-1">
           {productoSeleccionado.descripcion}

@@ -21,7 +21,6 @@ export const equipoSchema = z.object({
   nombreEquipo: z.string().min(1, 'El nombre del equipo es obligatorio'),
   tipoEquipo: z.string().min(1, 'Selecciona un tipo de equipo'),
   marca: z.string().min(1, 'La marca es obligatoria'),
-  modelo: z.string().min(1, 'El modelo es obligatorio'),
   numeroSerieBase: z.string().min(1, 'El número de serie base es obligatorio'),
   componentes: z.array(componenteFormSchema).min(1, 'Debe agregar al menos un componente'),
   accesorios: z.string().min(1, 'Describe los accesorios incluidos'),
