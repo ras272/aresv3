@@ -1,161 +1,60 @@
-'use client';
-
 import { supabase } from './supabase';
 import { User, UserRole } from '@/types/auth';
 
-/**
- * 🔐 SISTEMA DE AUTENTICACIÓN REAL
- * Reemplaza el sistema de bypass con autenticación real contra la base de datos
- */
+// ===============================================
+// FUNCIONES PARA GESTIÓN DE USUARIOS REALES
+// ===============================================
 
-export interface LoginResult {
-  success: boolean;
-  user?: User;
-  error?: string;
-}
-
-/**
- * Login real contra la base de datos
- */
-export async function realLogin(email: string, password: string): Promise<LoginResult> {
-  try {
-    console.log('🔐 Iniciando login real para:', email);
-
-    // 1. Buscar usuario en sistema_usuarios
-    const { data: usuario, error: userError } = await supabase
-      .from('sistema_usuarios')
-      .select('*')
-      .eq('email', email)
-      .eq('activo', true)
-      .single();
-
-    if (userError || !usuario) {
-      console.log('❌ Usuario no encontrado:', email);
-      return {
-        success: false,
-        error: 'Usuario no encontrado o inactivo'
-      };
-    }
-
-    // 2. Verificar contraseña (en producción usar hash)
-    // Por ahora usamos contraseña simple para desarrollo rápido
-    const passwordsValidas = {
-      'superadmin@arestech.com': 'admin123',
-      'contabilidad@arestech.com': 'conta123',
-      'tecnico@arestech.com': 'tecnico123'
-    };
-
-    const passwordCorrecta = passwordsValidas[email as keyof typeof passwordsValidas] || 'demo123';
-    
-    if (password !== passwordCorrecta) {
-      console.log('❌ Contraseña incorrecta para:', email);
-      return {
-        success: false,
-        error: 'Contraseña incorrecta'
-      };
-    }
-
-    // 3. Actualizar último acceso
-    await supabase
-      .from('sistema_usuarios')
-      .update({ 
-        ultimo_acceso: new Date().toISOString() 
-      })
-      .eq('id', usuario.id);
-
-    // 4. Crear objeto User
-    const user: User = {
-      id: usuario.id,
-      email: usuario.email,
-      name: usuario.nombre,
-      role: usuario.rol as UserRole,
-      empresa: 'Ares Paraguay',
-      telefono: '+595 21 123-4567',
-      isActive: usuario.activo,
-      createdAt: usuario.created_at,
-      lastLogin: new Date().toISOString()
-    };
-
-    console.log('✅ Login real exitoso para:', user.name);
-
-    return {
-      success: true,
-      user
-    };
-
-  } catch (error) {
-    console.error('❌ Error en login real:', error);
-    return {
-      success: false,
-      error: 'Error interno del sistema'
-    };
-  }
-}
-
-/**
- * Obtener todos los usuarios reales
- */
 export async function getAllRealUsers(): Promise<User[]> {
   try {
-    const { data: usuarios, error } = await supabase
-      .from('sistema_usuarios')
+    const { data, error } = await supabase
+      .from('usuarios')
       .select('*')
-      .order('nombre');
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    return usuarios.map(usuario => ({
+    return data.map(usuario => ({
       id: usuario.id,
-      email: usuario.email,
       name: usuario.nombre,
+      email: usuario.email,
       role: usuario.rol as UserRole,
-      empresa: 'Ares Paraguay',
-      telefono: '+595 21 123-4567',
       isActive: usuario.activo,
-      createdAt: usuario.created_at,
-      lastLogin: usuario.ultimo_acceso
+      lastLogin: usuario.ultimo_acceso,
+      createdAt: usuario.created_at
     }));
-
   } catch (error) {
-    console.error('❌ Error obteniendo usuarios reales:', error);
-    return [];
+    console.error('Error obteniendo usuarios:', error);
+    throw error;
   }
 }
 
-/**
- * Crear nuevo usuario
- */
 export async function createRealUser(userData: {
   nombre: string;
   email: string;
   rol: UserRole;
-  password?: string;
-}): Promise<{ success: boolean; user?: User; error?: string }> {
+  password: string;
+}): Promise<{ success: boolean; error?: string; user?: User }> {
   try {
-    console.log('👤 Creando usuario real:', userData.email);
-
-    // Verificar que no exista
+    // Verificar si el email ya existe
     const { data: existingUser } = await supabase
-      .from('sistema_usuarios')
-      .select('id')
+      .from('usuarios')
+      .select('email')
       .eq('email', userData.email)
       .single();
 
     if (existingUser) {
-      return {
-        success: false,
-        error: 'El email ya está registrado'
-      };
+      return { success: false, error: 'El email ya está registrado' };
     }
 
     // Crear usuario
-    const { data: nuevoUsuario, error } = await supabase
-      .from('sistema_usuarios')
+    const { data, error } = await supabase
+      .from('usuarios')
       .insert({
         nombre: userData.nombre,
         email: userData.email,
+        password_hash: userData.password, // En producción usar bcrypt
         rol: userData.rol,
-        password_hash: userData.password || 'demo123', // En producción usar hash
         activo: true
       })
       .select()
@@ -164,92 +63,126 @@ export async function createRealUser(userData: {
     if (error) throw error;
 
     const user: User = {
-      id: nuevoUsuario.id,
-      email: nuevoUsuario.email,
-      name: nuevoUsuario.nombre,
-      role: nuevoUsuario.rol as UserRole,
-      empresa: 'Ares Paraguay',
-      telefono: '+595 21 123-4567',
-      isActive: nuevoUsuario.activo,
-      createdAt: nuevoUsuario.created_at,
-      lastLogin: null
+      id: data.id,
+      name: data.nombre,
+      email: data.email,
+      role: data.rol as UserRole,
+      isActive: data.activo,
+      lastLogin: data.ultimo_acceso,
+      createdAt: data.created_at
     };
 
-    console.log('✅ Usuario creado exitosamente:', user.name);
-
-    return {
-      success: true,
-      user
-    };
-
+    return { success: true, user };
   } catch (error) {
-    console.error('❌ Error creando usuario:', error);
-    return {
-      success: false,
-      error: 'Error creando usuario'
-    };
+    console.error('Error creando usuario:', error);
+    return { success: false, error: 'Error interno del servidor' };
   }
 }
 
-/**
- * Actualizar usuario
- */
-export async function updateRealUser(userId: string, updates: {
-  nombre?: string;
-  email?: string;
-  rol?: UserRole;
-  activo?: boolean;
-}): Promise<{ success: boolean; error?: string }> {
+export async function updateRealUser(
+  userId: string, 
+  updates: {
+    nombre?: string;
+    email?: string;
+    rol?: UserRole;
+    activo?: boolean;
+  }
+): Promise<{ success: boolean; error?: string; user?: User }> {
+  try {
+    // Verificar si el email ya existe (si se está actualizando)
+    if (updates.email) {
+      const { data: existingUser } = await supabase
+        .from('usuarios')
+        .select('id, email')
+        .eq('email', updates.email)
+        .neq('id', userId)
+        .single();
+
+      if (existingUser) {
+        return { success: false, error: 'El email ya está registrado por otro usuario' };
+      }
+    }
+
+    // Actualizar usuario
+    const { data, error } = await supabase
+      .from('usuarios')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const user: User = {
+      id: data.id,
+      name: data.nombre,
+      email: data.email,
+      role: data.rol as UserRole,
+      isActive: data.activo,
+      lastLogin: data.ultimo_acceso,
+      createdAt: data.created_at
+    };
+
+    return { success: true, user };
+  } catch (error) {
+    console.error('Error actualizando usuario:', error);
+    return { success: false, error: 'Error interno del servidor' };
+  }
+}
+
+export async function deleteRealUser(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
-      .from('sistema_usuarios')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .from('usuarios')
+      .delete()
       .eq('id', userId);
 
     if (error) throw error;
 
-    console.log('✅ Usuario actualizado exitosamente');
     return { success: true };
-
   } catch (error) {
-    console.error('❌ Error actualizando usuario:', error);
-    return {
-      success: false,
-      error: 'Error actualizando usuario'
-    };
+    console.error('Error eliminando usuario:', error);
+    return { success: false, error: 'Error interno del servidor' };
   }
 }
 
-/**
- * Obtener usuario por ID
- */
-export async function getRealUserById(userId: string): Promise<User | null> {
+export async function authenticateUser(email: string, password: string): Promise<{
+  success: boolean;
+  user?: User;
+  error?: string;
+}> {
   try {
-    const { data: usuario, error } = await supabase
-      .from('sistema_usuarios')
+    const { data, error } = await supabase
+      .from('usuarios')
       .select('*')
-      .eq('id', userId)
+      .eq('email', email)
+      .eq('password_hash', password) // En producción usar bcrypt
+      .eq('activo', true)
       .single();
 
-    if (error || !usuario) return null;
+    if (error || !data) {
+      return { success: false, error: 'Email o contraseña incorrectos' };
+    }
 
-    return {
-      id: usuario.id,
-      email: usuario.email,
-      name: usuario.nombre,
-      role: usuario.rol as UserRole,
-      empresa: 'Ares Paraguay',
-      telefono: '+595 21 123-4567',
-      isActive: usuario.activo,
-      createdAt: usuario.created_at,
-      lastLogin: usuario.ultimo_acceso
+    // Actualizar último acceso
+    await supabase
+      .from('usuarios')
+      .update({ ultimo_acceso: new Date().toISOString() })
+      .eq('id', data.id);
+
+    const user: User = {
+      id: data.id,
+      name: data.nombre,
+      email: data.email,
+      role: data.rol as UserRole,
+      isActive: data.activo,
+      lastLogin: new Date().toISOString(),
+      createdAt: data.created_at
     };
 
+    return { success: true, user };
   } catch (error) {
-    console.error('❌ Error obteniendo usuario por ID:', error);
-    return null;
+    console.error('Error autenticando usuario:', error);
+    return { success: false, error: 'Error interno del servidor' };
   }
 }

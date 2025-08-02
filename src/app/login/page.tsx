@@ -10,37 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, LogIn, User, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-
-// 🔥 SISTEMA SIMPLE SIN BUCLES
-const USUARIOS_DEMO = {
-  'superadmin@arestech.com': {
-    password: 'admin123',
-    user: {
-      id: '1',
-      email: 'superadmin@arestech.com',
-      name: 'Super Administrador',
-      role: 'super_admin'
-    }
-  },
-  'contabilidad@arestech.com': {
-    password: 'conta123',
-    user: {
-      id: '2',
-      email: 'contabilidad@arestech.com',
-      name: 'María González - Contabilidad',
-      role: 'contabilidad'
-    }
-  },
-  'tecnico@arestech.com': {
-    password: 'tecnico123',
-    user: {
-      id: '3',
-      email: 'tecnico@arestech.com',
-      name: 'Javier López - Técnico',
-      role: 'tecnico'
-    }
-  }
-};
+import { authenticateUser } from '@/lib/auth-real';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -62,21 +32,21 @@ export default function LoginPage() {
     }
 
     try {
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Autenticar con la base de datos real
+      const result = await authenticateUser(email, password);
       
-      const userRecord = USUARIOS_DEMO[email as keyof typeof USUARIOS_DEMO];
-      
-      if (!userRecord || userRecord.password !== password) {
-        setError('Email o contraseña incorrectos');
+      if (!result.success || !result.user) {
+        setError(result.error || 'Email o contraseña incorrectos');
         setLoading(false);
         return;
       }
 
       // Guardar usuario en localStorage
-      localStorage.setItem('ares_current_user', JSON.stringify(userRecord.user));
+      localStorage.setItem('ares_current_user', JSON.stringify(result.user));
       
-      toast.success('Login exitoso');
+      toast.success('Login exitoso', {
+        description: `Bienvenido, ${result.user.name}`
+      });
       
       // Redirigir después de un pequeño delay
       setTimeout(() => {
@@ -84,6 +54,7 @@ export default function LoginPage() {
       }, 100);
       
     } catch (error) {
+      console.error('Error en login:', error);
       setError('Error interno del sistema');
       setLoading(false);
     }

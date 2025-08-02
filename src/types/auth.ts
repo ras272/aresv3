@@ -1,123 +1,115 @@
-/**
- * 🔐 TIPOS DE AUTENTICACIÓN
- * Definiciones de tipos para el sistema de usuarios real
- */
+// ===============================================
+// TIPOS PARA SISTEMA DE AUTENTICACIÓN
+// ===============================================
 
-export type UserRole = 
-  | 'super_admin'
-  | 'admin' 
-  | 'gerente'
-  | 'contabilidad'
-  | 'tecnico'
-  | 'vendedor'
-  | 'cliente';
+export type UserRole =
+  | "super_admin"
+  | "admin"
+  | "gerente"
+  | "contabilidad"
+  | "tecnico"
+  | "vendedor"
+  | "cliente";
 
 export interface User {
   id: string;
-  email: string;
   name: string;
+  email: string;
   role: UserRole;
-  empresa: string;
-  telefono: string;
   isActive: boolean;
+  lastLogin?: string;
   createdAt: string;
-  lastLogin: string | null;
 }
 
-export interface AuthState {
-  user: User | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface LoginResult {
-  success: boolean;
-  user?: User;
-  error?: string;
-}
-
-export interface CreateUserData {
-  nombre: string;
-  email: string;
-  rol: UserRole;
-  password?: string;
-}
-
-export interface UpdateUserData {
-  nombre?: string;
-  email?: string;
-  rol?: UserRole;
-  activo?: boolean;
+export interface UserSession {
+  id: string;
+  userId: string;
+  token: string;
+  startDate: string;
+  expirationDate: string;
+  isActive: boolean;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 // Permisos por rol
-export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
-  super_admin: ['*'], // Acceso total
-  admin: [
-    'dashboard', 'equipos', 'inventario', 'reportes', 'stock', 
-    'remisiones', 'usuarios', 'calendario', 'inventarioTecnico', 
-    'mercaderias', 'documentos', 'archivos', 'tareas', 'clinicas'
-  ],
-  gerente: [
-    'dashboard', 'equipos', 'inventario', 'reportes', 'stock', 
-    'remisiones', 'calendario', 'inventarioTecnico', 'mercaderias', 
-    'documentos', 'archivos', 'clinicas'
-  ],
-  contabilidad: [
-    'dashboard', 'reportes', 'remisiones', 'archivos', 
-    'clinicas', 'documentos', 'tareas'
-  ],
-  tecnico: [
-    'dashboard', 'equipos', 'inventario', 'calendario', 
-    'inventarioTecnico', 'reportes', 'stock'
-  ],
-  vendedor: [
-    'dashboard', 'equipos', 'reportes', 'remisiones', 
-    'clinicas', 'mercaderias'
-  ],
-  cliente: ['dashboard', 'equipos']
-};
-
-// Información de roles para UI
-export const ROLE_INFO: Record<UserRole, { label: string; color: string; description: string }> = {
+export const ROLE_PERMISSIONS = {
   super_admin: {
-    label: 'Super Administrador',
-    color: 'bg-red-100 text-red-800',
-    description: 'Acceso completo al sistema'
+    label: "Super Administrador",
+    description: "Acceso total al sistema",
+    permissions: ["*"], // Todos los permisos
   },
   admin: {
-    label: 'Administrador',
-    color: 'bg-purple-100 text-purple-800',
-    description: 'Gestión completa excepto usuarios'
+    label: "Administrador",
+    description: "Gestión completa excepto configuración del sistema",
+    permissions: [
+      "users.manage",
+      "equipos.manage",
+      "inventario.manage",
+      "clinicas.manage",
+      "reportes.view",
+      "documentos.manage",
+      "remisiones.manage",
+    ],
   },
   gerente: {
-    label: 'Gerente',
-    color: 'bg-blue-100 text-blue-800',
-    description: 'Supervisión y reportes'
+    label: "Gerente",
+    description: "Supervisión y reportes",
+    permissions: [
+      "equipos.view",
+      "inventario.view",
+      "clinicas.view",
+      "reportes.view",
+      "documentos.view",
+      "remisiones.view",
+    ],
   },
   contabilidad: {
-    label: 'Contabilidad',
-    color: 'bg-green-100 text-green-800',
-    description: 'Facturación y documentos'
+    label: "Contabilidad",
+    description: "Facturación, archivos, documentos, clínicas, tareas",
+    permissions: [
+      "clinicas.manage",
+      "documentos.manage",
+      "archivos.manage",
+      "tareas.manage",
+      "reportes.financial",
+    ],
   },
   tecnico: {
-    label: 'Técnico',
-    color: 'bg-orange-100 text-orange-800',
-    description: 'Servicio técnico y equipos'
+    label: "Técnico",
+    description: "Dashboard, equipos, inventario, calendario (solo lectura)",
+    permissions: [
+      "dashboard.view",
+      "equipos.view",
+      "inventario.view",
+      "calendario.view",
+    ],
   },
   vendedor: {
-    label: 'Vendedor',
-    color: 'bg-yellow-100 text-yellow-800',
-    description: 'Ventas y clientes'
+    label: "Vendedor",
+    description: "Gestión de clientes y ventas",
+    permissions: ["clinicas.view", "equipos.view", "reportes.sales"],
   },
   cliente: {
-    label: 'Cliente',
-    color: 'bg-gray-100 text-gray-800',
-    description: 'Acceso limitado a equipos'
+    label: "Cliente",
+    description: "Acceso limitado a sus equipos",
+    permissions: ["equipos.own.view", "documentos.own.view"],
+  },
+} as const;
+
+// Helper para verificar permisos
+export function hasPermission(userRole: UserRole, permission: string): boolean {
+  const rolePermissions = ROLE_PERMISSIONS[userRole];
+
+  // Super admin tiene todos los permisos
+  if (rolePermissions.permissions.includes("*" as any)) {
+    return true;
   }
-};
+
+  return rolePermissions.permissions.includes(permission as any);
+}
+
+// Helper para verificar si el usuario tiene uno de los roles especificados
+export function hasRole(userRole: UserRole, allowedRoles: UserRole[]): boolean {
+  return allowedRoles.includes(userRole);
+}
