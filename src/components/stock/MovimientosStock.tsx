@@ -29,6 +29,7 @@ interface Movimiento {
   tipo_movimiento: string
   producto_nombre: string
   codigo_item: string
+  numero_serie?: string
   cantidad: number
   cantidad_anterior: number
   cantidad_nueva: number
@@ -71,6 +72,7 @@ export function MovimientosStock() {
           tipo_movimiento,
           producto_nombre,
           codigo_item,
+          numero_serie,
           cantidad,
           cantidad_anterior,
           cantidad_nueva,
@@ -342,9 +344,16 @@ export function MovimientosStock() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{movimiento.producto_nombre}</div>
-                          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">
-                            {movimiento.codigo_item}
-                          </code>
+                          <div className="flex items-center gap-2 mt-1">
+                            <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">
+                              {movimiento.codigo_item}
+                            </code>
+                            {movimiento.numero_serie && (
+                              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono">
+                                S/N: {movimiento.numero_serie}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       

@@ -25,6 +25,65 @@ import {
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 
+// 🎨 Componente de título animado
+const AnimatedTitle = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const phrases = [
+    "Centro de control",
+    "Gestión inteligente", 
+    "Monitoreo en tiempo real",
+    "Servicio técnico avanzado"
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % phrases.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center space-x-2">
+      <motion.span
+        className="text-muted-foreground"
+        initial={{ opacity: 0.7 }}
+        animate={{ opacity: 1 }}
+      >
+        Sistema de
+      </motion.span>
+      <motion.span
+        key={currentIndex}
+        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -10, scale: 0.9 }}
+        transition={{ 
+          duration: 0.5, 
+          ease: "easeOut",
+          type: "spring",
+          stiffness: 100
+        }}
+        className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+      >
+        {phrases[currentIndex]}
+      </motion.span>
+      <motion.div
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.5, 1, 0.5]
+        }}
+        transition={{ 
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="w-2 h-2 bg-blue-500 rounded-full"
+      />
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const { equipos, mantenimientos, updateMantenimiento } = useAppStore();
@@ -315,7 +374,7 @@ export default function Dashboard() {
       <LoadingOverlay isVisible={isLoading} text="Actualizando datos..." />
       <DashboardLayout
         title="Dashboard"
-        subtitle="Bienvenido al sistema de gestión de equipos médicos"
+        subtitle={<AnimatedTitle />}
       >
         <div className="w-full max-w-full space-y-1.5 sm:space-y-3 lg:space-y-6">
         {/* Stats Cards - Mobile Optimized */}
@@ -1132,57 +1191,7 @@ export default function Dashboard() {
 
 
 
-        {/* Welcome Message */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-        >
-          <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <motion.div
-                  className="p-3 bg-green-100 dark:bg-green-900/50 rounded-full"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <Heart className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </motion.div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">¡Bienvenido a ARES Paraguay!</h3>
-                  <p className="text-muted-foreground">
-                    Sistema de gestión completo para el servicio técnico de equipos médicos.
-                    {mantenimientosPendientes.length > 0 && (
-                      <span className="font-medium text-orange-600 dark:text-orange-400">
-                        {' '}Tienes {mantenimientosPendientes.length} tarea{mantenimientosPendientes.length > 1 ? 's' : ''} pendiente{mantenimientosPendientes.length > 1 ? 's' : ''}.
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push('/analisis')}
-                >
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Ver Análisis
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push('/equipos')}
-                >
-                  <Wrench className="w-4 h-4 mr-2" />
-                  Gestionar Equipos
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
         </div>
       </DashboardLayout>
     </>

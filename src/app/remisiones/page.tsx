@@ -357,9 +357,11 @@ export default function RemisionesPage() {
                             {remision.productos.slice(0, 3).map((producto) => (
                               <div key={producto.id} className="text-sm text-gray-600">
                                 <span className="font-medium">{producto.cantidadSolicitada}x</span> {producto.nombre}
-                                <span className="text-gray-400 ml-1">
-                                  ({producto.marca} {producto.modelo})
-                                </span>
+                                {producto.numeroSerie && (
+                                  <span className="ml-1">
+                                    • S/N: <span className="font-bold text-gray-800">{producto.numeroSerie}</span>
+                                  </span>
+                                )}
                               </div>
                             ))}
                             {remision.productos.length > 3 && (

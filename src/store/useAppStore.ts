@@ -393,6 +393,57 @@ export const useAppStore = create<AppState>()(
           }
         },
 
+        // 🆕 NUEVA: Obtener números de serie disponibles para un producto
+        getNumerosSerie: async (
+          productoNombre: string,
+          productoMarca: string,
+          productoModelo?: string
+        ): Promise<string[]> => {
+          try {
+            console.log("🔍 Obteniendo números de serie disponibles para:", {
+              productoNombre,
+              productoMarca,
+              productoModelo
+            });
+
+            // 🔧 CORRECCIÓN: Obtener números de serie solo de componentes disponibles (cantidad > 0)
+            const { data: componentesDisponibles, error: errorComponentes } = await supabase
+              .from("componentes_disponibles")
+              .select("numero_serie")
+              .eq("nombre", productoNombre)
+              .eq("marca", productoMarca)
+              .gt("cantidad_disponible", 0) // Solo componentes con cantidad > 0
+              .not("numero_serie", "is", null)
+              .neq("numero_serie", "");
+
+            if (errorComponentes) throw errorComponentes;
+
+            // Procesar componentes para obtener números de serie únicos disponibles
+            const numerosSerieSet = new Set<string>();
+
+            componentesDisponibles.forEach((componente) => {
+              if (componente.numero_serie && componente.numero_serie.trim()) {
+                const sn = componente.numero_serie.trim();
+                numerosSerieSet.add(sn);
+              }
+            });
+
+            // Convertir a array y ordenar
+            const numerosSerieDisponibles = Array.from(numerosSerieSet).sort();
+
+            console.log("✅ Números de serie REALMENTE disponibles:", {
+              total: numerosSerieDisponibles.length,
+              numeros: numerosSerieDisponibles
+            });
+            
+            return numerosSerieDisponibles;
+
+          } catch (error) {
+            console.error("❌ Error obteniendo números de serie:", error);
+            return [];
+          }
+        },
+
         getMovimientosByProducto: async (
           productoNombre: string,
           productoMarca?: string
@@ -440,6 +491,7 @@ export const useAppStore = create<AppState>()(
           productoNombre: string;
           productoMarca?: string;
           productoModelo?: string;
+          numeroSerie?: string;
           cantidad: number;
           cantidadAnterior: number;
           motivo: string;
@@ -606,8 +658,8 @@ export const useAppStore = create<AppState>()(
             const cargas = await getAllCargas();
             set({ cargasMercaderia: cargas });
             
-            // 🔄 RECARGAR STOCK Y MOVIMIENTOS después de agregar carga para que aparezca inmediatamente
-            console.log('🔄 Recargando stock y movimientos después de agregar carga...');
+            // 🔄 RECARGAR STOCK, MOVIMIENTOS Y INVENTARIO TÉCNICO después de agregar carga para que aparezca inmediatamente
+            console.log('🔄 Recargando stock, movimientos e inventario técnico después de agregar carga...');
             const [stockItems, movimientos] = await Promise.all([
               getAllStockItems(),
               getAllMovimientosStock()
@@ -616,7 +668,10 @@ export const useAppStore = create<AppState>()(
               stockItems: stockItems,
               movimientosStock: movimientos 
             });
-            console.log('✅ Stock y movimientos recargados exitosamente después de agregar carga');
+            
+            // 🎯 RECARGAR INVENTARIO TÉCNICO para que aparezcan los nuevos componentes
+            await get().loadInventarioTecnico();
+            console.log('✅ Stock, movimientos e inventario técnico recargados exitosamente después de agregar carga');
             
             return nuevaCarga;
           } catch (error) {
@@ -1146,7 +1201,7 @@ export const useAppStore = create<AppState>()(
           cliente?: string
         ) => {
           try {
-            console.log("🔄 Procesando salida de stock...", {
+            console.log("🔄 INICIO - Procesando salida de stock...", {
               itemId,
               stockItemId,
               cantidad,
@@ -1157,34 +1212,44 @@ export const useAppStore = create<AppState>()(
 
             // Determinar si es del inventario técnico o stock general
             if (itemId) {
-              // Es del inventario técnico (componentes_disponibles)
-              const componente = get().componentesDisponibles.find((c) => c.id === itemId);
-              
-              if (componente) {
-                console.log("🔍 Procesando salida para componente:", componente);
-                
-                // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
-                await registrarSalidaStock({
-                  itemId: itemId,
-                  productoNombre: componente.nombre,
-                  productoMarca: componente.marca,
-                  productoModelo: componente.modelo,
-                  cantidad: cantidad,
-                  cantidadAnterior: componente.cantidadDisponible,
-                  motivo: motivo,
-                  destino: cliente || "Cliente",
-                  responsable: "Sistema - Remisión",
-                  cliente: cliente,
-                  numeroFactura: numeroFactura,
-                  observaciones: `Remisión: ${numeroRemision || "N/A"}`,
-                  carpetaOrigen: componente.marca,
-                });
+              // 🔧 CORRECCIÓN: Obtener datos directamente de la base de datos para asegurar que tenemos el número de serie
+              const { data: componenteDB, error: componenteError } = await supabase
+                .from('componentes_disponibles')
+                .select('id, nombre, marca, modelo, numero_serie, cantidad_disponible')
+                .eq('id', itemId)
+                .single();
 
-                console.log("✅ Movimiento de stock registrado para:", componente.nombre);
-              } else {
-                console.error("❌ No se encontró el componente con ID:", itemId);
+              if (componenteError || !componenteDB) {
+                console.error("❌ No se encontró el componente en la base de datos:", itemId, componenteError);
                 throw new Error(`Componente no encontrado: ${itemId}`);
               }
+
+              console.log("🔍 Procesando salida para componente desde DB:", {
+                id: componenteDB.id,
+                nombre: componenteDB.nombre,
+                numeroSerie: componenteDB.numero_serie,
+                numeroSerieType: typeof componenteDB.numero_serie
+              });
+              
+              // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
+              await registrarSalidaStock({
+                itemId: itemId,
+                productoNombre: componenteDB.nombre,
+                productoMarca: componenteDB.marca,
+                productoModelo: componenteDB.modelo,
+                numeroSerie: componenteDB.numero_serie, // 🆕 Desde la base de datos directamente
+                cantidad: cantidad,
+                cantidadAnterior: componenteDB.cantidad_disponible,
+                motivo: motivo,
+                destino: cliente || "Cliente",
+                responsable: "Sistema - Remisión",
+                cliente: cliente,
+                numeroFactura: numeroFactura,
+                observaciones: `Remisión: ${numeroRemision || "N/A"}`,
+                carpetaOrigen: componenteDB.marca,
+              });
+
+              console.log("✅ Movimiento de stock registrado para:", componenteDB.nombre, "S/N:", componenteDB.numero_serie);
             } else if (stockItemId) {
               // Es del stock general (stock_items)
               const stockItem = get().stockItems.find((s) => s.id === stockItemId);
@@ -1198,6 +1263,7 @@ export const useAppStore = create<AppState>()(
                   productoNombre: stockItem.nombre,
                   productoMarca: stockItem.marca,
                   productoModelo: stockItem.modelo,
+                  numeroSerie: stockItem.numeroSerie, // 🆕 AGREGADO: Incluir número de serie
                   cantidad: cantidad,
                   cantidadAnterior: stockItem.cantidadDisponible,
                   motivo: motivo,

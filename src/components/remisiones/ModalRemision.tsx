@@ -31,6 +31,178 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { ComponenteDisponible, ProductoRemision, Remision } from "@/types";
 
+// 🆕 NUEVO: Componente para mostrar productos agrupados con selector de números de serie
+interface ProductoAgrupadoItemProps {
+  grupo: {
+    nombre: string;
+    marca: string;
+    modelo: string;
+    origen: string;
+    origenLabel: string;
+    items: any[];
+  };
+  tieneNumerosSerie: boolean;
+  stockTotal: number;
+  onAgregarProducto: (componente: any) => void;
+}
+
+function ProductoAgrupadoItem({ grupo, tieneNumerosSerie, stockTotal, onAgregarProducto }: ProductoAgrupadoItemProps) {
+  const [mostrarSelector, setMostrarSelector] = useState(false);
+  const [numeroSerieSeleccionado, setNumeroSerieSeleccionado] = useState("");
+
+  const handleAgregarProducto = () => {
+    if (tieneNumerosSerie) {
+      if (!numeroSerieSeleccionado) {
+        toast.error("Selecciona un número de serie específico");
+        return;
+      }
+      // Encontrar el item específico con el número de serie seleccionado
+      const itemSeleccionado = grupo.items.find(item => item.numeroSerie === numeroSerieSeleccionado);
+      if (itemSeleccionado) {
+        onAgregarProducto(itemSeleccionado);
+        setNumeroSerieSeleccionado("");
+        setMostrarSelector(false);
+      }
+    } else {
+      // Si no tiene números de serie, agregar el primer item disponible
+      onAgregarProducto(grupo.items[0]);
+    }
+  };
+
+  if (tieneNumerosSerie) {
+    return (
+      <div className="border rounded-lg p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="font-semibold text-base">{grupo.nombre}</div>
+            <div className="text-sm text-gray-600 mt-1">
+              {grupo.marca} {grupo.modelo}
+            </div>
+            <div className="flex items-center gap-3 mt-2">
+              <Badge variant="outline" className="text-sm px-3 py-1">
+                Stock: {stockTotal}
+              </Badge>
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                {grupo.origenLabel}
+              </Badge>
+              <Badge variant="default" className="text-sm px-3 py-1 bg-blue-100 text-blue-800">
+                Con números de serie
+              </Badge>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="default"
+            onClick={() => setMostrarSelector(!mostrarSelector)}
+            className="text-blue-600 hover:text-blue-700 px-4 py-2"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Seleccionar
+          </Button>
+        </div>
+
+        {/* Selector elegante de números de serie */}
+        <AnimatePresence>
+          {mostrarSelector && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-blue-50 border border-blue-200 rounded-lg p-5"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-base font-medium text-blue-800">
+                  Selecciona el número de serie específico:
+                </span>
+              </div>
+
+              <Select value={numeroSerieSeleccionado} onValueChange={setNumeroSerieSeleccionado}>
+                <SelectTrigger className="w-full h-12 text-base">
+                  <SelectValue placeholder="Seleccionar número de serie...">
+                    {numeroSerieSeleccionado && (
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="font-mono text-base">{numeroSerieSeleccionado}</span>
+                      </div>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {grupo.items
+                    .filter(item => item.numeroSerie && item.cantidadDisponible > 0)
+                    .map((item) => (
+                      <SelectItem key={item.id} value={item.numeroSerie}>
+                        <div className="flex items-center space-x-4 py-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <div className="flex flex-col">
+                            <span className="font-mono text-base font-medium text-gray-900">
+                              {item.numeroSerie}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              Stock: {item.cantidadDisponible} • Disponible
+                            </span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex justify-end space-x-3 mt-5">
+                <Button
+                  variant="ghost"
+                  size="default"
+                  onClick={() => {
+                    setMostrarSelector(false);
+                    setNumeroSerieSeleccionado("");
+                  }}
+                  className="px-6 py-2"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="default"
+                  onClick={handleAgregarProducto}
+                  disabled={!numeroSerieSeleccionado}
+                  className="bg-blue-600 hover:bg-blue-700 px-6 py-2"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Agregar a Remisión
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  // Para productos sin números de serie (comportamiento normal)
+  return (
+    <div
+      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+      onClick={handleAgregarProducto}
+    >
+      <div className="flex-1">
+        <div className="font-medium text-sm">{grupo.nombre}</div>
+        <div className="text-xs text-gray-500">
+          {grupo.marca} {grupo.modelo}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <Badge variant="outline" className="text-xs">
+            Stock: {stockTotal}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {grupo.origenLabel}
+          </Badge>
+        </div>
+      </div>
+      <Plus className="w-4 h-4 text-blue-600" />
+    </div>
+  );
+}
+
 interface ModalRemisionProps {
   isOpen: boolean;
   onClose: () => void;
@@ -414,7 +586,7 @@ export default function ModalRemision({
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+          className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -610,41 +782,40 @@ export default function ModalRemision({
                       />
                     </div>
 
-                    <div className="max-h-60 overflow-y-auto space-y-2">
-                      {componentesFiltrados.map((componente) => (
-                        <div
-                          key={`${componente.origen}-${componente.id}`}
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                          onClick={() => agregarProducto(componente)}
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">
-                              {componente.nombre}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {componente.marca} {componente.modelo}
-                              {componente.numeroSerie &&
-                                ` • S/N: ${componente.numeroSerie}`}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                Stock: {componente.cantidadDisponible}
-                              </Badge>
-                              <Badge
-                                variant={
-                                  componente.origen === "inventario"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                                className="text-xs"
-                              >
-                                {componente.origenLabel}
-                              </Badge>
-                            </div>
-                          </div>
-                          <Plus className="w-4 h-4 text-blue-600" />
-                        </div>
-                      ))}
+                    <div className="max-h-96 overflow-y-auto space-y-3">
+                      {(() => {
+                        // 🆕 NUEVO: Agrupar productos por nombre/marca/modelo
+                        const productosAgrupados = componentesFiltrados.reduce((grupos, componente) => {
+                          const clave = `${componente.nombre}-${componente.marca}-${componente.modelo}`;
+                          if (!grupos[clave]) {
+                            grupos[clave] = {
+                              nombre: componente.nombre,
+                              marca: componente.marca,
+                              modelo: componente.modelo,
+                              origen: componente.origen,
+                              origenLabel: componente.origenLabel,
+                              items: []
+                            };
+                          }
+                          grupos[clave].items.push(componente);
+                          return grupos;
+                        }, {} as Record<string, any>);
+
+                        return Object.values(productosAgrupados).map((grupo: any) => {
+                          const tieneNumerosSerie = grupo.items.some((item: any) => item.numeroSerie);
+                          const stockTotal = grupo.items.reduce((total: number, item: any) => total + item.cantidadDisponible, 0);
+
+                          return (
+                            <ProductoAgrupadoItem
+                              key={`${grupo.nombre}-${grupo.marca}-${grupo.modelo}`}
+                              grupo={grupo}
+                              tieneNumerosSerie={tieneNumerosSerie}
+                              stockTotal={stockTotal}
+                              onAgregarProducto={agregarProducto}
+                            />
+                          );
+                        });
+                      })()}
 
                       {busquedaProducto &&
                         componentesFiltrados.length === 0 && (

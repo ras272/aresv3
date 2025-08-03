@@ -176,7 +176,8 @@ export function Sidebar() {
   // 🚫 Función para manejar elementos bloqueados
   const handleBlockedClick = (itemName: string) => {
     toast.info(`${itemName} - Próximamente`, {
-      description: "Esta funcionalidad estará disponible en una próxima actualización.",
+      description:
+        "Esta funcionalidad estará disponible en una próxima actualización.",
       duration: 3000,
     });
   };
@@ -286,16 +287,30 @@ export function Sidebar() {
     if (!badge) return null;
 
     const badgeConfig = {
-      new: { text: "Nuevo", className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-      admin: { text: "Admin", className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-      beta: { text: "Beta", className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+      new: {
+        text: "Nuevo",
+        className:
+          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      },
+      admin: {
+        text: "Admin",
+        className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      },
+      beta: {
+        text: "Beta",
+        className:
+          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      },
     };
 
     const config = badgeConfig[badge as keyof typeof badgeConfig];
     if (!config) return null;
 
     return (
-      <Badge variant="secondary" className={cn("text-xs px-1.5 py-0.5 ml-auto", config.className)}>
+      <Badge
+        variant="secondary"
+        className={cn("text-xs px-1.5 py-0.5 ml-auto", config.className)}
+      >
         {config.text}
       </Badge>
     );
@@ -342,7 +357,9 @@ export function Sidebar() {
                 exit={{ opacity: 0, x: -10 }}
                 className="flex flex-col"
               >
-                <h1 className="text-sm font-bold text-sidebar-foreground">ARES</h1>
+                <h1 className="text-sm font-bold text-sidebar-foreground">
+                  ARES
+                </h1>
                 <p className="text-xs text-muted-foreground">PARAGUAY</p>
               </motion.div>
             )}
@@ -352,7 +369,12 @@ export function Sidebar() {
 
       {/* Theme Toggle */}
       <div className="border-b border-sidebar-border p-4">
-        <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
+        <div
+          className={cn(
+            "flex",
+            isCollapsed ? "justify-center" : "justify-start"
+          )}
+        >
           <ThemeToggle variant="switch" showLabel={!isCollapsed} />
         </div>
       </div>
@@ -438,7 +460,9 @@ export function Sidebar() {
                                     exit={{ opacity: 0, width: 0 }}
                                     className="flex items-center justify-between flex-1 min-w-0"
                                   >
-                                    <span className="truncate">{item.name}</span>
+                                    <span className="truncate">
+                                      {item.name}
+                                    </span>
                                     <span className="text-xs text-muted-foreground opacity-60 ml-2">
                                       🔒
                                     </span>
@@ -477,7 +501,9 @@ export function Sidebar() {
                                     exit={{ opacity: 0, width: 0 }}
                                     className="flex items-center justify-between flex-1 min-w-0"
                                   >
-                                    <span className="truncate">{item.name}</span>
+                                    <span className="truncate">
+                                      {item.name}
+                                    </span>
                                     {renderBadge(item.badge)}
                                   </motion.div>
                                 )}

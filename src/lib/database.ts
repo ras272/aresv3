@@ -395,11 +395,8 @@ export async function createComponenteInventarioTecnico(
   carga: any
 ) {
   try {
-    // Solo procesar si NO es para stock general
-    if (carga.destino === 'Stock/Inventario General') {
-      console.log('⚠️ Componente marcado para stock - no se envía al inventario técnico');
-      return null;
-    }
+    // 🎯 CAMBIO: Permitir que productos de stock TAMBIÉN vayan al inventario técnico si están marcados
+    console.log('✅ Procesando componente para inventario técnico:', producto.producto);
 
     // Determinar tipo de componente basado en el nombre del producto
     const tipoComponente = determinarTipoComponente(producto.producto);
@@ -447,11 +444,8 @@ export async function createComponenteInventarioTecnicoFromSubitem(
   carga: any
 ) {
   try {
-    // Solo procesar si NO es para stock general
-    if (carga.destino === 'Stock/Inventario General') {
-      console.log('⚠️ Subitem marcado para stock - no se envía al inventario técnico');
-      return null;
-    }
+    // 🎯 CAMBIO: Permitir que subitems de stock TAMBIÉN vayan al inventario técnico si están marcados
+    console.log('✅ Procesando subitem para inventario técnico:', subitem.nombre);
 
     // Determinar tipo de componente basado en el nombre del subitem
     const tipoComponente = determinarTipoComponente(subitem.nombre);
@@ -1235,7 +1229,6 @@ export async function getAllComponentesDisponibles() {
           )
         )
       `)
-      .or('carpeta_principal.eq.Servicio Técnico,marca.eq.Servicio Técnico')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -2678,6 +2671,7 @@ export interface MovimientoStock {
   productoNombre: string;
   productoMarca?: string;
   productoModelo?: string;
+  numeroSerie?: string;
   codigoItem?: string;
   codigoCargaOrigen?: string;
   numeroFactura?: string;
@@ -2698,6 +2692,7 @@ export async function registrarMovimientoStock(movimiento: {
   productoNombre: string;
   productoMarca?: string;
   productoModelo?: string;
+  numeroSerie?: string;
   codigoItem?: string;
   tipoMovimiento: 'Entrada' | 'Salida' | 'Ajuste' | 'Transferencia' | 'Asignacion';
   cantidad: number;
@@ -2727,6 +2722,7 @@ export async function registrarMovimientoStock(movimiento: {
       producto_nombre: movimiento.productoNombre,
       producto_marca: movimiento.productoMarca,
       producto_modelo: movimiento.productoModelo,
+      numero_serie: movimiento.numeroSerie,
       tipo_movimiento: movimiento.tipoMovimiento,
       cantidad: movimiento.cantidad,
       cantidad_anterior: movimiento.cantidadAnterior,
@@ -2806,6 +2802,7 @@ export async function getAllMovimientosStock(): Promise<MovimientoStock[]> {
       productoNombre: mov.producto_nombre,
       productoMarca: mov.producto_marca,
       productoModelo: mov.producto_modelo,
+      numeroSerie: mov.numero_serie,
       codigoItem: mov.codigo_item,
       codigoCargaOrigen: mov.codigo_carga_origen,
       numeroFactura: mov.numero_factura,
@@ -2905,6 +2902,7 @@ export async function getMovimientosByCarpeta(carpeta: string): Promise<Movimien
       productoNombre: mov.producto_nombre,
       productoMarca: mov.producto_marca,
       productoModelo: mov.producto_modelo,
+      numeroSerie: mov.numero_serie, // 🆕 AGREGADO: Incluir número de serie
       codigoItem: mov.codigo_item,
       codigoCargaOrigen: mov.codigo_carga_origen,
       numeroFactura: mov.numero_factura,
@@ -3153,6 +3151,7 @@ export async function registrarSalidaStock(salidaData: {
   productoNombre: string;
   productoMarca?: string;
   productoModelo?: string;
+  numeroSerie?: string;
   cantidad: number;
   cantidadAnterior: number;
   motivo: string;
@@ -3164,16 +3163,49 @@ export async function registrarSalidaStock(salidaData: {
   carpetaOrigen?: string;
 }) {
   try {
+    console.log('🔍 Iniciando registrarSalidaStock con datos:', {
+      itemId: salidaData.itemId,
+      productoNombre: salidaData.productoNombre,
+      numeroSerie: salidaData.numeroSerie,
+      cantidad: salidaData.cantidad,
+      cantidadAnterior: salidaData.cantidadAnterior
+    });
+
     // 🔧 CORRECCIÓN: Detectar automáticamente si el producto está en stock_items o componentes_disponibles
-    const { data: stockItem } = await supabase
+    const { data: stockItem, error: stockError } = await supabase
       .from('stock_items')
-      .select('id')
+      .select('id, cantidad_actual')
       .eq('id', salidaData.itemId)
       .single();
+
+    const { data: componenteItem, error: componenteError } = await supabase
+      .from('componentes_disponibles')
+      .select('id, cantidad_disponible, numero_serie')
+      .eq('id', salidaData.itemId)
+      .single();
+
+    console.log('🔍 Resultados de búsqueda:', {
+      stockItem,
+      stockError: stockError?.message,
+      componenteItem,
+      componenteError: componenteError?.message
+    });
 
     const itemType = stockItem ? 'stock_item' : 'componente_disponible';
     const tableName = stockItem ? 'stock_items' : 'componentes_disponibles';
     const cantidadField = stockItem ? 'cantidad_actual' : 'cantidad_disponible';
+
+    // Verificar que el item existe en alguna de las dos tablas
+    if (!stockItem && !componenteItem) {
+      throw new Error(`Item con ID ${salidaData.itemId} no encontrado en stock_items ni componentes_disponibles`);
+    }
+
+    console.log('✅ Item encontrado:', {
+      itemType,
+      tableName,
+      cantidadField,
+      cantidadActual: stockItem?.cantidad_actual || componenteItem?.cantidad_disponible
+    });
 
 
 
@@ -3184,6 +3216,7 @@ export async function registrarSalidaStock(salidaData: {
       productoNombre: salidaData.productoNombre,
       productoMarca: salidaData.productoMarca,
       productoModelo: salidaData.productoModelo,
+      numeroSerie: salidaData.numeroSerie,
       tipoMovimiento: 'Salida', // ✅ Corregido: usar "Salida" en lugar de "SALIDA"
       cantidad: salidaData.cantidad,
       cantidadAnterior: salidaData.cantidadAnterior,
@@ -3198,6 +3231,15 @@ export async function registrarSalidaStock(salidaData: {
     });
 
     // 2. Actualizar la cantidad en la tabla correcta
+    console.log('🔄 Actualizando cantidad en tabla:', {
+      tabla: tableName,
+      campo: cantidadField,
+      itemId: salidaData.itemId,
+      cantidadAnterior: salidaData.cantidadAnterior,
+      cantidadSalida: salidaData.cantidad,
+      cantidadNueva: salidaData.cantidadAnterior - salidaData.cantidad
+    });
+
     const { error: updateError } = await supabase
       .from(tableName)
       .update({
@@ -3206,7 +3248,12 @@ export async function registrarSalidaStock(salidaData: {
       })
       .eq('id', salidaData.itemId);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('❌ Error actualizando cantidad:', updateError);
+      throw updateError;
+    }
+
+    console.log('✅ Cantidad actualizada exitosamente en', tableName);
 
     console.log('✅ Salida de stock registrada exitosamente:', {
       producto: salidaData.productoNombre,

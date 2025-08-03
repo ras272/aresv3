@@ -1,11 +1,22 @@
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from 'docx';
-import { Remision } from '@/types';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
+} from "docx";
+import { Remision } from "@/types";
 
 export class WordRemisionService {
   static async generarRemisionWord(remision: Remision): Promise<Blob> {
     // Formatear la fecha en español
     const fechaFormateada = this.formatearFecha(remision.fecha);
-    
+
     const doc = new Document({
       styles: {
         paragraphStyles: [
@@ -41,6 +52,23 @@ export class WordRemisionService {
               alignment: AlignmentType.CENTER,
             },
           },
+          {
+            id: "empresa",
+            name: "Empresa",
+            basedOn: "Normal",
+            next: "Normal",
+            run: {
+              font: "Calibri",
+              size: 24,
+              bold: true,
+            },
+            paragraph: {
+              spacing: {
+                after: 120,
+              },
+              alignment: AlignmentType.CENTER,
+            },
+          },
         ],
       },
       sections: [
@@ -56,7 +84,36 @@ export class WordRemisionService {
             },
           },
           children: [
-            // Título
+            // Header con logo de ARES (placeholder por ahora)
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "🏥 ARES PARAGUAY",
+                  font: "Calibri",
+                  size: 28,
+                  bold: true,
+                  color: "2B5797", // Azul corporativo
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 120 },
+            }),
+
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Sistema de Trazabilidad para Entregas Médicas",
+                  font: "Calibri",
+                  size: 18,
+                  italics: true,
+                  color: "666666",
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 360 },
+            }),
+
+            // Título principal
             new Paragraph({
               children: [
                 new TextRun({
@@ -68,33 +125,6 @@ export class WordRemisionService {
               ],
               alignment: AlignmentType.CENTER,
               spacing: { after: 240 },
-            }),
-
-            // Información de la empresa
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "ARES PARAGUAY",
-                  font: "Calibri",
-                  size: 24,
-                  bold: true,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 120 },
-            }),
-
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "Sistema de Trazabilidad para Entregas",
-                  font: "Calibri",
-                  size: 20,
-                  italics: true,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 480 },
             }),
 
             // Información básica de la remisión
@@ -115,11 +145,21 @@ export class WordRemisionService {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Número de Remisión:", bold: true })] })],
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Número de Remisión:", bold: true }),
+                          ],
+                        }),
+                      ],
                       width: { size: 30, type: WidthType.PERCENTAGE },
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: remision.numeroRemision })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: remision.numeroRemision })],
+                        }),
+                      ],
                       width: { size: 70, type: WidthType.PERCENTAGE },
                     }),
                   ],
@@ -127,35 +167,70 @@ export class WordRemisionService {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Fecha:", bold: true })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: "Fecha:", bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: fechaFormateada })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: fechaFormateada })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Tipo de Remisión:", bold: true })] })],
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Tipo de Remisión:", bold: true }),
+                          ],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: remision.tipoRemision })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: remision.tipoRemision })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
-                ...(remision.numeroFactura ? [
-                  new TableRow({
-                    children: [
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: "Número de Factura:", bold: true })] })],
+                ...(remision.numeroFactura
+                  ? [
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                children: [
+                                  new TextRun({
+                                    text: "Número de Factura:",
+                                    bold: true,
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                children: [
+                                  new TextRun({ text: remision.numeroFactura }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        ],
                       }),
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: remision.numeroFactura })] })],
-                      }),
-                    ],
-                  })
-                ] : []),
+                    ]
+                  : []),
               ],
             }),
 
@@ -195,11 +270,19 @@ export class WordRemisionService {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Cliente:", bold: true })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: "Cliente:", bold: true })],
+                        }),
+                      ],
                       width: { size: 30, type: WidthType.PERCENTAGE },
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: remision.cliente })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: remision.cliente })],
+                        }),
+                      ],
                       width: { size: 70, type: WidthType.PERCENTAGE },
                     }),
                   ],
@@ -207,44 +290,88 @@ export class WordRemisionService {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Dirección de Entrega:", bold: true })] })],
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Dirección de Entrega:", bold: true }),
+                          ],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: remision.direccionEntrega })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: remision.direccionEntrega })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
-                ...(remision.contacto ? [
-                  new TableRow({
-                    children: [
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: "Contacto:", bold: true })] })],
+                ...(remision.contacto
+                  ? [
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                children: [
+                                  new TextRun({ text: "Contacto:", bold: true }),
+                                ],
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                children: [new TextRun({ text: remision.contacto })],
+                              }),
+                            ],
+                          }),
+                        ],
                       }),
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: remision.contacto })] })],
+                    ]
+                  : []),
+                ...(remision.telefono
+                  ? [
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                children: [
+                                  new TextRun({ text: "Teléfono:", bold: true }),
+                                ],
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            children: [
+                              new Paragraph({
+                                children: [new TextRun({ text: remision.telefono })],
+                              }),
+                            ],
+                          }),
+                        ],
                       }),
-                    ],
-                  })
-                ] : []),
-                ...(remision.telefono ? [
-                  new TableRow({
-                    children: [
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: "Teléfono:", bold: true })] })],
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: remision.telefono })] })],
-                      }),
-                    ],
-                  })
-                ] : []),
+                    ]
+                  : []),
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Técnico Responsable:", bold: true })] })],
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Técnico Responsable:", bold: true }),
+                          ],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: remision.tecnicoResponsable })] })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: remision.tecnicoResponsable })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
@@ -289,74 +416,144 @@ export class WordRemisionService {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Cant.", bold: true })] })],
-                      width: { size: 10, type: WidthType.PERCENTAGE },
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: "Cant.", bold: true })],
+                        }),
+                      ],
+                      width: { size: 8, type: WidthType.PERCENTAGE },
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Producto", bold: true })] })],
-                      width: { size: 40, type: WidthType.PERCENTAGE },
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: "Producto", bold: true })],
+                        }),
+                      ],
+                      width: { size: 32, type: WidthType.PERCENTAGE },
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Marca/Modelo", bold: true })] })],
-                      width: { size: 30, type: WidthType.PERCENTAGE },
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: "Marca/Modelo", bold: true })],
+                        }),
+                      ],
+                      width: { size: 25, type: WidthType.PERCENTAGE },
                     }),
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Observaciones", bold: true })] })],
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Número de Serie", bold: true }),
+                          ],
+                        }),
+                      ],
                       width: { size: 20, type: WidthType.PERCENTAGE },
+                    }),
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Observaciones", bold: true }),
+                          ],
+                        }),
+                      ],
+                      width: { size: 15, type: WidthType.PERCENTAGE },
                     }),
                   ],
                 }),
                 // Productos
-                ...remision.productos.map(producto => 
-                  new TableRow({
-                    children: [
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: producto.cantidadSolicitada.toString() })] })],
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: producto.nombre })] })],
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: `${producto.marca} ${producto.modelo}` })] })],
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: producto.observaciones || "-" })] })],
-                      }),
-                    ],
-                  })
+                ...remision.productos.map(
+                  (producto) =>
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: producto.cantidadSolicitada.toString(),
+                                }),
+                              ],
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          children: [
+                            new Paragraph({
+                              children: [new TextRun({ text: producto.nombre })],
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: `${producto.marca} ${producto.modelo}`,
+                                }),
+                              ],
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: producto.numeroSerie || "-",
+                                  font: "Consolas", // Fuente monospace para números de serie
+                                  size: 20,
+                                }),
+                              ],
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({ text: producto.observaciones || "-" }),
+                              ],
+                            }),
+                          ],
+                        }),
+                      ],
+                    })
                 ),
               ],
             }),
 
             // Observaciones generales
-            ...(remision.descripcionGeneral ? [
-              new Paragraph({
-                children: [new TextRun({ text: "" })],
-                spacing: { after: 240 },
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: "OBSERVACIONES GENERALES",
-                    font: "Calibri",
-                    size: 24,
-                    bold: true,
+            ...(remision.descripcionGeneral
+              ? [
+                  new Paragraph({
+                    children: [new TextRun({ text: "" })],
+                    spacing: { after: 240 },
                   }),
-                ],
-                spacing: { after: 120 },
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: remision.descripcionGeneral,
-                    font: "Calibri",
-                    size: 22,
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "OBSERVACIONES GENERALES",
+                        font: "Calibri",
+                        size: 24,
+                        bold: true,
+                      }),
+                    ],
+                    spacing: { after: 120 },
                   }),
-                ],
-                alignment: AlignmentType.JUSTIFIED,
-                spacing: { after: 480 },
-              }),
-            ] : []),
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: remision.descripcionGeneral,
+                        font: "Calibri",
+                        size: 22,
+                      }),
+                    ],
+                    alignment: AlignmentType.JUSTIFIED,
+                    spacing: { after: 480 },
+                  }),
+                ]
+              : []),
 
             // Espacio para firmas
             new Paragraph({
@@ -384,15 +581,21 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "________________________" })],
+                          children: [
+                            new TextRun({ text: "________________________" }),
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                         new Paragraph({
-                          children: [new TextRun({ text: "Firma del Técnico", bold: true })],
+                          children: [
+                            new TextRun({ text: "Firma del Técnico", bold: true }),
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                         new Paragraph({
-                          children: [new TextRun({ text: remision.tecnicoResponsable })],
+                          children: [
+                            new TextRun({ text: remision.tecnicoResponsable }),
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
@@ -401,11 +604,15 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "________________________" })],
+                          children: [
+                            new TextRun({ text: "________________________" }),
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                         new Paragraph({
-                          children: [new TextRun({ text: "Firma del Cliente", bold: true })],
+                          children: [
+                            new TextRun({ text: "Firma del Cliente", bold: true }),
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                         new Paragraph({
@@ -420,7 +627,7 @@ export class WordRemisionService {
               ],
             }),
 
-            // Footer
+            // Footer simple
             new Paragraph({
               children: [new TextRun({ text: "" })],
               spacing: { after: 240 },
@@ -429,10 +636,13 @@ export class WordRemisionService {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `Estado: ${remision.estado} | Generado el ${new Date().toLocaleDateString('es-PY')}`,
+                  text: `Estado: ${remision.estado} | Generado el ${new Date().toLocaleDateString(
+                    "es-PY"
+                  )}`,
                   font: "Calibri",
                   size: 18,
                   italics: true,
+                  color: "666666",
                 }),
               ],
               alignment: AlignmentType.CENTER,
@@ -444,15 +654,25 @@ export class WordRemisionService {
 
     // Generar el blob del documento Word
     const buffer = await Packer.toBuffer(doc);
-    return new Blob([new Uint8Array(buffer)], { 
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+    return new Blob([new Uint8Array(buffer)], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
   }
 
   private static formatearFecha(fechaISO: string): string {
     const meses = [
-      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      "enero",
+      "febrero",
+      "marzo",
+      "abril",
+      "mayo",
+      "junio",
+      "julio",
+      "agosto",
+      "septiembre",
+      "octubre",
+      "noviembre",
+      "diciembre",
     ];
 
     const fecha = new Date(fechaISO);
@@ -460,6 +680,6 @@ export class WordRemisionService {
     const mes = meses[fecha.getMonth()];
     const año = fecha.getFullYear();
 
-    return `Asunción, ${dia.toString().padStart(2, '0')} de ${mes} del ${año}`;
+    return `Asunción, ${dia.toString().padStart(2, "0")} de ${mes} del ${año}`;
   }
 }

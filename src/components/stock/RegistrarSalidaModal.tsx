@@ -54,6 +54,7 @@ interface RegistrarSalidaModalProps {
     productoNombre: string;
     productoMarca?: string;
     productoModelo?: string;
+    numeroSerie?: string;
     cantidad: number;
     cantidadAnterior: number;
     motivo: string;
@@ -82,8 +83,69 @@ export function RegistrarSalidaModal({
   const [numeroFactura, setNumeroFactura] = useState<string>('');
   const [observaciones, setObservaciones] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 🆕 NUEVO: Estados para números de serie
+  const [numerosSerieDisponibles, setNumerosSerieDisponibles] = useState<string[]>([]);
+  const [numerosSerieSeleccionados, setNumerosSerieSeleccionados] = useState<string[]>([]);
+  const [loadingNumerosSerie, setLoadingNumerosSerie] = useState(false);
 
-  const { clinicas } = useAppStore();
+  const { clinicas, getNumerosSerie, loadAllData } = useAppStore();
+
+  // 🆕 NUEVO: Cargar datos cuando se abre el modal
+  useEffect(() => {
+    const cargarDatos = async () => {
+      if (!isOpen || !producto) return;
+
+      // Cargar todas las clínicas si no están cargadas
+      if (clinicas.length === 0) {
+        console.log('🔄 Cargando clínicas...');
+        await loadAllData();
+      }
+
+      // Solo cargar números de serie si el producto los tiene
+      const tieneNumerosSerie = producto.detallesNumerosSerie.conNumeroSerie.length > 0;
+      if (!tieneNumerosSerie) {
+        setNumerosSerieDisponibles([]);
+        return;
+      }
+
+      try {
+        setLoadingNumerosSerie(true);
+        const numerosDisponibles = await getNumerosSerie(
+          producto.nombre,
+          producto.marca,
+          producto.modelo
+        );
+        setNumerosSerieDisponibles(numerosDisponibles);
+        console.log('✅ Números de serie cargados:', numerosDisponibles);
+      } catch (error) {
+        console.error('❌ Error cargando números de serie:', error);
+        setNumerosSerieDisponibles([]);
+      } finally {
+        setLoadingNumerosSerie(false);
+      }
+    };
+
+    cargarDatos();
+  }, [isOpen, producto, getNumerosSerie, clinicas.length, loadAllData]);
+
+  // 🆕 NUEVO: Manejar selección de números de serie
+  const toggleNumeroSerie = (numeroSerie: string) => {
+    setNumerosSerieSeleccionados(prev => {
+      const isSelected = prev.includes(numeroSerie);
+      if (isSelected) {
+        // Deseleccionar
+        const nuevaSeleccion = prev.filter(sn => sn !== numeroSerie);
+        setCantidad(nuevaSeleccion.length || 1);
+        return nuevaSeleccion;
+      } else {
+        // Seleccionar
+        const nuevaSeleccion = [...prev, numeroSerie];
+        setCantidad(nuevaSeleccion.length);
+        return nuevaSeleccion;
+      }
+    });
+  };
 
   const motivosComunes = [
     'Venta a cliente',
@@ -112,6 +174,17 @@ export function RegistrarSalidaModal({
       return;
     }
 
+    // 🆕 NUEVO: Validar números de serie si están disponibles
+    if (numerosSerieDisponibles.length > 0 && numerosSerieSeleccionados.length === 0) {
+      toast.error('Debes seleccionar los números de serie específicos para este producto');
+      return;
+    }
+
+    if (numerosSerieSeleccionados.length > 0 && numerosSerieSeleccionados.length !== cantidad) {
+      toast.error(`Debes seleccionar exactamente ${cantidad} número(s) de serie`);
+      return;
+    }
+
     if (!motivo.trim()) {
       toast.error('El motivo es requerido');
       return;
@@ -130,25 +203,75 @@ export function RegistrarSalidaModal({
     try {
       setIsLoading(true);
 
-      // Usar el primer componente ID disponible (simplificado)
-      const itemId = producto.ubicaciones[0]?.componenteIds[0] || producto.id;
+      // 🔧 CORRECCIÓN: Obtener el ID del componente específico por número de serie
+      let itemId: string;
+      
+      if (numerosSerieSeleccionados.length > 0) {
+        // Si hay número de serie seleccionado, buscar el componente específico
+        const numeroSerieSeleccionado = numerosSerieSeleccionados[0];
+        const componenteConNumeroSerie = producto.detallesNumerosSerie.conNumeroSerie.find(
+          detalle => detalle.numeroSerie === numeroSerieSeleccionado
+        );
+        
+        if (componenteConNumeroSerie) {
+          itemId = componenteConNumeroSerie.componenteId;
+          console.log('✅ Usando ID específico para número de serie:', {
+            numeroSerie: numeroSerieSeleccionado,
+            componenteId: itemId
+          });
+        } else {
+          throw new Error(`No se encontró el componente con número de serie ${numeroSerieSeleccionado}`);
+        }
+      } else {
+        // Si no hay número de serie, usar el primer componente disponible
+        itemId = producto.ubicaciones[0]?.componenteIds[0] || producto.id;
+        console.log('✅ Usando primer componente disponible:', itemId);
+      }
 
       // Determinar el cliente final
       const clienteFinal = cliente === 'Otro' ? clientePersonalizado.trim() : cliente.trim();
+
+      // 🆕 NUEVO: Incluir números de serie en las observaciones
+      let observacionesFinales = observaciones.trim();
+      if (numerosSerieSeleccionados.length > 0) {
+        const numerosSerieTexto = `Números de serie: ${numerosSerieSeleccionados.join(', ')}`;
+        observacionesFinales = observacionesFinales 
+          ? `${observacionesFinales}\n\n${numerosSerieTexto}`
+          : numerosSerieTexto;
+      }
+
+      // 🔧 CORRECCIÓN: Calcular cantidad anterior correcta
+      let cantidadAnteriorCorrecta: number;
+      
+      if (numerosSerieSeleccionados.length > 0) {
+        // Para productos con número de serie, cada componente individual tiene cantidad 1
+        cantidadAnteriorCorrecta = 1;
+        console.log('✅ Usando cantidad individual para producto con S/N:', {
+          numeroSerie: numerosSerieSeleccionados[0],
+          cantidadAnterior: cantidadAnteriorCorrecta
+        });
+      } else {
+        // Para productos sin número de serie, usar la cantidad total agrupada
+        cantidadAnteriorCorrecta = producto.cantidadTotal;
+        console.log('✅ Usando cantidad total para producto sin S/N:', {
+          cantidadAnterior: cantidadAnteriorCorrecta
+        });
+      }
 
       await onRegistrarSalida({
         itemId,
         productoNombre: producto.nombre,
         productoMarca: producto.marca,
         productoModelo: producto.modelo,
+        numeroSerie: numerosSerieSeleccionados[0] || undefined,
         cantidad,
-        cantidadAnterior: producto.cantidadTotal,
+        cantidadAnterior: cantidadAnteriorCorrecta,
         motivo,
         destino,
         responsable,
         cliente: clienteFinal || undefined,
         numeroFactura: numeroFactura.trim() || undefined,
-        observaciones: observaciones.trim() || undefined,
+        observaciones: observacionesFinales || undefined,
         carpetaOrigen: carpeta
       });
 
@@ -172,6 +295,10 @@ export function RegistrarSalidaModal({
     setClientePersonalizado('');
     setNumeroFactura('');
     setObservaciones('');
+    // 🆕 NUEVO: Limpiar estados de números de serie
+    setNumerosSerieDisponibles([]);
+    setNumerosSerieSeleccionados([]);
+    setLoadingNumerosSerie(false);
     onClose();
   };
 
@@ -251,9 +378,17 @@ export function RegistrarSalidaModal({
                     min="1"
                     max={producto.cantidadTotal}
                     value={cantidad}
-                    onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
+                    onChange={(e) => {
+                      const nuevaCantidad = parseInt(e.target.value) || 1;
+                      setCantidad(nuevaCantidad);
+                      // Si hay números de serie, limpiar selección si la cantidad cambia manualmente
+                      if (numerosSerieDisponibles.length > 0 && numerosSerieSeleccionados.length !== nuevaCantidad) {
+                        setNumerosSerieSeleccionados([]);
+                      }
+                    }}
                     className="w-full"
                     required
+                    disabled={numerosSerieSeleccionados.length > 0} // Deshabilitar si se están seleccionando números de serie
                   />
                   {cantidad > producto.cantidadTotal && (
                     <div className="flex items-center space-x-2 mt-2 text-red-600">
@@ -262,6 +397,80 @@ export function RegistrarSalidaModal({
                     </div>
                   )}
                 </div>
+
+                {/* 🆕 NUEVO: Dropdown de números de serie */}
+                {numerosSerieDisponibles.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Números de Serie Disponibles
+                      </label>
+                      {loadingNumerosSerie && (
+                        <div className="flex items-center space-x-2 text-xs text-blue-600">
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent"></div>
+                          <span>Cargando...</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <Select 
+                      value={numerosSerieSeleccionados[0] || ""} 
+                      onValueChange={(value) => {
+                        if (value) {
+                          setNumerosSerieSeleccionados([value]);
+                          setCantidad(1);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccionar número de serie específico...">
+                          {numerosSerieSeleccionados[0] && (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="font-mono text-sm">{numerosSerieSeleccionados[0]}</span>
+                            </div>
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {numerosSerieDisponibles.map((numeroSerie) => (
+                          <SelectItem key={numeroSerie} value={numeroSerie}>
+                            <div className="flex items-center space-x-3 py-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <div className="flex flex-col">
+                                <span className="font-mono text-sm font-medium text-gray-900">
+                                  {numeroSerie}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Disponible para retiro
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <p className="text-xs text-gray-600 mt-2">
+                      Este producto requiere selección de número de serie específico para trazabilidad completa.
+                    </p>
+
+                    {/* Mostrar selección actual */}
+                    {numerosSerieSeleccionados.length > 0 && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium text-blue-800">
+                            Número de serie seleccionado:
+                          </span>
+                        </div>
+                        <div className="mt-1 font-mono text-sm text-blue-900 bg-white px-2 py-1 rounded border">
+                          {numerosSerieSeleccionados[0]}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Motivo */}
                 <div>

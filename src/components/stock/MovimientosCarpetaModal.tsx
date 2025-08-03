@@ -258,9 +258,14 @@ export function MovimientosCarpetaModal({
                                 {movimiento.tipoMovimiento}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {movimiento.productoMarca} - {movimiento.productoModelo}
-                            </p>
+                            <div className="text-sm text-muted-foreground mb-2">
+                              <span>{movimiento.productoMarca} - {movimiento.productoModelo}</span>
+                              {movimiento.numeroSerie && (
+                                <span className="ml-2 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono">
+                                  S/N: {movimiento.numeroSerie}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm">
                               <strong>Motivo:</strong> {movimiento.motivo}
                             </p>
