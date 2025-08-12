@@ -6,7 +6,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TablaCargas } from '@/components/mercaderias/TablaCargas';
 import { EstadisticasCargaMasiva } from '@/components/mercaderias/EstadisticasCargaMasiva';
-import { VerificadorSistema } from '@/components/mercaderias/VerificadorSistema';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Plus, TrendingUp, Box, ShoppingCart } from 'lucide-react';
@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 export default function MercaderiasPage() {
   const router = useRouter();
   const { cargasMercaderia } = useAppStore();
-  const [mostrarVerificador, setMostrarVerificador] = useState(false);
+
 
   // Estadísticas actualizadas para cargas
   const totalCargas = cargasMercaderia.length;
@@ -43,18 +43,8 @@ export default function MercaderiasPage() {
             </p>
           </div>
           
-          {/* Botones optimizados para móvil */}
-          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
-            <Button
-              onClick={() => setMostrarVerificador(!mostrarVerificador)}
-              variant="outline"
-              className="text-green-600 border-green-600 hover:bg-green-50 w-full sm:w-auto"
-              size="sm"
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">{mostrarVerificador ? 'Ocultar' : 'Verificar'} Sistema</span>
-              <span className="sm:hidden">{mostrarVerificador ? 'Ocultar' : 'Verificar'}</span>
-            </Button>
+          {/* Botón optimizado para móvil */}
+          <div className="flex">
             <Button
               onClick={() => router.push('/mercaderias/nueva')}
               className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
@@ -66,10 +56,7 @@ export default function MercaderiasPage() {
           </div>
         </div>
 
-        {/* 🚀 Verificador de Sistema (condicional) */}
-        {mostrarVerificador && (
-          <VerificadorSistema />
-        )}
+
 
         {/* 🚀 Estadísticas de Carga Masiva 2025 */}
         <EstadisticasCargaMasiva />

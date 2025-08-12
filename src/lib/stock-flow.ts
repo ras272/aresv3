@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { registrarMovimientoStock } from './database';
+import { registrarMovimientoStock } from './database/stock';
 import {
   ejecutarConManejoErrores,
   validarDatosProducto,
@@ -106,6 +106,28 @@ export async function procesarProductoParaStock(cargaId: string, producto: any, 
       marca: producto.marca
     });
 
+    // 🎯 OBTENER INFORMACIÓN DE LA CARGA PARA TRAZABILIDAD
+    let cargaInfo = null;
+    try {
+      console.log('🔍 Buscando información de carga:', cargaId);
+      const { data: carga, error: cargaError } = await supabase
+        .from('cargas_mercaderia')
+        .select('destino, codigo_carga')
+        .eq('codigo_carga', cargaId)
+        .single();
+      
+      if (cargaError) {
+        console.error('❌ Error obteniendo información de carga:', cargaError);
+      } else if (carga) {
+        cargaInfo = carga;
+        console.log('✅ Información de carga obtenida:', cargaInfo);
+      } else {
+        console.log('⚠️ No se encontró la carga:', cargaId);
+      }
+    } catch (error) {
+      console.error('❌ Excepción obteniendo información de la carga:', error);
+    }
+
     console.log('✅ Procesando producto para stock general (carpetas por marca)...');
 
     // 1. Validar datos del producto
@@ -150,18 +172,17 @@ export async function procesarProductoParaStock(cargaId: string, producto: any, 
     }
 
     // 4. Procesar producto con información de carpeta
-    await procesarProductoIndividualConCarpetaConErrores(cargaId, producto, carpetaInfo);
+    await procesarProductoIndividualConCarpetaConErrores(cargaId, producto, carpetaInfo, cargaInfo);
 
     // 5. Procesar subitems si existen
     if (producto.subitems && producto.subitems.length > 0) {
       for (const subitem of producto.subitems) {
-        if (subitem.paraServicioTecnico) { // 🎯 CAMBIO: Verificar paraServicioTecnico en lugar de paraStock
-          try {
-            await procesarSubitemParaStock(cargaId, producto, subitem, carpetaInfo);
-          } catch (subitemError) {
-            console.error(`❌ Error procesando subitem ${subitem.nombre}:`, subitemError);
-            // Continuar con otros subitems en caso de error
-          }
+        // 🔧 CORRECCIÓN: Procesar TODOS los subitems para stock, no solo los marcados para servicio técnico
+        try {
+          await procesarSubitemParaStock(cargaId, producto, subitem, carpetaInfo);
+        } catch (subitemError) {
+          console.error(`❌ Error procesando subitem ${subitem.nombre}:`, subitemError);
+          // Continuar con otros subitems en caso de error
         }
       }
     }
@@ -197,13 +218,13 @@ function inferirMarcaDesdeNombre(nombre: string): string | null {
 }
 
 // Función con manejo integral de errores
-async function procesarProductoIndividualConCarpetaConErrores(cargaId: string, producto: any, carpetaInfo: CarpetaInfo) {
+async function procesarProductoIndividualConCarpetaConErrores(cargaId: string, producto: any, carpetaInfo: CarpetaInfo, cargaInfo: any = null) {
   return await ejecutarConManejoErrores(async () => {
-    await procesarProductoIndividualConCarpeta(cargaId, producto, carpetaInfo);
+    await procesarProductoIndividualConCarpeta(cargaId, producto, carpetaInfo, cargaInfo);
   }, 'procesarProductoIndividualConCarpeta', { cargaId, producto, carpetaInfo });
 }
 
-async function procesarProductoIndividualConCarpeta(cargaId: string, producto: any, carpetaInfo: CarpetaInfo) {
+async function procesarProductoIndividualConCarpeta(cargaId: string, producto: any, carpetaInfo: CarpetaInfo, cargaInfo: any = null) {
   try {
     console.log('🔄 Procesando producto individual con carpeta:', {
       cargaId,
@@ -212,21 +233,21 @@ async function procesarProductoIndividualConCarpeta(cargaId: string, producto: a
       carpeta: carpetaInfo.rutaCompleta
     });
 
-    // 🎯 USAR TABLA componentes_disponibles PARA COMPATIBILIDAD (fallback a stock_items si existe)
+    // 🎯 USAR TABLA stock_items PARA STOCK GENERAL (NO inventario técnico)
     
-    // Primero intentar con componentes_disponibles (tabla existente)
-    const { data: existentesComponentes, error: buscarErrorComponentes } = await supabase
-      .from('componentes_disponibles')
+    // Buscar en stock_items (tabla correcta para stock general)
+    const { data: existentesStock, error: buscarErrorStock } = await supabase
+      .from('stock_items')
       .select('*')
       .eq('marca', producto.marca)
       .eq('nombre', producto.producto);
 
-    if (buscarErrorComponentes) {
-      console.warn('⚠️ Error buscando en componentes_disponibles:', buscarErrorComponentes);
+    if (buscarErrorStock) {
+      console.warn('⚠️ Error buscando en stock_items:', buscarErrorStock);
     }
 
-    // Buscar coincidencia exacta en componentes_disponibles
-    const existenteComponente = existentesComponentes?.find(item => {
+    // Buscar coincidencia exacta en stock_items
+    const existenteStock = existentesStock?.find(item => {
       const nombreSimilar = item.nombre.toLowerCase().trim() === producto.producto.toLowerCase().trim();
       const marcaSimilar = item.marca?.toLowerCase().trim() === producto.marca?.toLowerCase().trim();
       const serieSimilar = (!item.numero_serie && !producto.numeroSerie) || 
@@ -234,89 +255,92 @@ async function procesarProductoIndividualConCarpeta(cargaId: string, producto: a
       return nombreSimilar && marcaSimilar && serieSimilar;
     }) || null;
 
-    if (existenteComponente) {
-      // ✅ EXISTE EN COMPONENTES: Sumar cantidades
-      const nuevaCantidad = existenteComponente.cantidad_disponible + producto.cantidad;
+    if (existenteStock) {
+      // ✅ EXISTE EN STOCK: Sumar cantidades
+      const nuevaCantidad = existenteStock.cantidad_actual + producto.cantidad;
 
       const { error: updateError } = await supabase
-        .from('componentes_disponibles')
+        .from('stock_items')
         .update({
-          cantidad_disponible: nuevaCantidad,
+          cantidad_actual: nuevaCantidad,
           updated_at: new Date().toISOString()
         })
-        .eq('id', existenteComponente.id);
+        .eq('id', existenteStock.id);
 
       if (updateError) {
-        console.error('❌ Error actualizando componente existente:', updateError);
+        console.error('❌ Error actualizando stock existente:', updateError);
         throw updateError;
       }
 
-      console.log(`✅ Stock actualizado en componentes_disponibles: ${producto.producto} (${existenteComponente.cantidad_disponible} → ${nuevaCantidad}) en carpeta ${carpetaInfo.rutaCompleta}`);
+      console.log(`✅ Stock actualizado en stock_items: ${producto.producto} (${existenteStock.cantidad_actual} → ${nuevaCantidad}) en carpeta ${carpetaInfo.rutaCompleta}`);
       
       // 📊 REGISTRAR MOVIMIENTO DE ENTRADA (producto existente)
+      const motivoCompleto = cargaInfo 
+        ? `Entrada desde carga: ${cargaId} - Destino: ${cargaInfo.destino}`
+        : `Entrada desde carga: ${cargaId}`;
+
       await registrarMovimientoStock({
-        itemId: existenteComponente.id,
-        itemType: 'componente_disponible',
+        itemId: existenteStock.id,
+        itemType: 'stock_item',
         tipoMovimiento: 'Entrada',
         cantidad: producto.cantidad,
-        cantidadAnterior: existenteComponente.cantidad_disponible,
+        cantidadAnterior: existenteStock.cantidad_actual,
         cantidadNueva: nuevaCantidad,
-        motivo: `Entrada desde carga: ${cargaId}`,
+        motivo: motivoCompleto,
         productoNombre: producto.producto,
         productoMarca: producto.marca,
         carpetaOrigen: carpetaInfo.rutaCompleta,
         carpetaDestino: carpetaInfo.rutaCompleta,
-        codigoCargaOrigen: cargaId
+        codigoCargaOrigen: cargaId,
+        observaciones: cargaInfo ? `Mercadería destinada a: ${cargaInfo.destino}` : undefined
       });
     } else {
-      // ✅ NO EXISTE: Crear nuevo item en componentes_disponibles
-      const nuevoComponente = {
-        nombre: producto.producto,
-        marca: producto.marca,
-        modelo: producto.modelo,
-        numero_serie: producto.numeroSerie || null,
-        cantidad_disponible: producto.cantidad,
-        cantidad_original: producto.cantidad,
-        ubicacion_fisica: carpetaInfo.ubicacionFisica,
-        estado: 'Disponible',
-        observaciones: `${producto.observaciones || ''}. Carpeta: ${carpetaInfo.rutaCompleta}`,
-        codigo_carga_origen: cargaId,
-        tipo_componente: determinarTipoComponenteBasico(producto.producto),
-        // Campos adicionales para organización por carpetas
-        carpeta_principal: carpetaInfo.carpetaPrincipal,
-        subcarpeta: carpetaInfo.subcarpeta || null,
-        ruta_carpeta: carpetaInfo.rutaCompleta,
-        tipo_destino: carpetaInfo.tipoDestino
-      };
-
+      // ✅ NO EXISTE: Crear nuevo item en stock_items
+      // Generar código único más robusto
+      const codigoUnico = `${producto.marca?.substring(0, 3).toUpperCase() || 'GEN'}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      
       const { data: nuevoItem, error: createError } = await supabase
-        .from('componentes_disponibles')
-        .insert(nuevoComponente)
+        .from('stock_items')
+        .insert({
+          codigo_item: codigoUnico,
+          nombre: producto.producto,
+          marca: producto.marca || 'Sin Marca',
+          modelo: producto.modelo || 'Sin Modelo',
+          numero_serie: producto.numeroSerie || null,
+          cantidad_actual: producto.cantidad,
+          cantidad_minima: 1,
+          estado: 'Disponible',
+          observaciones: `${producto.observaciones || ''}. Carpeta: ${carpetaInfo.rutaCompleta}. Tipo: ${carpetaInfo.tipoDestino}`
+        })
         .select()
         .single();
 
       if (createError) {
-        console.error('❌ Error creando nuevo componente:', createError);
-        console.error('❌ Datos del componente:', nuevoComponente);
+        console.error('❌ Error creando nuevo item en stock:', createError);
         throw createError;
       }
 
-      console.log(`✅ Nuevo producto en componentes_disponibles: ${producto.producto} (${producto.cantidad} unidades) organizado en carpeta ${carpetaInfo.rutaCompleta}`);
+      console.log(`✅ Nuevo producto en stock_items: ${producto.producto} (${producto.cantidad} unidades) organizado en carpeta ${carpetaInfo.rutaCompleta}`);
       
       // 📊 REGISTRAR MOVIMIENTO DE ENTRADA (producto nuevo)
+      const motivoCompletoNuevo = cargaInfo 
+        ? `Entrada inicial desde carga: ${cargaId} - Destino: ${cargaInfo.destino}`
+        : `Entrada inicial desde carga: ${cargaId}`;
+
       await registrarMovimientoStock({
         itemId: nuevoItem.id,
-        itemType: 'componente_disponible',
+        itemType: 'stock_item',
         tipoMovimiento: 'Entrada',
         cantidad: producto.cantidad,
         cantidadAnterior: 0,
         cantidadNueva: producto.cantidad,
-        motivo: `Entrada inicial desde carga: ${cargaId}`,
+        motivo: motivoCompletoNuevo,
         productoNombre: producto.producto,
         productoMarca: producto.marca,
         carpetaOrigen: null,
         carpetaDestino: carpetaInfo.rutaCompleta,
-        codigoCargaOrigen: cargaId
+        codigoCargaOrigen: cargaId,
+        observaciones: cargaInfo ? `Mercadería destinada a: ${cargaInfo.destino}` : undefined
       });
     }
 

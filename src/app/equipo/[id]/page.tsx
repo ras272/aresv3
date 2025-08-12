@@ -829,6 +829,11 @@ export default function EquipoDetailPage() {
                                   {getEstadoIcon(mantenimiento.estado)}
                                   <span className="ml-1">{mantenimiento.estado}</span>
                                 </Badge>
+                                {mantenimiento.numeroReporte && (
+                                  <Badge className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+                                    {mantenimiento.numeroReporte}
+                                  </Badge>
+                                )}
                                 <span className="text-xs text-gray-500">
                                   {new Date(mantenimiento.fecha).toLocaleDateString('es-ES')}
                                 </span>

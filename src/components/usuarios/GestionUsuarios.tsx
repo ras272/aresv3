@@ -27,7 +27,7 @@ import { User, UserRole } from '@/types/auth';
 import { getAllRealUsers, createRealUser, updateRealUser } from '@/lib/auth-real';
 import { getCurrentUser } from '@/hooks/useAuth';
 
-const ROLES: { value: UserRole; label: string; color: string }[] = [
+const ROLES: { value: UserRole; label: string; color: sring }[] = [
   { value: 'super_admin', label: 'Super Admin', color: 'bg-red-100 text-red-800' },
   { value: 'admin', label: 'Administrador', color: 'bg-purple-100 text-purple-800' },
   { value: 'gerente', label: 'Gerente', color: 'bg-blue-100 text-blue-800' },

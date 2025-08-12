@@ -50,7 +50,12 @@ interface MantenimientoProgramado {
 }
 
 export default function CalendarioPage() {
-  const { equipos, mantenimientos, updateMantenimiento, addMantenimientoProgramado } = useAppStore();
+  const { equipos, mantenimientos, updateMantenimiento, addMantenimientoProgramado, loadAllData } = useAppStore();
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
   const [vista, setVista] = useState<VistaCalendario>('mes');
   const [fechaActual, setFechaActual] = useState(new Date());
   const [filtroTecnico, setFiltroTecnico] = useState<FiltroTecnico>('todos');

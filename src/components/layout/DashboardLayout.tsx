@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Sidebar } from "./Sidebar";
+import { SidebarNew as Sidebar } from "./SidebarNew";
 import { LogOut, Menu } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,12 +11,14 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  fullWidth?: boolean;
 }
 
 export function DashboardLayout({
   children,
   title,
   subtitle,
+  fullWidth = false,
 }: DashboardLayoutProps) {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -103,7 +105,7 @@ export function DashboardLayout({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="lg:max-w-7xl lg:mx-auto flex items-center justify-between"
+            className={`${fullWidth ? 'w-full' : 'lg:max-w-7xl lg:mx-auto'} flex items-center justify-between`}
           >
             {/* Left side - Mobile menu button + Title */}
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
@@ -190,7 +192,7 @@ export function DashboardLayout({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="w-full lg:max-w-7xl lg:mx-auto py-2 sm:py-4 lg:py-6 px-2 sm:px-4 lg:px-6 min-h-full"
+            className={`w-full ${fullWidth ? 'max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8' : 'lg:max-w-7xl lg:mx-auto px-2 sm:px-4 lg:px-6'} py-2 sm:py-4 lg:py-6 min-h-full`}
           >
             {children}
           </motion.div>

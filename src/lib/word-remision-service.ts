@@ -148,7 +148,10 @@ export class WordRemisionService {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Número de Remisión:", bold: true }),
+                            new TextRun({
+                              text: "Número de Remisión:",
+                              bold: true,
+                            }),
                           ],
                         }),
                       ],
@@ -157,7 +160,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: remision.numeroRemision })],
+                          children: [
+                            new TextRun({ text: remision.numeroRemision }),
+                          ],
                         }),
                       ],
                       width: { size: 70, type: WidthType.PERCENTAGE },
@@ -169,7 +174,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "Fecha:", bold: true })],
+                          children: [
+                            new TextRun({ text: "Fecha:", bold: true }),
+                          ],
                         }),
                       ],
                     }),
@@ -188,7 +195,10 @@ export class WordRemisionService {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Tipo de Remisión:", bold: true }),
+                            new TextRun({
+                              text: "Tipo de Remisión:",
+                              bold: true,
+                            }),
                           ],
                         }),
                       ],
@@ -196,7 +206,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: remision.tipoRemision })],
+                          children: [
+                            new TextRun({ text: remision.tipoRemision }),
+                          ],
                         }),
                       ],
                     }),
@@ -272,7 +284,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "Cliente:", bold: true })],
+                          children: [
+                            new TextRun({ text: "Cliente:", bold: true }),
+                          ],
                         }),
                       ],
                       width: { size: 30, type: WidthType.PERCENTAGE },
@@ -293,7 +307,10 @@ export class WordRemisionService {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Dirección de Entrega:", bold: true }),
+                            new TextRun({
+                              text: "Dirección de Entrega:",
+                              bold: true,
+                            }),
                           ],
                         }),
                       ],
@@ -301,7 +318,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: remision.direccionEntrega })],
+                          children: [
+                            new TextRun({ text: remision.direccionEntrega }),
+                          ],
                         }),
                       ],
                     }),
@@ -315,7 +334,10 @@ export class WordRemisionService {
                             children: [
                               new Paragraph({
                                 children: [
-                                  new TextRun({ text: "Contacto:", bold: true }),
+                                  new TextRun({
+                                    text: "Contacto:",
+                                    bold: true,
+                                  }),
                                 ],
                               }),
                             ],
@@ -323,7 +345,9 @@ export class WordRemisionService {
                           new TableCell({
                             children: [
                               new Paragraph({
-                                children: [new TextRun({ text: remision.contacto })],
+                                children: [
+                                  new TextRun({ text: remision.contacto }),
+                                ],
                               }),
                             ],
                           }),
@@ -339,7 +363,10 @@ export class WordRemisionService {
                             children: [
                               new Paragraph({
                                 children: [
-                                  new TextRun({ text: "Teléfono:", bold: true }),
+                                  new TextRun({
+                                    text: "Teléfono:",
+                                    bold: true,
+                                  }),
                                 ],
                               }),
                             ],
@@ -347,7 +374,9 @@ export class WordRemisionService {
                           new TableCell({
                             children: [
                               new Paragraph({
-                                children: [new TextRun({ text: remision.telefono })],
+                                children: [
+                                  new TextRun({ text: remision.telefono }),
+                                ],
                               }),
                             ],
                           }),
@@ -361,7 +390,10 @@ export class WordRemisionService {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Técnico Responsable:", bold: true }),
+                            new TextRun({
+                              text: "Técnico Responsable:",
+                              bold: true,
+                            }),
                           ],
                         }),
                       ],
@@ -369,7 +401,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: remision.tecnicoResponsable })],
+                          children: [
+                            new TextRun({ text: remision.tecnicoResponsable }),
+                          ],
                         }),
                       ],
                     }),
@@ -418,7 +452,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "Cant.", bold: true })],
+                          children: [
+                            new TextRun({ text: "Cant.", bold: true }),
+                          ],
                         }),
                       ],
                       width: { size: 8, type: WidthType.PERCENTAGE },
@@ -426,7 +462,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "Producto", bold: true })],
+                          children: [
+                            new TextRun({ text: "Producto", bold: true }),
+                          ],
                         }),
                       ],
                       width: { size: 32, type: WidthType.PERCENTAGE },
@@ -434,7 +472,9 @@ export class WordRemisionService {
                     new TableCell({
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "Marca/Modelo", bold: true })],
+                          children: [
+                            new TextRun({ text: "Marca/Modelo", bold: true }),
+                          ],
                         }),
                       ],
                       width: { size: 25, type: WidthType.PERCENTAGE },
@@ -443,7 +483,10 @@ export class WordRemisionService {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Número de Serie", bold: true }),
+                            new TextRun({
+                              text: "Número de Serie",
+                              bold: true,
+                            }),
                           ],
                         }),
                       ],
@@ -480,7 +523,9 @@ export class WordRemisionService {
                         new TableCell({
                           children: [
                             new Paragraph({
-                              children: [new TextRun({ text: producto.nombre })],
+                              children: [
+                                new TextRun({ text: producto.nombre }),
+                              ],
                             }),
                           ],
                         }),
@@ -512,7 +557,9 @@ export class WordRemisionService {
                           children: [
                             new Paragraph({
                               children: [
-                                new TextRun({ text: producto.observaciones || "-" }),
+                                new TextRun({
+                                  text: producto.observaciones || "-",
+                                }),
                               ],
                             }),
                           ],
@@ -588,7 +635,10 @@ export class WordRemisionService {
                         }),
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Firma del Técnico", bold: true }),
+                            new TextRun({
+                              text: "Firma del Técnico",
+                              bold: true,
+                            }),
                           ],
                           alignment: AlignmentType.CENTER,
                         }),
@@ -611,7 +661,10 @@ export class WordRemisionService {
                         }),
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Firma del Cliente", bold: true }),
+                            new TextRun({
+                              text: "Firma del Cliente",
+                              bold: true,
+                            }),
                           ],
                           alignment: AlignmentType.CENTER,
                         }),
@@ -636,9 +689,9 @@ export class WordRemisionService {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `Estado: ${remision.estado} | Generado el ${new Date().toLocaleDateString(
-                    "es-PY"
-                  )}`,
+                  text: `Estado: ${
+                    remision.estado
+                  } | Generado el ${new Date().toLocaleDateString("es-PY")}`,
                   font: "Calibri",
                   size: 18,
                   italics: true,

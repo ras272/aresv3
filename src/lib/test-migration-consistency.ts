@@ -6,3 +6,4 @@ import { supabase } from './supabase';
 import { 
   migrarProductosAEstructuraCarpetas, 
   validarConsistenciaCarpetas,
+} from './stock-flow';

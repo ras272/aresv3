@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -79,69 +77,74 @@
 }
 
 .dark {
-  /* Core colors with improved contrast */
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  
-  /* Primary colors optimized for dark mode */
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  
-  /* Secondary and muted colors with better visibility */
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  
-  /* Destructive color with proper contrast */
-  --destructive: oklch(0.704 0.191 22.216);
-  
-  /* Enhanced border and input visibility */
-  --border: oklch(1 0 0 / 18%);
-  --input: oklch(1 0 0 / 25%);
-  
-  /* Improved ring color for better focus visibility */
-  --ring: oklch(0.708 0 0);
-  
-  /* Optimized chart colors for dark mode readability */
-  --chart-1: oklch(0.65 0.25 264.376);
-  --chart-2: oklch(0.75 0.18 162.48);
-  --chart-3: oklch(0.82 0.20 70.08);
-  --chart-4: oklch(0.70 0.28 303.9);
-  --chart-5: oklch(0.72 0.26 16.439);
-  
-  /* Sidebar colors with enhanced contrast */
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.25 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 18%);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* 🌙 DARK MODE SUAVE - Colores más cálidos y menos agresivos */
+
+  /* 🌙 DARK MODE EQUILIBRADO - Más oscuro pero elegante */
+  --background: oklch(0.15 0.005 240);
+  --foreground: oklch(0.92 0.005 240);
+
+  /* Cards con contraste perfecto */
+  --card: oklch(0.19 0.008 240);
+  --card-foreground: oklch(0.92 0.005 240);
+  --popover: oklch(0.19 0.008 240);
+  --popover-foreground: oklch(0.92 0.005 240);
+
+  /* Primary más vibrante pero elegante */
+  --primary: oklch(0.6 0.18 220);
+  --primary-foreground: oklch(0.98 0.005 240);
+
+  /* Secondary con mejor definición */
+  --secondary: oklch(0.23 0.008 240);
+  --secondary-foreground: oklch(0.88 0.005 240);
+  --muted: oklch(0.23 0.008 240);
+  --muted-foreground: oklch(0.7 0.008 240);
+  --accent: oklch(0.28 0.01 240);
+  --accent-foreground: oklch(0.92 0.005 240);
+
+  /* Destructive más suave */
+  --destructive: oklch(0.65 0.18 25);
+
+  /* Bordes más visibles pero suaves */
+  --border: oklch(0.35 0.01 240);
+  --input: oklch(0.25 0.01 240);
+
+  /* Ring con color primario */
+  --ring: oklch(0.65 0.15 240);
+
+  /* Charts con colores más vibrantes pero no agresivos */
+  --chart-1: oklch(0.7 0.2 260);
+  --chart-2: oklch(0.72 0.18 160);
+  --chart-3: oklch(0.75 0.16 80);
+  --chart-4: oklch(0.68 0.22 300);
+  --chart-5: oklch(0.74 0.2 20);
+
+  /* Sidebar con un tono ligeramente diferente para contraste */
+  --sidebar: oklch(0.2 0.01 240);
+  --sidebar-foreground: oklch(0.92 0.005 240);
+  --sidebar-primary: oklch(0.65 0.15 240);
+  --sidebar-primary-foreground: oklch(0.98 0.005 240);
+  --sidebar-accent: oklch(0.3 0.01 240);
+  --sidebar-accent-foreground: oklch(0.92 0.005 240);
+  --sidebar-border: oklch(0.35 0.01 240);
+  --sidebar-ring: oklch(0.65 0.15 240);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  
+
   /* Arreglo para evitar doble scroll */
-  html, body {
+  html,
+  body {
     height: 100%;
     overflow: hidden;
   }
-  
+
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* Asegurar que el contenedor principal ocupe toda la altura */
   #__next {
     height: 100%;

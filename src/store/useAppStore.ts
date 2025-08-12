@@ -15,34 +15,16 @@ import {
   Usuario,
 } from "@/types";
 import { EquipoFormData, CargaMercaderiaFormData } from "@/lib/schemas";
+// Imports específicos por módulo (mejores prácticas)
 import {
   createCargaMercaderia,
   getAllCargas,
   generateCodigoCarga as dbGenerateCodigoCarga,
-  getAllEquipos,
-  createEquipo,
-  createMantenimiento,
-  getAllMantenimientos,
-  getEstadisticasDashboard,
-  updateComponente as dbUpdateComponente,
-  updateMantenimiento as dbUpdateMantenimiento,
-  deleteMantenimiento as dbDeleteMantenimiento,
   deleteCargaMercaderia,
-  deleteEquipo,
-  getAllComponentesDisponibles,
+} from "@/lib/database/mercaderias";
+
+import {
   getAllStockItems,
-  asignarComponenteAEquipo,
-  getHistorialAsignaciones as dbGetHistorialAsignaciones,
-  getAllClinicas,
-  createClinica,
-  updateClinica,
-  deleteClinica,
-  getAllRemisiones,
-  createRemision,
-  updateRemision,
-  deleteRemision,
-  deleteRemisionConRestauracion,
-  generateNumeroRemision,
   getAllTransaccionesStock,
   createTransaccionStock,
   getAllMovimientosStock,
@@ -53,8 +35,43 @@ import {
   registrarSalidaStockReporte,
   devolverRepuestosAlStockReporte,
   type MovimientoStock,
-} from "@/lib/database";
-import { 
+} from "@/lib/database/stock";
+
+import {
+  getAllEquipos,
+  createEquipo,
+  deleteEquipo,
+  getAllComponentesDisponibles,
+  asignarComponenteAEquipo,
+  getHistorialAsignaciones as dbGetHistorialAsignaciones,
+  updateComponente as dbUpdateComponente,
+} from "@/lib/database/equipos";
+
+import {
+  createMantenimiento,
+  getAllMantenimientos,
+  updateMantenimiento as dbUpdateMantenimiento,
+  deleteMantenimiento as dbDeleteMantenimiento,
+} from "@/lib/database/mantenimientos";
+
+import {
+  getAllClinicas,
+  createClinica,
+  updateClinica,
+  deleteClinica,
+} from "@/lib/database/clinicas";
+
+import {
+  getAllRemisiones,
+  createRemision,
+  updateRemision,
+  deleteRemision,
+  deleteRemisionConRestauracion,
+  generateNumeroRemision,
+} from "@/lib/database/remisiones";
+
+import { getEstadisticasDashboard } from "@/lib/database";
+import {
   createDocumentoCarga,
   getAllDocumentosCarga,
   deleteDocumentoCarga,
@@ -219,13 +236,17 @@ export const useAppStore = create<AppState>()(
           try {
             // 🔧 DETECCIÓN AUTOMÁTICA: Copiar lógica de registrarSalidaStock
             const { data: stockItem } = await supabase
-              .from('stock_items')
-              .select('id')
-              .eq('id', itemId)
+              .from("stock_items")
+              .select("id")
+              .eq("id", itemId)
               .single();
 
-            const tableName = stockItem ? 'stock_items' : 'componentes_disponibles';
-            const cantidadField = stockItem ? 'cantidad_actual' : 'cantidad_disponible';
+            const tableName = stockItem
+              ? "stock_items"
+              : "componentes_disponibles";
+            const cantidadField = stockItem
+              ? "cantidad_actual"
+              : "cantidad_disponible";
 
             const { error } = await supabase
               .from(tableName)
@@ -403,18 +424,19 @@ export const useAppStore = create<AppState>()(
             console.log("🔍 Obteniendo números de serie disponibles para:", {
               productoNombre,
               productoMarca,
-              productoModelo
+              productoModelo,
             });
 
             // 🔧 CORRECCIÓN: Obtener números de serie solo de componentes disponibles (cantidad > 0)
-            const { data: componentesDisponibles, error: errorComponentes } = await supabase
-              .from("componentes_disponibles")
-              .select("numero_serie")
-              .eq("nombre", productoNombre)
-              .eq("marca", productoMarca)
-              .gt("cantidad_disponible", 0) // Solo componentes con cantidad > 0
-              .not("numero_serie", "is", null)
-              .neq("numero_serie", "");
+            const { data: componentesDisponibles, error: errorComponentes } =
+              await supabase
+                .from("componentes_disponibles")
+                .select("numero_serie")
+                .eq("nombre", productoNombre)
+                .eq("marca", productoMarca)
+                .gt("cantidad_disponible", 0) // Solo componentes con cantidad > 0
+                .not("numero_serie", "is", null)
+                .neq("numero_serie", "");
 
             if (errorComponentes) throw errorComponentes;
 
@@ -433,11 +455,10 @@ export const useAppStore = create<AppState>()(
 
             console.log("✅ Números de serie REALMENTE disponibles:", {
               total: numerosSerieDisponibles.length,
-              numeros: numerosSerieDisponibles
+              numeros: numerosSerieDisponibles,
             });
-            
-            return numerosSerieDisponibles;
 
+            return numerosSerieDisponibles;
           } catch (error) {
             console.error("❌ Error obteniendo números de serie:", error);
             return [];
@@ -657,22 +678,26 @@ export const useAppStore = create<AppState>()(
             const nuevaCarga = await createCargaMercaderia(cargaData);
             const cargas = await getAllCargas();
             set({ cargasMercaderia: cargas });
-            
+
             // 🔄 RECARGAR STOCK, MOVIMIENTOS Y INVENTARIO TÉCNICO después de agregar carga para que aparezca inmediatamente
-            console.log('🔄 Recargando stock, movimientos e inventario técnico después de agregar carga...');
+            console.log(
+              "🔄 Recargando stock, movimientos e inventario técnico después de agregar carga..."
+            );
             const [stockItems, movimientos] = await Promise.all([
               getAllStockItems(),
-              getAllMovimientosStock()
+              getAllMovimientosStock(),
             ]);
-            set({ 
+            set({
               stockItems: stockItems,
-              movimientosStock: movimientos 
+              movimientosStock: movimientos,
             });
-            
+
             // 🎯 RECARGAR INVENTARIO TÉCNICO para que aparezcan los nuevos componentes
             await get().loadInventarioTecnico();
-            console.log('✅ Stock, movimientos e inventario técnico recargados exitosamente después de agregar carga');
-            
+            console.log(
+              "✅ Stock, movimientos e inventario técnico recargados exitosamente después de agregar carga"
+            );
+
             return nuevaCarga;
           } catch (error) {
             console.error("Error adding carga mercadería:", error);
@@ -780,8 +805,6 @@ export const useAppStore = create<AppState>()(
             console.error("❌ Error loading inventario técnico:", error);
           }
         },
-
-
 
         asignarComponente: async (
           componenteId: string,
@@ -1038,18 +1061,29 @@ export const useAppStore = create<AppState>()(
         // ===============================================
         addMantenimiento: async (mantenimientoData: any) => {
           try {
-            console.log('🔄 Store: Creando mantenimiento en BD...', mantenimientoData);
+            console.log(
+              "🔄 Store: Creando mantenimiento en BD...",
+              mantenimientoData
+            );
             const nuevoMantenimiento = await createMantenimiento(
               mantenimientoData
             );
-            console.log('✅ Store: Mantenimiento creado en BD:', nuevoMantenimiento);
-            
+            console.log(
+              "✅ Store: Mantenimiento creado en BD:",
+              nuevoMantenimiento
+            );
+
             // 🔧 CAMBIO: Recargar todos los mantenimientos desde la BD (más seguro)
-            console.log('🔄 Store: Recargando todos los mantenimientos desde BD...');
+            console.log(
+              "🔄 Store: Recargando todos los mantenimientos desde BD..."
+            );
             const mantenimientos = await getAllMantenimientos();
             set({ mantenimientos });
-            console.log('✅ Store: Mantenimientos recargados:', mantenimientos.length);
-            
+            console.log(
+              "✅ Store: Mantenimientos recargados:",
+              mantenimientos.length
+            );
+
             return nuevoMantenimiento;
           } catch (error) {
             console.error("Error al crear mantenimiento:", error);
@@ -1213,14 +1247,21 @@ export const useAppStore = create<AppState>()(
             // Determinar si es del inventario técnico o stock general
             if (itemId) {
               // 🔧 CORRECCIÓN: Obtener datos directamente de la base de datos para asegurar que tenemos el número de serie
-              const { data: componenteDB, error: componenteError } = await supabase
-                .from('componentes_disponibles')
-                .select('id, nombre, marca, modelo, numero_serie, cantidad_disponible')
-                .eq('id', itemId)
-                .single();
+              const { data: componenteDB, error: componenteError } =
+                await supabase
+                  .from("componentes_disponibles")
+                  .select(
+                    "id, nombre, marca, modelo, numero_serie, cantidad_disponible"
+                  )
+                  .eq("id", itemId)
+                  .single();
 
               if (componenteError || !componenteDB) {
-                console.error("❌ No se encontró el componente en la base de datos:", itemId, componenteError);
+                console.error(
+                  "❌ No se encontró el componente en la base de datos:",
+                  itemId,
+                  componenteError
+                );
                 throw new Error(`Componente no encontrado: ${itemId}`);
               }
 
@@ -1228,9 +1269,9 @@ export const useAppStore = create<AppState>()(
                 id: componenteDB.id,
                 nombre: componenteDB.nombre,
                 numeroSerie: componenteDB.numero_serie,
-                numeroSerieType: typeof componenteDB.numero_serie
+                numeroSerieType: typeof componenteDB.numero_serie,
               });
-              
+
               // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
               await registrarSalidaStock({
                 itemId: itemId,
@@ -1249,14 +1290,21 @@ export const useAppStore = create<AppState>()(
                 carpetaOrigen: componenteDB.marca,
               });
 
-              console.log("✅ Movimiento de stock registrado para:", componenteDB.nombre, "S/N:", componenteDB.numero_serie);
+              console.log(
+                "✅ Movimiento de stock registrado para:",
+                componenteDB.nombre,
+                "S/N:",
+                componenteDB.numero_serie
+              );
             } else if (stockItemId) {
               // Es del stock general (stock_items)
-              const stockItem = get().stockItems.find((s) => s.id === stockItemId);
-              
+              const stockItem = get().stockItems.find(
+                (s) => s.id === stockItemId
+              );
+
               if (stockItem) {
                 console.log("🔍 Procesando salida para stock item:", stockItem);
-                
+
                 // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
                 await registrarSalidaStock({
                   itemId: stockItemId,
@@ -1275,9 +1323,15 @@ export const useAppStore = create<AppState>()(
                   carpetaOrigen: stockItem.marca,
                 });
 
-                console.log("✅ Movimiento de stock registrado para:", stockItem.nombre);
+                console.log(
+                  "✅ Movimiento de stock registrado para:",
+                  stockItem.nombre
+                );
               } else {
-                console.error("❌ No se encontró el stock item con ID:", stockItemId);
+                console.error(
+                  "❌ No se encontró el stock item con ID:",
+                  stockItemId
+                );
                 throw new Error(`Stock item no encontrado: ${stockItemId}`);
               }
             }
@@ -1339,16 +1393,23 @@ export const useAppStore = create<AppState>()(
             throw error;
           }
         },
-        deleteRemision: async (id: string) => {
+        deleteRemision: async (
+          id: string,
+          motivo: string = "Eliminación solicitada por usuario"
+        ) => {
           try {
-            console.log("🔄 Eliminando remisión...", id);
-            await deleteRemision(id);
+            console.log(
+              "🔄 Eliminando remisión con restauración de stock...",
+              id
+            );
+            const resultado = await deleteRemisionConRestauracion(id, motivo);
 
             // Recargar la lista de remisiones después de eliminar
             const remisiones = await getAllRemisiones();
             set({ remisiones });
 
-            console.log("✅ Remisión eliminada exitosamente");
+            console.log("✅ Remisión eliminada exitosamente:", resultado);
+            return resultado;
           } catch (error) {
             console.error("❌ Error deleting remisión:", error);
             throw error;
@@ -1358,7 +1419,10 @@ export const useAppStore = create<AppState>()(
         // 🆕 Nueva función para eliminar remisión con motivo y restauración de stock
         deleteRemisionConMotivo: async (id: string, motivo: string) => {
           try {
-            console.log("🔄 Eliminando remisión con restauración de stock...", id);
+            console.log(
+              "🔄 Eliminando remisión con restauración de stock...",
+              id
+            );
             const resultado = await deleteRemisionConRestauracion(id, motivo);
 
             // Recargar datos
@@ -1370,7 +1434,10 @@ export const useAppStore = create<AppState>()(
             const remisiones = await getAllRemisiones();
             set({ remisiones });
 
-            console.log("✅ Remisión eliminada con restauración exitosa:", resultado);
+            console.log(
+              "✅ Remisión eliminada con restauración exitosa:",
+              resultado
+            );
             return resultado;
           } catch (error) {
             console.error("❌ Error deleting remisión con motivo:", error);
@@ -1406,17 +1473,17 @@ export const useAppStore = create<AppState>()(
         loadDocumentosCarga: async () => {},
         addDocumentoCarga: async (documento: DocumentoCarga) => {
           try {
-            console.log('📄 Agregando documento a la carga:', documento);
+            console.log("📄 Agregando documento a la carga:", documento);
             const nuevoDocumento = await createDocumentoCarga(documento);
-            
+
             // Recargar documentos
             const documentos = await getAllDocumentosCarga();
             set({ documentosCarga: documentos });
-            
-            console.log('✅ Documento agregado exitosamente');
+
+            console.log("✅ Documento agregado exitosamente");
             return nuevoDocumento;
           } catch (error) {
-            console.error('❌ Error agregando documento:', error);
+            console.error("❌ Error agregando documento:", error);
             throw error;
           }
         },
@@ -1424,8 +1491,8 @@ export const useAppStore = create<AppState>()(
         getDocumentosByCarga: (cargaId: string) => {
           const { documentosCarga } = get();
           return documentosCarga
-            .filter(doc => doc.carga_id === cargaId)
-            .map(doc => ({
+            .filter((doc) => doc.carga_id === cargaId)
+            .map((doc) => ({
               id: doc.id,
               cargaId: doc.carga_id,
               codigoCarga: doc.codigo_carga,
@@ -1435,14 +1502,201 @@ export const useAppStore = create<AppState>()(
                 nombre: doc.archivo_nombre,
                 tamaño: doc.archivo_tamaño,
                 tipo: doc.archivo_tipo,
-                url: doc.archivo_url
+                url: doc.archivo_url,
               },
               observaciones: doc.observaciones,
               fechaSubida: doc.fecha_subida,
-              subidoPor: doc.subido_por
+              subidoPor: doc.subido_por,
             }));
         },
         getCargasConDocumentos: () => [],
+
+        // ===============================================
+        // FUNCIONES DE MANTENIMIENTOS
+        // ===============================================
+        addMantenimiento: async (
+          mantenimientoData: Omit<Mantenimiento, "id" | "createdAt">
+        ) => {
+          try {
+            console.log("🔄 Creando mantenimiento...", mantenimientoData);
+            const nuevoMantenimiento = await createMantenimiento(
+              mantenimientoData
+            );
+
+            // Recargar mantenimientos
+            const mantenimientos = await getAllMantenimientos();
+            set({ mantenimientos });
+
+            console.log("✅ Mantenimiento creado exitosamente");
+            return nuevoMantenimiento;
+          } catch (error) {
+            console.error("❌ Error creating mantenimiento:", error);
+            throw error;
+          }
+        },
+
+        updateMantenimiento: async (
+          id: string,
+          updates: Partial<Mantenimiento>
+        ) => {
+          try {
+            console.log("🔄 Actualizando mantenimiento...", id, updates);
+            await dbUpdateMantenimiento(id, updates);
+
+            // Recargar mantenimientos
+            const mantenimientos = await getAllMantenimientos();
+            set({ mantenimientos });
+
+            console.log("✅ Mantenimiento actualizado exitosamente");
+          } catch (error) {
+            console.error("❌ Error updating mantenimiento:", error);
+            throw error;
+          }
+        },
+
+        deleteMantenimiento: async (id: string) => {
+          try {
+            console.log("🔄 Eliminando mantenimiento...", id);
+            await dbDeleteMantenimiento(id);
+
+            // Recargar mantenimientos
+            const mantenimientos = await getAllMantenimientos();
+            set({ mantenimientos });
+
+            console.log("✅ Mantenimiento eliminado exitosamente");
+          } catch (error) {
+            console.error("❌ Error deleting mantenimiento:", error);
+            throw error;
+          }
+        },
+
+        getMantenimientosByEquipo: (equipoId: string) => {
+          const { mantenimientos } = get();
+          return mantenimientos.filter((m) => m.equipoId === equipoId);
+        },
+
+        // 🆕 FUNCIONES PARA CALENDARIO
+        addMantenimientoProgramado: async (mantenimiento: {
+          equipoId: string;
+          fechaProgramada: string;
+          descripcion: string;
+          tipo: "Preventivo";
+          tecnicoAsignado?: string;
+          prioridad: "Baja" | "Media" | "Alta" | "Crítica";
+          tiempoEstimado?: number;
+          esRecurrente?: boolean;
+          frecuenciaMantenimiento?:
+            | "Mensual"
+            | "Bimestral"
+            | "Trimestral"
+            | "Semestral"
+            | "Anual";
+          diasNotificacionAnticipada?: number;
+        }) => {
+          try {
+            console.log(
+              "🔄 Creando mantenimiento programado...",
+              mantenimiento
+            );
+
+            const mantenimientoData = {
+              equipoId: mantenimiento.equipoId,
+              fecha: mantenimiento.fechaProgramada.split("T")[0], // Solo la fecha
+              fechaProgramada: mantenimiento.fechaProgramada,
+              descripcion: mantenimiento.descripcion,
+              estado: "Pendiente" as const,
+              tipo: mantenimiento.tipo,
+              esProgramado: true,
+              tecnicoAsignado: mantenimiento.tecnicoAsignado,
+              prioridad: mantenimiento.prioridad,
+              tiempoEstimado: mantenimiento.tiempoEstimado,
+              esRecurrente: mantenimiento.esRecurrente,
+              frecuenciaMantenimiento: mantenimiento.frecuenciaMantenimiento,
+              diasNotificacionAnticipada:
+                mantenimiento.diasNotificacionAnticipada,
+            };
+
+            const nuevoMantenimiento = await createMantenimiento(
+              mantenimientoData
+            );
+
+            // Recargar mantenimientos
+            const mantenimientos = await getAllMantenimientos();
+            set({ mantenimientos });
+
+            console.log("✅ Mantenimiento programado creado exitosamente");
+            return nuevoMantenimiento;
+          } catch (error) {
+            console.error("❌ Error creating mantenimiento programado:", error);
+            throw error;
+          }
+        },
+
+        getMantenimientosProgramados: () => {
+          const { mantenimientos } = get();
+          return mantenimientos.filter(
+            (m) => m.tipo === "Preventivo" || m.esProgramado
+          );
+        },
+
+        getMantenimientosByTecnico: (tecnico: string) => {
+          const { mantenimientos } = get();
+          return mantenimientos.filter((m) => m.tecnicoAsignado === tecnico);
+        },
+
+        getMantenimientosVencidos: () => {
+          const { mantenimientos } = get();
+          const hoy = new Date();
+          return mantenimientos.filter((m) => {
+            const fechaMantenimiento = new Date(m.fechaProgramada || m.fecha);
+            return fechaMantenimiento < hoy && m.estado !== "Finalizado";
+          });
+        },
+
+        // Funciones placeholder para técnicos y planes (se pueden implementar después)
+        loadTecnicos: async () => {
+          console.log("🔄 Cargando técnicos... (placeholder)");
+        },
+
+        addTecnico: async (tecnico: Omit<Tecnico, "id">) => {
+          console.log("🔄 Agregando técnico... (placeholder)", tecnico);
+        },
+
+        updateTecnico: async (id: string, updates: Partial<Tecnico>) => {
+          console.log("🔄 Actualizando técnico... (placeholder)", id, updates);
+        },
+
+        getTecnicosDisponibles: () => {
+          return [];
+        },
+
+        loadPlanesMantenimiento: async () => {
+          console.log("🔄 Cargando planes de mantenimiento... (placeholder)");
+        },
+
+        addPlanMantenimiento: async (
+          plan: Omit<PlanMantenimiento, "id" | "createdAt">
+        ) => {
+          console.log(
+            "🔄 Agregando plan de mantenimiento... (placeholder)",
+            plan
+          );
+        },
+
+        searchEquipos: (term: string) => {
+          const { equipos } = get();
+          if (!term.trim()) return equipos;
+
+          const searchTerm = term.toLowerCase();
+          return equipos.filter(
+            (equipo) =>
+              equipo.cliente.toLowerCase().includes(searchTerm) ||
+              equipo.nombreEquipo.toLowerCase().includes(searchTerm) ||
+              equipo.marca.toLowerCase().includes(searchTerm) ||
+              equipo.modelo.toLowerCase().includes(searchTerm) ||
+              equipo.ubicacion.toLowerCase().includes(searchTerm)
+          );
+        },
       };
     },
     {

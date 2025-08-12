@@ -17,11 +17,13 @@ import {
   User,
   Edit,
   Trash2,
-  Eye
+  Eye,
+  Stethoscope
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import ModalClinica from '@/components/clinicas/ModalClinica';
+import { EquiposCliente } from '@/components/EquiposCliente';
 
 export default function ClinicasPage() {
   const { 
@@ -33,6 +35,10 @@ export default function ClinicasPage() {
   const [clinicaEditando, setClinicaEditando] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  
+  // Estado para el modal de equipos
+  const [equiposModalAbierto, setEquiposModalAbierto] = useState(false);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<string>('');
 
   const clinicas = getClinicas();
 
@@ -73,6 +79,18 @@ export default function ClinicasPage() {
   const handleCerrarModal = () => {
     setModalAbierto(false);
     setClinicaEditando(null);
+  };
+
+  // Ver equipos de cliente
+  const handleVerEquipos = (clinicaNombre: string) => {
+    setClienteSeleccionado(clinicaNombre);
+    setEquiposModalAbierto(true);
+  };
+
+  // Cerrar modal de equipos
+  const handleCerrarEquiposModal = () => {
+    setEquiposModalAbierto(false);
+    setClienteSeleccionado('');
   };
 
   // Estadísticas rápidas
@@ -218,6 +236,15 @@ export default function ClinicasPage() {
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleVerEquipos(clinica.nombre)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Ver equipos de esta clínica"
+                          >
+                            <Stethoscope className="w-4 h-4" />
+                          </Button>
                           <Button variant="outline" size="sm">
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -298,6 +325,13 @@ export default function ClinicasPage() {
           isOpen={modalAbierto}
           onClose={handleCerrarModal}
           clinica={clinicaEditando}
+        />
+
+        {/* Modal de equipos del cliente */}
+        <EquiposCliente
+          clienteNombre={clienteSeleccionado}
+          isOpen={equiposModalAbierto}
+          onClose={handleCerrarEquiposModal}
         />
       </div>
     </DashboardLayout>

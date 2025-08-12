@@ -24,6 +24,7 @@ export interface Equipo {
 
 export interface Mantenimiento {
   id: string;
+  numeroReporte?: string; // 🆕 Identificador único del reporte (ej: RPT-20250115-001)
   equipoId: string;
   componenteId?: string;
   fecha: string;

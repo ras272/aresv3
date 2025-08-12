@@ -29,24 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const tiposEquipo = [
-  'CMSlim (Estética)',
-  'Electrocardiógrafo',
-  'Monitor de Signos Vitales',
-  'Desfibrilador',
-  'Ventilador Mecánico',
-  'Bomba de Infusión',
-  'Oxímetro de Pulso',
-  'Aspirador Quirúrgico',
-  'Cauterizador',
-  'Monitor Fetal',
-  'Equipo de Rayos X',
-  'Ultrasonido',
-  'Laser Terapéutico',
-  'Radiofrecuencia',
-  'Criolipolisis',
-  'Otro'
-];
+
 
 const tiposComponentes = [
   'Unidad Principal',
@@ -114,14 +97,14 @@ export default function NuevoEquipoPage() {
     setIsLoading(true);
     
     try {
-      // Importar la función createEquipo
-      const { createEquipo } = await import('@/lib/database');
+      // Importar la función createEquipo desde el módulo específico
+      const { createEquipo } = await import('@/lib/database/equipos');
       
       console.log('🔄 Llamando a createEquipo con datos:', {
         cliente: data.cliente,
         ubicacion: data.ubicacion,
         nombreEquipo: data.nombreEquipo,
-        tipoEquipo: data.tipoEquipo,
+        tipoEquipo: 'Equipo Médico', // Valor por defecto
         marca: data.marca,
         modelo: data.nombreEquipo,
         numeroSerieBase: data.numeroSerieBase,
@@ -136,7 +119,7 @@ export default function NuevoEquipoPage() {
         cliente: data.cliente,
         ubicacion: data.ubicacion,
         nombreEquipo: data.nombreEquipo,
-        tipoEquipo: data.tipoEquipo,
+        tipoEquipo: 'Equipo Médico', // Valor por defecto ya que eliminamos el campo
         marca: data.marca,
         modelo: data.nombreEquipo, // Usar nombreEquipo como modelo ya que simplificamos
         numeroSerieBase: data.numeroSerieBase,
@@ -282,24 +265,7 @@ export default function NuevoEquipoPage() {
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="tipoEquipo">Tipo de Equipo *</Label>
-                  <Select onValueChange={(value) => setValue('tipoEquipo', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo de equipo..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tiposEquipo.map((tipo) => (
-                        <SelectItem key={tipo} value={tipo}>
-                          {tipo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.tipoEquipo && (
-                    <p className="text-sm text-red-600 mt-1">{errors.tipoEquipo.message}</p>
-                  )}
-                </div>
+
                 
                 <div className="md:col-span-2">
                   <Label htmlFor="numeroSerieBase">Número de Serie Base *</Label>
