@@ -140,13 +140,7 @@ const navigationSections = [
         icon: Building2,
         permission: "clinicas" as const,
       },
-      {
-        name: "Tareas",
-        href: "/tareas",
-        icon: CheckSquare,
-        permission: "tareas" as const,
-        blocked: true,
-      },
+
       {
         name: "Usuarios",
         href: "/usuarios",
