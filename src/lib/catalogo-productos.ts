@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './database/shared/supabase';
 
 export interface ProductoCatalogo {
   id: string;

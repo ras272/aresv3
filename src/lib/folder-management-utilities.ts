@@ -2,7 +2,7 @@
 // UTILIDADES DE GESTIÓN DE CARPETAS
 // ===============================================
 
-import { supabase } from './supabase';
+import { supabase } from './database/shared/supabase';
 import { 
   ejecutarConManejoErrores, 
   logOperacionCarpeta,

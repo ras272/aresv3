@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { 
-  supabaseSimple, 
-  uploadFileSimple, 
-  getPublicUrlSimple, 
-  downloadFileSimple, 
-  deleteFileSimple 
-} from '@/lib/supabase-simple';
+  supabase, 
+  uploadFile, 
+  getPublicUrl, 
+  downloadFile, 
+  deleteFile 
+} from '@/lib/database/shared/supabase';
 import { 
   Carpeta, 
   Archivo, 
@@ -123,7 +123,7 @@ export function useFileSystem() {
   const cargarCarpetas = useCallback(async (carpetaPadreId?: string) => {
     setLoading(true);
     try {
-      let query = supabaseSimple
+      let query = supabase
         .from('carpetas')
         .select('*');
       
@@ -147,7 +147,7 @@ export function useFileSystem() {
       const carpetasConConteo = await Promise.all(
         carpetasConvertidas.map(async (carpeta) => {
           try {
-            const { count, error: countError } = await supabaseSimple
+            const { count, error: countError } = await supabase
               .from('archivos')
               .select('*', { count: 'exact', head: true })
               .eq('carpeta_id', carpeta.id);
@@ -193,7 +193,7 @@ export function useFileSystem() {
         return [];
       }
       
-      const { data, error } = await supabaseSimple
+      const { data, error } = await supabase
         .from('archivos')
         .select('*')
         .eq('carpeta_id', carpetaId)
@@ -264,13 +264,13 @@ export function useFileSystem() {
       const rutaStorage = `${carpetaId}/${timestamp}_${nombreLimpio}`;
       
       // Subir archivo a Supabase Storage
-      const storageData = await uploadFileSimple(file, rutaStorage);
+      const storageData = await uploadFile(file, rutaStorage);
       
       // Obtener URL pública
-      const urlPublica = getPublicUrlSimple(rutaStorage);
+      const urlPublica = getPublicUrl(rutaStorage);
       
       // Crear registro en la base de datos
-      const { data, error } = await supabaseSimple
+      const { data, error } = await supabase
         .from('archivos')
         .insert({
           nombre: file.name,
@@ -302,7 +302,7 @@ export function useFileSystem() {
       setArchivos(prev => [...prev, nuevoArchivo]);
       
       // Registrar actividad en la base de datos
-      await supabaseSimple
+      await supabase
         .from('actividad_archivos')
         .insert({
           archivo_id: nuevoArchivo.id,
@@ -359,7 +359,7 @@ export function useFileSystem() {
     setLoading(true);
     try {
       // Obtener información del archivo antes de eliminarlo
-      const { data: archivo, error: fetchError } = await supabaseSimple
+      const { data: archivo, error: fetchError } = await supabase
         .from('archivos')
         .select('*')
         .eq('id', archivoId)
@@ -368,10 +368,10 @@ export function useFileSystem() {
       if (fetchError || !archivo) throw new Error('Archivo no encontrado');
 
       // Eliminar archivo del storage
-      await deleteFileSimple(archivo.ruta_storage);
+      await deleteFile(archivo.ruta_storage);
       
       // Eliminar registro de la base de datos
-      const { error: deleteError } = await supabaseSimple
+      const { error: deleteError } = await supabase
         .from('archivos')
         .delete()
         .eq('id', archivoId);
@@ -382,7 +382,7 @@ export function useFileSystem() {
       setArchivos(prev => prev.filter(a => a.id !== archivoId));
       
       // Registrar actividad en la base de datos
-      await supabaseSimple
+      await supabase
         .from('actividad_archivos')
         .insert({
           archivo_id: archivoId,
@@ -422,7 +422,7 @@ export function useFileSystem() {
       
       // Si no hay URL pública, obtenerla desde Supabase Storage
       if (!url) {
-        url = getPublicUrlSimple(archivo.ruta_storage);
+        url = getPublicUrl(archivo.ruta_storage);
       }
       
       // Descargar archivo real
@@ -435,7 +435,7 @@ export function useFileSystem() {
       document.body.removeChild(link);
       
       // Registrar actividad en la base de datos
-      await supabaseSimple
+      await supabase
         .from('actividad_archivos')
         .insert({
           archivo_id: archivo.id,
@@ -549,14 +549,14 @@ export function useFileSystem() {
       console.log('📊 Calculando estadísticas globales...');
       
       // Contar carpetas totales
-      const { count: totalCarpetas, error: errorCarpetas } = await supabaseSimple
+      const { count: totalCarpetas, error: errorCarpetas } = await supabase
         .from('carpetas')
         .select('*', { count: 'exact', head: true });
       
       if (errorCarpetas) throw errorCarpetas;
 
       // Obtener todos los archivos para estadísticas detalladas
-      const { data: todosArchivos, error: errorArchivos } = await supabaseSimple
+      const { data: todosArchivos, error: errorArchivos } = await supabase
         .from('archivos')
         .select('tamaño, created_at, es_editable');
       
@@ -624,7 +624,7 @@ export function useFileSystem() {
     setLoading(true);
     try {
       // Primero eliminar todos los archivos de la carpeta
-      const { error: eliminarArchivosError } = await supabaseSimple
+      const { error: eliminarArchivosError } = await supabase
         .from('archivos')
         .delete()
         .eq('carpeta_id', carpetaId);
@@ -632,7 +632,7 @@ export function useFileSystem() {
       if (eliminarArchivosError) throw eliminarArchivosError;
 
       // Luego eliminar la carpeta
-      const { error: eliminarCarpetaError } = await supabaseSimple
+      const { error: eliminarCarpetaError } = await supabase
         .from('carpetas')
         .delete()
         .eq('id', carpetaId);

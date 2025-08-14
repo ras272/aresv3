@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabaseSimple } from '@/lib/supabase-simple';
+import { supabase } from '@/lib/database/shared/supabase';
 import { 
   Tarea, 
   ComentarioTarea, 

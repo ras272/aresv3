@@ -1,5 +1,5 @@
 // 🎫 Funciones de base de datos para tickets de ServTec
-import { supabase } from '../supabase';
+import { supabase } from './shared/supabase';
 import type { TicketFormData, TicketCreationResponse } from '@/components/servtec/types';
 
 /**

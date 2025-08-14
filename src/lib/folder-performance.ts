@@ -2,7 +2,7 @@
 // UTILIDADES DE PERFORMANCE PARA OPERACIONES DE CARPETAS
 // ===============================================
 
-import { supabase } from './supabase';
+import { supabase } from './database/shared/supabase';
 
 // ===============================================
 // INTERFACES Y TIPOS

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './database/shared/supabase';
 import { registrarMovimientoStock } from './database/stock';
 import {
   ejecutarConManejoErrores,

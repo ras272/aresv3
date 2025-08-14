@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './database/shared/supabase';
 import { User, UserRole } from '@/types/auth';
 
 // ===============================================
@@ -24,7 +24,6 @@ export async function getAllRealUsers(): Promise<User[]> {
       createdAt: usuario.created_at
     }));
   } catch (error) {
-    console.error('Error obteniendo usuarios:', error);
     throw error;
   }
 }
@@ -74,7 +73,6 @@ export async function createRealUser(userData: {
 
     return { success: true, user };
   } catch (error) {
-    console.error('Error creando usuario:', error);
     return { success: false, error: 'Error interno del servidor' };
   }
 }
@@ -125,7 +123,6 @@ export async function updateRealUser(
 
     return { success: true, user };
   } catch (error) {
-    console.error('Error actualizando usuario:', error);
     return { success: false, error: 'Error interno del servidor' };
   }
 }
@@ -141,7 +138,6 @@ export async function deleteRealUser(userId: string): Promise<{ success: boolean
 
     return { success: true };
   } catch (error) {
-    console.error('Error eliminando usuario:', error);
     return { success: false, error: 'Error interno del servidor' };
   }
 }
@@ -182,7 +178,6 @@ export async function authenticateUser(email: string, password: string): Promise
 
     return { success: true, user };
   } catch (error) {
-    console.error('Error autenticando usuario:', error);
     return { success: false, error: 'Error interno del servidor' };
   }
 }

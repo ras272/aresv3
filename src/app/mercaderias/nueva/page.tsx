@@ -19,7 +19,7 @@ import { ArrowLeft, Package, Zap, ShoppingCart, Trash2, Save, Heart, Plus, Uploa
 import { toast } from 'sonner';
 import { ProductSelectorSimple as ProductSelector } from '@/components/mercaderias/ProductSelectorSimple';
 import { createProductoCatalogo } from '@/lib/catalogo-productos';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/database/shared/supabase';
 
 // Componente ClienteSelector para dropdown de clínicas
 function ClienteSelector({ value, onChange, error }: {

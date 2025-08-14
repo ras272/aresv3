@@ -119,10 +119,18 @@ export default function StockPage() {
       );
 
       if (!productoExistente) {
-        productoExistente = {
-          id: `${componente.nombre}-${componente.marca}-${componente.modelo}`
+        // Función para normalizar strings (manejar acentos y caracteres especiales)
+        const normalizeString = (str: string) => {
+          return str
             .toLowerCase()
-            .replace(/\s+/g, "-"),
+            .normalize('NFD') // Descomponer caracteres acentuados
+            .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos (acentos)
+            .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+            .replace(/[^a-z0-9-]/g, ''); // Remover caracteres especiales excepto guiones
+        };
+
+        productoExistente = {
+          id: normalizeString(`${componente.nombre}-${componente.marca}-${componente.modelo}`),
           nombre: componente.nombre,
           marca: componente.marca,
           modelo: componente.modelo,

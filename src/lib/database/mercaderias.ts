@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { supabase } from './shared/supabase'
 import type { CargaMercaderia, ProductoCarga, SubItem, Equipo } from '@/types'
 import { procesarProductoParaStock } from '../stock-flow'
 import { 

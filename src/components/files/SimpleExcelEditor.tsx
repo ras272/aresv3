@@ -14,7 +14,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { downloadFileSimple } from '@/lib/supabase-simple';
+// import { downloadFileSimple } from '@/lib/supabase-simple'; // TODO: Implementar función de descarga
 
 interface SimpleExcelEditorProps {
   archivo: Archivo;
@@ -46,8 +46,8 @@ function SimpleExcelEditor({ archivo, onClose, onSave }: SimpleExcelEditorProps)
         if (!response.ok) throw new Error('No se pudo descargar el archivo');
         fileData = await response.arrayBuffer();
       } else if (archivo.ruta_storage) {
-        const blob = await downloadFileSimple(archivo.ruta_storage);
-        fileData = await blob.arrayBuffer();
+        // TODO: Implementar descarga desde Supabase Storage
+        throw new Error('Descarga desde storage no implementada aún');
       } else {
         throw new Error('No se encontró la ruta del archivo');
       }

@@ -2,7 +2,7 @@
 // MANEJO INTEGRAL DE ERRORES PARA OPERACIONES DE CARPETAS
 // ===============================================
 
-import { supabase } from './supabase';
+import { supabase } from './database/shared/supabase';
 
 // ===============================================
 // TIPOS E INTERFACES DE ERROR

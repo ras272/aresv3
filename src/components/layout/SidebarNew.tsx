@@ -15,7 +15,6 @@ import {
   Receipt,
   Building2,
   HardDrive,
-  CheckSquare,
   Users,
   ChevronLeft,
   ChevronRight,
@@ -27,9 +26,28 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { hasPermission } from "@/types/auth";
+import type { UserRole } from "@/types/auth";
+
+// 🎯 Tipos para elementos de navegación
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  permission: string;
+  badge?: "new" | "admin" | "beta";
+  blocked?: boolean;
+  requiresWrite?: boolean;
+}
+
+interface NavigationSection {
+  title: string;
+  items: NavigationItem[];
+}
 
 // 🎯 Navegación organizada por categorías
-const navigationSections = [
+const navigationSections: NavigationSection[] = [
   {
     title: "Principal",
     items: [
@@ -37,14 +55,14 @@ const navigationSections = [
         name: "Dashboard",
         href: "/",
         icon: Home,
-        permission: "dashboard" as const,
+        permission: "dashboard",
         badge: "new",
       },
       {
         name: "ServTec",
         href: "/servtec",
         icon: Activity,
-        permission: "equipos" as const,
+        permission: "equipos",
         badge: "new",
       },
     ],
@@ -56,26 +74,26 @@ const navigationSections = [
         name: "Equipos",
         href: "/equipos",
         icon: Heart,
-        permission: "equipos" as const,
+        permission: "equipos",
       },
       {
         name: "Nuevo Equipo",
         href: "/equipos/nuevo",
         icon: Plus,
-        permission: "equipos" as const,
+        permission: "equipos",
         requiresWrite: true,
       },
       {
         name: "Inventario Técnico",
         href: "/inventario-tecnico",
         icon: Wrench,
-        permission: "inventarioTecnico" as const,
+        permission: "inventarioTecnico",
       },
       {
         name: "Calendario",
         href: "/calendario",
         icon: Calendar,
-        permission: "calendario" as const,
+        permission: "calendario",
       },
     ],
   },
@@ -86,19 +104,19 @@ const navigationSections = [
         name: "Ingreso de Mercaderías",
         href: "/mercaderias",
         icon: Truck,
-        permission: "mercaderias" as const,
+        permission: "mercaderias",
       },
       {
         name: "Catálogo de Productos",
         href: "/productos",
         icon: Package,
-        permission: "mercaderias" as const,
+        permission: "mercaderias",
       },
       {
         name: "Stock General",
         href: "/stock",
         icon: Package,
-        permission: "stock" as const,
+        permission: "stock",
       },
     ],
   },
@@ -109,25 +127,25 @@ const navigationSections = [
         name: "Gestión Documental",
         href: "/documentos",
         icon: FileText,
-        permission: "documentos" as const,
+        permission: "documentos",
       },
       {
         name: "Remisiones",
         href: "/remisiones",
         icon: Receipt,
-        permission: "remisiones" as const,
+        permission: "remisiones",
       },
       {
         name: "Sistema de Archivos",
         href: "/archivos",
         icon: HardDrive,
-        permission: "archivos" as const,
+        permission: "archivos",
       },
       {
         name: "Reportes de Servicio",
         href: "/reportes",
         icon: FileText,
-        permission: "reportes" as const,
+        permission: "reportes",
       },
     ],
   },
@@ -138,14 +156,13 @@ const navigationSections = [
         name: "Clínicas",
         href: "/clinicas",
         icon: Building2,
-        permission: "clinicas" as const,
+        permission: "clinicas",
       },
-
       {
         name: "Usuarios",
         href: "/usuarios",
         icon: Users,
-        permission: "usuarios" as const,
+        permission: "usuarios",
         badge: "admin",
       },
     ],
@@ -154,6 +171,7 @@ const navigationSections = [
 
 export function SidebarNew() {
   const pathname = usePathname();
+  const { user, hasPermission: userHasPermission } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "Principal",
@@ -172,94 +190,41 @@ export function SidebarNew() {
     });
   };
 
-  // 🔧 Usar el sistema de autenticación real
+  // 🔧 Usar el nuevo sistema de autenticación con AuthProvider
   const canAccess = (permission: string) => {
-    if (typeof window === "undefined") return false;
+    if (!user) return false;
 
-    try {
-      const savedUser = localStorage.getItem("ares_current_user");
-      if (!savedUser) return false;
+    // Mapear permisos de navegación a permisos del sistema de autenticación
+    const permissionMap: Record<string, string> = {
+      dashboard: "dashboard.view",
+      equipos: "equipos.view",
+      inventario: "inventario.view",
+      inventarioTecnico: "inventario.view",
+      reportes: "reportes.view",
+      stock: "inventario.view",
+      remisiones: "remisiones.view",
+      usuarios: "users.manage",
+      calendario: "equipos.view",
+      mercaderias: "inventario.manage",
+      documentos: "documentos.view",
+      archivos: "archivos.manage",
+      tareas: "tareas.manage",
+      clinicas: "clinicas.view",
+    };
 
-      const user = JSON.parse(savedUser);
-      if (!user) return false;
-
-      // Super admin puede todo
-      if (user.role === "super_admin") return true;
-
-      // Definir permisos por rol
-      const permissions = {
-        admin: [
-          "dashboard",
-          "equipos",
-          "inventario",
-          "reportes",
-          "stock",
-          "remisiones",
-          "usuarios",
-          "calendario",
-          "inventarioTecnico",
-          "mercaderias",
-          "documentos",
-          "archivos",
-          "tareas",
-          "clinicas",
-        ],
-        gerente: [
-          "dashboard",
-          "equipos",
-          "inventario",
-          "reportes",
-          "stock",
-          "remisiones",
-          "calendario",
-          "inventarioTecnico",
-          "mercaderias",
-          "documentos",
-          "archivos",
-          "clinicas",
-        ],
-        contabilidad: [
-          "dashboard",
-          "reportes",
-          "remisiones",
-          "archivos",
-          "clinicas",
-          "documentos",
-          "tareas",
-        ],
-        tecnico: [
-          "dashboard",
-          "equipos",
-          "inventario",
-          "calendario",
-          "inventarioTecnico",
-          "reportes",
-          "stock",
-        ],
-        vendedor: [
-          "dashboard",
-          "equipos",
-          "reportes",
-          "remisiones",
-          "clinicas",
-          "mercaderias",
-        ],
-        cliente: ["dashboard", "equipos"],
-      };
-
-      const userPermissions =
-        permissions[user.role as keyof typeof permissions] || [];
-      return userPermissions.includes(permission);
-    } catch {
-      return false;
-    }
+    const mappedPermission = permissionMap[permission] || permission;
+    return userHasPermission(mappedPermission);
   };
 
   // Filtrar secciones según permisos del usuario
   const filteredSections = navigationSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => canAccess(item.permission)),
+      items: section.items.filter((item) => {
+        const hasAccess = canAccess(item.permission);
+        console.log(`🔍 SidebarNew: Checking access for ${item.name} (${item.permission}):`, hasAccess);
+        return hasAccess;
+      }),
     }))
     .filter((section) => section.items.length > 0);
 

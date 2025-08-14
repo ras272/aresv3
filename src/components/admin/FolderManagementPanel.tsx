@@ -1,29 +1,29 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { 
-  Folder, 
-  FolderOpen, 
-  Move, 
-  Merge, 
-  Split, 
-  Trash2, 
-  RefreshCw, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import {
+  Folder,
+  FolderOpen,
+  Move,
+  Merge,
+  Split,
+  Trash2,
+  RefreshCw,
   Download,
   AlertTriangle,
   CheckCircle,
   XCircle,
   Settings,
-  BarChart3
-} from 'lucide-react';
+  BarChart3,
+} from "lucide-react";
 import {
   folderManager,
   reorganizarProductos,
@@ -34,9 +34,9 @@ import {
   generarReporteCarpetas,
   crearBackupEstructuraCarpetas,
   type FolderOperation,
-  type FolderCleanupReport
-} from '@/lib/folder-management-utilities';
-import { obtenerMetricasPerformance } from '@/lib/folder-performance';
+  type FolderCleanupReport,
+} from "@/lib/folder-management-utilities";
+import { obtenerMetricasPerformance } from "@/lib/folder-performance";
 
 // ===============================================
 // INTERFACES
@@ -58,34 +58,37 @@ interface FolderStats {
 // ===============================================
 
 export default function FolderManagementPanel() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [folderStats, setFolderStats] = useState<FolderStats | null>(null);
-  const [cleanupReport, setCleanupReport] = useState<FolderCleanupReport | null>(null);
-  const [activeOperations, setActiveOperations] = useState<FolderOperation[]>([]);
+  const [cleanupReport, setCleanupReport] =
+    useState<FolderCleanupReport | null>(null);
+  const [activeOperations, setActiveOperations] = useState<FolderOperation[]>(
+    []
+  );
   const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
 
   // Estados para operaciones
   const [moveOperation, setMoveOperation] = useState({
-    productIds: '',
-    targetFolder: '',
-    newDestinationType: ''
+    productIds: "",
+    targetFolder: "",
+    newDestinationType: "",
   });
 
   const [renameOperation, setRenameOperation] = useState({
-    currentPath: '',
-    newPath: ''
+    currentPath: "",
+    newPath: "",
   });
 
   const [mergeOperation, setMergeOperation] = useState({
-    sourceFolders: '',
-    targetFolder: ''
+    sourceFolders: "",
+    targetFolder: "",
   });
 
   const [splitOperation, setSplitOperation] = useState({
-    sourceFolder: '',
-    criterion: 'marca' as 'marca' | 'tipo' | 'custom',
-    customConfig: ''
+    sourceFolder: "",
+    criterion: "marca" as "marca" | "tipo" | "custom",
+    customConfig: "",
   });
 
   // ===============================================
@@ -108,10 +111,10 @@ export default function FolderManagementPanel() {
       await Promise.all([
         loadFolderStats(),
         updateActiveOperations(),
-        loadPerformanceMetrics()
+        loadPerformanceMetrics(),
       ]);
     } catch (error) {
-      console.error('Error cargando datos iniciales:', error);
+      console.error("Error cargando datos iniciales:", error);
     } finally {
       setLoading(false);
     }
@@ -122,7 +125,7 @@ export default function FolderManagementPanel() {
       const stats = await generarReporteCarpetas();
       setFolderStats(stats);
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      console.error("Error cargando estadísticas:", error);
     }
   };
 
@@ -132,7 +135,7 @@ export default function FolderManagementPanel() {
       const report = await ejecutarLimpiezaCarpetas();
       setCleanupReport(report);
     } catch (error) {
-      console.error('Error generando reporte de limpieza:', error);
+      console.error("Error generando reporte de limpieza:", error);
     } finally {
       setLoading(false);
     }
@@ -148,7 +151,7 @@ export default function FolderManagementPanel() {
       const metrics = obtenerMetricasPerformance();
       setPerformanceMetrics(metrics);
     } catch (error) {
-      console.error('Error cargando métricas:', error);
+      console.error("Error cargando métricas:", error);
     }
   };
 
@@ -161,7 +164,9 @@ export default function FolderManagementPanel() {
 
     setLoading(true);
     try {
-      const productIds = moveOperation.productIds.split(',').map(id => id.trim());
+      const productIds = moveOperation.productIds
+        .split(",")
+        .map((id) => id.trim());
       const result = await reorganizarProductos(
         productIds,
         moveOperation.targetFolder,
@@ -170,14 +175,18 @@ export default function FolderManagementPanel() {
 
       if (result.success) {
         alert(`${result.movedCount} productos movidos exitosamente`);
-        setMoveOperation({ productIds: '', targetFolder: '', newDestinationType: '' });
+        setMoveOperation({
+          productIds: "",
+          targetFolder: "",
+          newDestinationType: "",
+        });
         await loadFolderStats();
       } else {
-        alert(`Error moviendo productos: ${result.errors.join(', ')}`);
+        alert(`Error moviendo productos: ${result.errors.join(", ")}`);
       }
     } catch (error) {
-      console.error('Error en operación de movimiento:', error);
-      alert('Error ejecutando operación de movimiento');
+      console.error("Error en operación de movimiento:", error);
+      alert("Error ejecutando operación de movimiento");
     } finally {
       setLoading(false);
     }
@@ -188,16 +197,21 @@ export default function FolderManagementPanel() {
 
     setLoading(true);
     try {
-      const result = await renombrarCarpeta(renameOperation.currentPath, renameOperation.newPath);
-      
+      const result = await renombrarCarpeta(
+        renameOperation.currentPath,
+        renameOperation.newPath
+      );
+
       if (result.success) {
-        alert(`Carpeta renombrada exitosamente. ${result.affectedProducts} productos actualizados`);
-        setRenameOperation({ currentPath: '', newPath: '' });
+        alert(
+          `Carpeta renombrada exitosamente. ${result.affectedProducts} productos actualizados`
+        );
+        setRenameOperation({ currentPath: "", newPath: "" });
         await loadFolderStats();
       }
     } catch (error) {
-      console.error('Error renombrando carpeta:', error);
-      alert('Error renombrando carpeta');
+      console.error("Error renombrando carpeta:", error);
+      alert("Error renombrando carpeta");
     } finally {
       setLoading(false);
     }
@@ -208,20 +222,25 @@ export default function FolderManagementPanel() {
 
     setLoading(true);
     try {
-      const sourceFolders = mergeOperation.sourceFolders.split(',').map(f => f.trim());
-      const result = await fusionarCarpetas(sourceFolders, mergeOperation.targetFolder);
-      
+      const sourceFolders = mergeOperation.sourceFolders
+        .split(",")
+        .map((f) => f.trim());
+      const result = await fusionarCarpetas(
+        sourceFolders,
+        mergeOperation.targetFolder
+      );
+
       if (result.success) {
         alert(`${result.mergedProducts} productos fusionados exitosamente`);
         if (result.conflicts.length > 0) {
-          console.warn('Conflictos encontrados:', result.conflicts);
+          console.warn("Conflictos encontrados:", result.conflicts);
         }
-        setMergeOperation({ sourceFolders: '', targetFolder: '' });
+        setMergeOperation({ sourceFolders: "", targetFolder: "" });
         await loadFolderStats();
       }
     } catch (error) {
-      console.error('Error fusionando carpetas:', error);
-      alert('Error fusionando carpetas');
+      console.error("Error fusionando carpetas:", error);
+      alert("Error fusionando carpetas");
     } finally {
       setLoading(false);
     }
@@ -232,24 +251,30 @@ export default function FolderManagementPanel() {
 
     setLoading(true);
     try {
-      const config = splitOperation.customConfig 
-        ? JSON.parse(splitOperation.customConfig) 
+      const config = splitOperation.customConfig
+        ? JSON.parse(splitOperation.customConfig)
         : undefined;
-      
+
       const result = await dividirCarpeta(
         splitOperation.sourceFolder,
         splitOperation.criterion,
         config
       );
-      
+
       if (result.success) {
-        alert(`Carpeta dividida exitosamente. ${result.newFolders.length} nuevas carpetas creadas, ${result.movedProducts} productos movidos`);
-        setSplitOperation({ sourceFolder: '', criterion: 'marca', customConfig: '' });
+        alert(
+          `Carpeta dividida exitosamente. ${result.newFolders.length} nuevas carpetas creadas, ${result.movedProducts} productos movidos`
+        );
+        setSplitOperation({
+          sourceFolder: "",
+          criterion: "marca",
+          customConfig: "",
+        });
         await loadFolderStats();
       }
     } catch (error) {
-      console.error('Error dividiendo carpeta:', error);
-      alert('Error dividiendo carpeta');
+      console.error("Error dividiendo carpeta:", error);
+      alert("Error dividiendo carpeta");
     } finally {
       setLoading(false);
     }
@@ -260,11 +285,13 @@ export default function FolderManagementPanel() {
     try {
       const result = await crearBackupEstructuraCarpetas();
       if (result.success) {
-        alert(`Backup creado exitosamente: ${result.backupId} (${result.recordCount} registros)`);
+        alert(
+          `Backup creado exitosamente: ${result.backupId} (${result.recordCount} registros)`
+        );
       }
     } catch (error) {
-      console.error('Error creando backup:', error);
-      alert('Error creando backup');
+      console.error("Error creando backup:", error);
+      alert("Error creando backup");
     } finally {
       setLoading(false);
     }
@@ -282,7 +309,9 @@ export default function FolderManagementPanel() {
             <Folder className="w-5 h-5 text-blue-600" />
             <div>
               <p className="text-sm text-gray-600">Total Carpetas</p>
-              <p className="text-2xl font-bold">{folderStats?.resumen.totalCarpetas || 0}</p>
+              <p className="text-2xl font-bold">
+                {folderStats?.resumen.totalCarpetas || 0}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -294,7 +323,9 @@ export default function FolderManagementPanel() {
             <BarChart3 className="w-5 h-5 text-green-600" />
             <div>
               <p className="text-sm text-gray-600">Total Productos</p>
-              <p className="text-2xl font-bold">{folderStats?.resumen.totalProductos || 0}</p>
+              <p className="text-2xl font-bold">
+                {folderStats?.resumen.totalProductos || 0}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -306,7 +337,9 @@ export default function FolderManagementPanel() {
             <AlertTriangle className="w-5 h-5 text-yellow-600" />
             <div>
               <p className="text-sm text-gray-600">Carpetas Vacías</p>
-              <p className="text-2xl font-bold">{folderStats?.resumen.carpetasVacias || 0}</p>
+              <p className="text-2xl font-bold">
+                {folderStats?.resumen.carpetasVacias || 0}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -318,7 +351,9 @@ export default function FolderManagementPanel() {
             <XCircle className="w-5 h-5 text-red-600" />
             <div>
               <p className="text-sm text-gray-600">Inconsistencias</p>
-              <p className="text-2xl font-bold">{cleanupReport?.inconsistentProducts.length || 0}</p>
+              <p className="text-2xl font-bold">
+                {cleanupReport?.inconsistentProducts.length || 0}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -338,11 +373,18 @@ export default function FolderManagementPanel() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="productIds">IDs de Productos (separados por coma)</Label>
+            <Label htmlFor="productIds">
+              IDs de Productos (separados por coma)
+            </Label>
             <Input
               id="productIds"
               value={moveOperation.productIds}
-              onChange={(e) => setMoveOperation(prev => ({ ...prev, productIds: e.target.value }))}
+              onChange={(e) =>
+                setMoveOperation((prev) => ({
+                  ...prev,
+                  productIds: e.target.value,
+                }))
+              }
               placeholder="uuid1, uuid2, uuid3..."
             />
           </div>
@@ -351,16 +393,28 @@ export default function FolderManagementPanel() {
             <Input
               id="targetFolder"
               value={moveOperation.targetFolder}
-              onChange={(e) => setMoveOperation(prev => ({ ...prev, targetFolder: e.target.value }))}
+              onChange={(e) =>
+                setMoveOperation((prev) => ({
+                  ...prev,
+                  targetFolder: e.target.value,
+                }))
+              }
               placeholder="Ares, Servicio Técnico/Classys..."
             />
           </div>
           <div>
-            <Label htmlFor="newDestinationType">Nuevo Tipo de Destino (opcional)</Label>
+            <Label htmlFor="newDestinationType">
+              Nuevo Tipo de Destino (opcional)
+            </Label>
             <Input
               id="newDestinationType"
               value={moveOperation.newDestinationType}
-              onChange={(e) => setMoveOperation(prev => ({ ...prev, newDestinationType: e.target.value }))}
+              onChange={(e) =>
+                setMoveOperation((prev) => ({
+                  ...prev,
+                  newDestinationType: e.target.value,
+                }))
+              }
               placeholder="stock, cliente, reparacion"
             />
           </div>
@@ -385,7 +439,12 @@ export default function FolderManagementPanel() {
             <Input
               id="currentPath"
               value={renameOperation.currentPath}
-              onChange={(e) => setRenameOperation(prev => ({ ...prev, currentPath: e.target.value }))}
+              onChange={(e) =>
+                setRenameOperation((prev) => ({
+                  ...prev,
+                  currentPath: e.target.value,
+                }))
+              }
               placeholder="Ares, Servicio Técnico/Classys..."
             />
           </div>
@@ -394,7 +453,12 @@ export default function FolderManagementPanel() {
             <Input
               id="newPath"
               value={renameOperation.newPath}
-              onChange={(e) => setRenameOperation(prev => ({ ...prev, newPath: e.target.value }))}
+              onChange={(e) =>
+                setRenameOperation((prev) => ({
+                  ...prev,
+                  newPath: e.target.value,
+                }))
+              }
               placeholder="Nueva ruta..."
             />
           </div>
@@ -415,11 +479,18 @@ export default function FolderManagementPanel() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="sourceFolders">Carpetas Origen (separadas por coma)</Label>
+            <Label htmlFor="sourceFolders">
+              Carpetas Origen (separadas por coma)
+            </Label>
             <Input
               id="sourceFolders"
               value={mergeOperation.sourceFolders}
-              onChange={(e) => setMergeOperation(prev => ({ ...prev, sourceFolders: e.target.value }))}
+              onChange={(e) =>
+                setMergeOperation((prev) => ({
+                  ...prev,
+                  sourceFolders: e.target.value,
+                }))
+              }
               placeholder="Carpeta1, Carpeta2, Carpeta3..."
             />
           </div>
@@ -428,7 +499,12 @@ export default function FolderManagementPanel() {
             <Input
               id="mergeTargetFolder"
               value={mergeOperation.targetFolder}
-              onChange={(e) => setMergeOperation(prev => ({ ...prev, targetFolder: e.target.value }))}
+              onChange={(e) =>
+                setMergeOperation((prev) => ({
+                  ...prev,
+                  targetFolder: e.target.value,
+                }))
+              }
               placeholder="Carpeta destino..."
             />
           </div>
@@ -453,7 +529,12 @@ export default function FolderManagementPanel() {
             <Input
               id="sourceFolder"
               value={splitOperation.sourceFolder}
-              onChange={(e) => setSplitOperation(prev => ({ ...prev, sourceFolder: e.target.value }))}
+              onChange={(e) =>
+                setSplitOperation((prev) => ({
+                  ...prev,
+                  sourceFolder: e.target.value,
+                }))
+              }
               placeholder="Carpeta a dividir..."
             />
           </div>
@@ -462,7 +543,12 @@ export default function FolderManagementPanel() {
             <select
               id="criterion"
               value={splitOperation.criterion}
-              onChange={(e) => setSplitOperation(prev => ({ ...prev, criterion: e.target.value as any }))}
+              onChange={(e) =>
+                setSplitOperation((prev) => ({
+                  ...prev,
+                  criterion: e.target.value as any,
+                }))
+              }
               className="w-full p-2 border rounded"
             >
               <option value="marca">Por Marca</option>
@@ -470,13 +556,20 @@ export default function FolderManagementPanel() {
               <option value="custom">Personalizado</option>
             </select>
           </div>
-          {splitOperation.criterion === 'custom' && (
+          {splitOperation.criterion === "custom" && (
             <div>
-              <Label htmlFor="customConfig">Configuración Personalizada (JSON)</Label>
+              <Label htmlFor="customConfig">
+                Configuración Personalizada (JSON)
+              </Label>
               <Input
                 id="customConfig"
                 value={splitOperation.customConfig}
-                onChange={(e) => setSplitOperation(prev => ({ ...prev, customConfig: e.target.value }))}
+                onChange={(e) =>
+                  setSplitOperation((prev) => ({
+                    ...prev,
+                    customConfig: e.target.value,
+                  }))
+                }
                 placeholder='{"porCantidad": true}'
               />
             </div>
@@ -513,7 +606,9 @@ export default function FolderManagementPanel() {
               {cleanupReport.emptyFolders.length > 0 ? (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {cleanupReport.emptyFolders.map((folder, index) => (
-                    <Badge key={index} variant="outline">{folder}</Badge>
+                    <Badge key={index} variant="outline">
+                      {folder}
+                    </Badge>
                   ))}
                 </div>
               ) : (
@@ -526,18 +621,21 @@ export default function FolderManagementPanel() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
-                Productos Inconsistentes ({cleanupReport.inconsistentProducts.length})
+                Productos Inconsistentes (
+                {cleanupReport.inconsistentProducts.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {cleanupReport.inconsistentProducts.length > 0 ? (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {cleanupReport.inconsistentProducts.slice(0, 5).map((product, index) => (
-                    <div key={index} className="text-sm">
-                      <p className="font-medium">{product.nombre}</p>
-                      <p className="text-gray-500">{product.issue}</p>
-                    </div>
-                  ))}
+                  {cleanupReport.inconsistentProducts
+                    .slice(0, 5)
+                    .map((product, index) => (
+                      <div key={index} className="text-sm">
+                        <p className="font-medium">{product.nombre}</p>
+                        <p className="text-gray-500">{product.issue}</p>
+                      </div>
+                    ))}
                   {cleanupReport.inconsistentProducts.length > 5 && (
                     <p className="text-sm text-gray-500">
                       Y {cleanupReport.inconsistentProducts.length - 5} más...
@@ -560,12 +658,14 @@ export default function FolderManagementPanel() {
             <CardContent>
               {cleanupReport.orphanedProducts.length > 0 ? (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {cleanupReport.orphanedProducts.slice(0, 5).map((product, index) => (
-                    <div key={index} className="text-sm">
-                      <p className="font-medium">{product.nombre}</p>
-                      <p className="text-gray-500">{product.issue}</p>
-                    </div>
-                  ))}
+                  {cleanupReport.orphanedProducts
+                    .slice(0, 5)
+                    .map((product, index) => (
+                      <div key={index} className="text-sm">
+                        <p className="font-medium">{product.nombre}</p>
+                        <p className="text-gray-500">{product.issue}</p>
+                      </div>
+                    ))}
                   {cleanupReport.orphanedProducts.length > 5 && (
                     <p className="text-sm text-gray-500">
                       Y {cleanupReport.orphanedProducts.length - 5} más...
@@ -598,21 +698,25 @@ export default function FolderManagementPanel() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge 
+                    <Badge
                       variant={
-                        operation.status === 'completed' ? 'default' :
-                        operation.status === 'failed' ? 'destructive' :
-                        operation.status === 'in_progress' ? 'secondary' : 'outline'
+                        operation.status === "completed"
+                          ? "default"
+                          : operation.status === "failed"
+                          ? "destructive"
+                          : operation.status === "in_progress"
+                          ? "secondary"
+                          : "outline"
                       }
                     >
                       {operation.status}
                     </Badge>
-                    {operation.status === 'in_progress' && (
+                    {operation.status === "in_progress" && (
                       <RefreshCw className="w-4 h-4 animate-spin" />
                     )}
                   </div>
                 </div>
-                {operation.status === 'in_progress' && (
+                {operation.status === "in_progress" && (
                   <Progress value={50} className="mt-2" />
                 )}
               </CardContent>
@@ -634,11 +738,19 @@ export default function FolderManagementPanel() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gestión de Carpetas</h1>
         <div className="flex gap-2">
-          <Button onClick={handleCreateBackup} variant="outline" disabled={loading}>
+          <Button
+            onClick={handleCreateBackup}
+            variant="outline"
+            disabled={loading}
+          >
             <Download className="w-4 h-4 mr-2" />
             Crear Backup
           </Button>
-          <Button onClick={loadInitialData} variant="outline" disabled={loading}>
+          <Button
+            onClick={loadInitialData}
+            variant="outline"
+            disabled={loading}
+          >
             <RefreshCw className="w-4 h-4 mr-2" />
             Actualizar
           </Button>
@@ -669,12 +781,16 @@ export default function FolderManagementPanel() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Object.entries(folderStats.carpetasPorTipo).map(([tipo, cantidad]) => (
-                    <div key={tipo} className="text-center">
-                      <p className="text-2xl font-bold">{cantidad}</p>
-                      <p className="text-sm text-gray-600 capitalize">{tipo}</p>
-                    </div>
-                  ))}
+                  {Object.entries(folderStats.carpetasPorTipo).map(
+                    ([tipo, cantidad]) => (
+                      <div key={tipo} className="text-center">
+                        <p className="text-2xl font-bold">{cantidad}</p>
+                        <p className="text-sm text-gray-600 capitalize">
+                          {tipo}
+                        </p>
+                      </div>
+                    )
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -700,19 +816,27 @@ export default function FolderManagementPanel() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Tamaño de Caché</p>
-                    <p className="text-xl font-bold">{performanceMetrics.cache.size}</p>
+                    <p className="text-xl font-bold">
+                      {performanceMetrics.cache.size}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Hit Rate</p>
-                    <p className="text-xl font-bold">{performanceMetrics.queries.cacheHitRate.toFixed(1)}%</p>
+                    <p className="text-xl font-bold">
+                      {performanceMetrics.queries.cacheHitRate.toFixed(1)}%
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Tiempo Promedio</p>
-                    <p className="text-xl font-bold">{performanceMetrics.queries.averageTime.toFixed(0)}ms</p>
+                    <p className="text-xl font-bold">
+                      {performanceMetrics.queries.averageTime.toFixed(0)}ms
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Total Consultas</p>
-                    <p className="text-xl font-bold">{performanceMetrics.queries.total}</p>
+                    <p className="text-xl font-bold">
+                      {performanceMetrics.queries.total}
+                    </p>
                   </div>
                 </div>
               </CardContent>

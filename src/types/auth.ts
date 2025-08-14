@@ -111,5 +111,12 @@ export function hasPermission(userRole: UserRole, permission: string): boolean {
 
 // Helper para verificar si el usuario tiene uno de los roles especificados
 export function hasRole(userRole: UserRole, allowedRoles: UserRole[]): boolean {
+  console.log('🔍 hasRole check:', {
+    userRole,
+    allowedRoles,
+    includes: allowedRoles.includes(userRole),
+    userRoleType: typeof userRole,
+    allowedRolesTypes: allowedRoles.map(r => typeof r)
+  });
   return allowedRoles.includes(userRole);
 }

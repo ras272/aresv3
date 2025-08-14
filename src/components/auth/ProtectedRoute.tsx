@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "./AuthProvider";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,46 +11,20 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Si estamos en login, no verificar auth
+    // Si estamos en login, no hacer nada
     if (pathname === "/login") {
-      setIsLoading(false);
-      setIsAuthenticated(true); // Permitir acceso a login
       return;
     }
 
-    // Verificar autenticación
-    const checkAuth = () => {
-      try {
-        const savedUser = localStorage.getItem("ares_current_user");
-        if (savedUser) {
-          const user = JSON.parse(savedUser);
-          if (user && user.id) {
-            setIsAuthenticated(true);
-            setIsLoading(false);
-            return;
-          }
-        }
-
-        // No hay usuario válido, redirigir a login
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        router.replace("/login");
-      } catch (error) {
-        console.error("Error checking auth:", error);
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        router.replace("/login");
-      }
-    };
-
-    // Pequeño delay para evitar flash
-    const timer = setTimeout(checkAuth, 100);
-    return () => clearTimeout(timer);
-  }, [pathname, router]);
+    // Si no está cargando y no está autenticado, redirigir a login
+    if (!isLoading && !isAuthenticated) {
+      console.log('🔄 User not authenticated, redirecting to login');
+      router.replace("/login");
+    }
+  }, [pathname, router, isLoading, isAuthenticated]);
 
   // Loading state
   if (isLoading) {

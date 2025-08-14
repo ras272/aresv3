@@ -2,10 +2,11 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SidebarNew as Sidebar } from "./SidebarNew";
 import { LogOut, Menu } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -22,47 +23,16 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user, logout, isLoading } = useAuth();
 
-  // 🔧 Obtener usuario del sistema de auth real (SOLO PARA UI)
-  const getCurrentUser = () => {
-    if (typeof window === "undefined") return null;
+  const handleLogout = async () => {
     try {
-      const savedUser = localStorage.getItem("ares_current_user");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
+      await logout();
+      toast.success("Sesión cerrada correctamente");
+    } catch (error) {
+      console.error("Error during logout:", error);
+      toast.error("Error al cerrar sesión");
     }
-  };
-
-  // 🔥 ESCUCHAR CAMBIOS EN EL USUARIO PARA ACTUALIZAR NAVBAR
-  useEffect(() => {
-    // Cargar usuario inicial
-    const initialUser = getCurrentUser();
-    console.log("🔍 DashboardLayout - Usuario inicial:", initialUser);
-    setCurrentUser(initialUser);
-
-    // Escuchar evento de actualización de usuario
-    const handleUserUpdate = () => {
-      console.log("🔥 DashboardLayout - Evento user-updated recibido!");
-      const updatedUser = getCurrentUser();
-      console.log("🔍 DashboardLayout - Usuario actualizado:", updatedUser);
-      setCurrentUser(updatedUser);
-    };
-
-    window.addEventListener("user-updated", handleUserUpdate);
-    console.log("✅ DashboardLayout - Event listener agregado");
-
-    return () => {
-      window.removeEventListener("user-updated", handleUserUpdate);
-      console.log("🗑️ DashboardLayout - Event listener removido");
-    };
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("ares_current_user");
-    toast.success("Sesión cerrada correctamente");
-    router.push("/login");
   };
 
   return (
@@ -134,42 +104,47 @@ export function DashboardLayout({
             </div>
 
             {/* User info in header - Responsive */}
-            {currentUser && (
+            {user && !isLoading && (
               <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 flex-shrink-0">
                 {/* User info - Hidden on very small screens, shown on sm+ */}
                 <div className="text-right hidden sm:block">
                   <p className="text-xs sm:text-sm font-medium text-foreground truncate max-w-24 sm:max-w-none">
-                    {currentUser.name}
+                    {user.nombre}
                   </p>
                   <p className="text-xs text-muted-foreground truncate max-w-24 sm:max-w-none">
-                    {currentUser.email}
+                    {user.email}
                   </p>
                 </div>
 
                 {/* Role badge - Responsive sizing and text */}
                 <div
                   className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                    currentUser.role === "super_admin"
+                    user.rol === "super_admin"
                       ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                      : currentUser.role === "contabilidad"
+                      : user.rol === "contabilidad"
                       ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      : user.rol === "admin"
+                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
                       : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                   }`}
                 >
                   <span className="sm:hidden">
-                    {currentUser.role === "super_admin" && "Admin"}
-                    {currentUser.role === "contabilidad" && "Conta"}
-                    {currentUser.role === "tecnico" && "Téc"}
+                    {user.rol === "super_admin" && "Super"}
+                    {user.rol === "admin" && "Admin"}
+                    {user.rol === "contabilidad" && "Conta"}
+                    {user.rol === "tecnico" && "Téc"}
                   </span>
                   <span className="hidden sm:inline lg:hidden">
-                    {currentUser.role === "super_admin" && "Admin"}
-                    {currentUser.role === "contabilidad" && "Contabilidad"}
-                    {currentUser.role === "tecnico" && "Técnico"}
+                    {user.rol === "super_admin" && "Super Admin"}
+                    {user.rol === "admin" && "Admin"}
+                    {user.rol === "contabilidad" && "Contabilidad"}
+                    {user.rol === "tecnico" && "Técnico"}
                   </span>
                   <span className="hidden lg:inline">
-                    {currentUser.role === "super_admin" && "Super Admin"}
-                    {currentUser.role === "contabilidad" && "Contabilidad"}
-                    {currentUser.role === "tecnico" && "Técnico"}
+                    {user.rol === "super_admin" && "Super Administrador"}
+                    {user.rol === "admin" && "Administrador"}
+                    {user.rol === "contabilidad" && "Contabilidad"}
+                    {user.rol === "tecnico" && "Técnico"}
                   </span>
                 </div>
 
@@ -181,6 +156,14 @@ export function DashboardLayout({
                 >
                   <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
+              </div>
+            )}
+
+            {/* Loading state */}
+            {isLoading && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-24 rounded"></div>
+                <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-16 rounded-full"></div>
               </div>
             )}
           </motion.div>

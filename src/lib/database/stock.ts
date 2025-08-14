@@ -198,18 +198,50 @@ class StockModuleImpl implements StockModule {
 
       if (fetchError) throw fetchError;
 
+      if (this.config?.enableLogging) {
+        console.log('🔍 Total componentes en BD:', componentes?.length || 0);
+        console.log('🔍 Primeros 3 componentes:', componentes?.slice(0, 3).map(c => ({
+          nombre: c.nombre,
+          marca: c.marca,
+          modelo: c.modelo,
+          id_generado: `${c.nombre}-${c.marca}-${c.modelo}`.toLowerCase().replace(/\s+/g, '-')
+        })));
+      }
+
+      // Función para normalizar strings (manejar acentos y caracteres especiales)
+      const normalizeString = (str: string) => {
+        return str
+          .toLowerCase()
+          .normalize('NFD') // Descomponer caracteres acentuados
+          .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos (acentos)
+          .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+          .replace(/[^a-z0-9-]/g, ''); // Remover caracteres especiales excepto guiones
+      };
+
       // Filtrar los items que corresponden al producto
       const itemsDelProducto = componentes.filter(item => {
-        const productoId = `${item.nombre}-${item.marca}-${item.modelo}`.toLowerCase().replace(/\s+/g, '-');
+        // Usar la misma lógica de generación de ID que en la página de stock
+        const productoId = `${item.nombre}-${item.marca}-${item.modelo}`;
+        const productoIdNormalizado = normalizeString(productoId);
+        const productIdNormalizado = normalizeString(productId);
+        
         if (this.config?.enableLogging) {
           console.log('🔍 Comparando:', { 
-            generado: productoId, 
-            buscado: productId, 
-            coincide: productoId === productId,
-            item: { nombre: item.nombre, marca: item.marca, modelo: item.modelo }
+            generado: productoIdNormalizado, 
+            buscado: productIdNormalizado, 
+            coincide: productoIdNormalizado === productIdNormalizado,
+            original: {
+              generado: productoId,
+              buscado: productId
+            },
+            item: { 
+              nombre: item.nombre, 
+              marca: item.marca, 
+              modelo: item.modelo
+            }
           });
         }
-        return productoId === productId;
+        return productoIdNormalizado === productIdNormalizado;
       });
 
       if (this.config?.enableLogging) {
@@ -217,7 +249,76 @@ class StockModuleImpl implements StockModule {
       }
 
       if (itemsDelProducto.length === 0) {
-        throw new Error('Producto no encontrado en stock');
+        if (this.config?.enableLogging) {
+          console.log('🔍 No encontrado en componentes_disponibles, buscando en stock_items...');
+        }
+        
+        // Buscar en stock_items si no se encuentra en componentes_disponibles
+        const { data: stockItems, error: stockError } = await supabase
+          .from('stock_items')
+          .select('*');
+
+        if (stockError) throw stockError;
+
+        const stockItemsDelProducto = stockItems.filter(item => {
+          const productoId = `${item.nombre}-${item.marca}-${item.modelo}`;
+          const productoIdNormalizado = normalizeString(productoId);
+          const productIdNormalizado = normalizeString(productId);
+          
+          if (this.config?.enableLogging) {
+            console.log('🔍 Comparando en stock_items:', { 
+              generado: productoIdNormalizado, 
+              buscado: productIdNormalizado, 
+              coincide: productoIdNormalizado === productIdNormalizado,
+              item: { 
+                nombre: item.nombre, 
+                marca: item.marca, 
+                modelo: item.modelo
+              }
+            });
+          }
+          return productoIdNormalizado === productIdNormalizado;
+        });
+
+        if (stockItemsDelProducto.length === 0) {
+          throw new Error('Producto no encontrado en stock (ni en componentes_disponibles ni en stock_items)');
+        }
+
+        // Actualizar en stock_items
+        const updateData: any = {
+          updated_at: new Date().toISOString()
+        };
+        
+        if (updates.imagen !== undefined) {
+          updateData.imagen_url = updates.imagen;
+        }
+        if (updates.observaciones !== undefined) {
+          updateData.observaciones = updates.observaciones;
+        }
+
+        const updatePromises = stockItemsDelProducto.map(item =>
+          supabase
+            .from('stock_items')
+            .update(updateData)
+            .eq('id', item.id)
+        );
+
+        const results = await Promise.all(updatePromises);
+        const errors = results.filter(result => result.error);
+        if (errors.length > 0) {
+          throw new Error(`Error actualizando ${errors.length} items en stock_items`);
+        }
+
+        if (this.config?.enableLogging) {
+          console.log('✅ Producto actualizado exitosamente en stock_items:', {
+            productId,
+            itemsActualizados: stockItemsDelProducto.length,
+            imagen: updates.imagen ? 'Actualizada' : 'Sin cambios',
+            observaciones: updates.observaciones ? 'Actualizadas' : 'Sin cambios'
+          });
+        }
+
+        return true;
       }
 
       // Actualizar todos los items relacionados

@@ -1,24 +1,30 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAppStore } from '@/store/useAppStore';
-import { 
-  X, 
-  ArrowDownCircle, 
-  Package, 
-  User, 
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAppStore } from "@/store/useAppStore";
+import {
+  X,
+  ArrowDownCircle,
+  Package,
+  User,
   MapPin,
   FileText,
-  AlertTriangle
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+  AlertTriangle,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 interface ProductoAgrupado {
   id: string;
@@ -72,21 +78,25 @@ export function RegistrarSalidaModal({
   onClose,
   producto,
   carpeta,
-  onRegistrarSalida
+  onRegistrarSalida,
 }: RegistrarSalidaModalProps) {
   const [cantidad, setCantidad] = useState<number>(1);
-  const [motivo, setMotivo] = useState<string>('');
-  const [destino, setDestino] = useState<string>('');
-  const [responsable, setResponsable] = useState<string>('');
-  const [cliente, setCliente] = useState<string>('');
-  const [clientePersonalizado, setClientePersonalizado] = useState<string>('');
-  const [numeroFactura, setNumeroFactura] = useState<string>('');
-  const [observaciones, setObservaciones] = useState<string>('');
+  const [motivo, setMotivo] = useState<string>("");
+  const [destino, setDestino] = useState<string>("");
+  const [responsable, setResponsable] = useState<string>("");
+  const [cliente, setCliente] = useState<string>("");
+  const [clientePersonalizado, setClientePersonalizado] = useState<string>("");
+  const [numeroFactura, setNumeroFactura] = useState<string>("");
+  const [observaciones, setObservaciones] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // 🆕 NUEVO: Estados para números de serie
-  const [numerosSerieDisponibles, setNumerosSerieDisponibles] = useState<string[]>([]);
-  const [numerosSerieSeleccionados, setNumerosSerieSeleccionados] = useState<string[]>([]);
+  const [numerosSerieDisponibles, setNumerosSerieDisponibles] = useState<
+    string[]
+  >([]);
+  const [numerosSerieSeleccionados, setNumerosSerieSeleccionados] = useState<
+    string[]
+  >([]);
   const [loadingNumerosSerie, setLoadingNumerosSerie] = useState(false);
 
   const { clinicas, getNumerosSerie, loadAllData } = useAppStore();
@@ -98,12 +108,13 @@ export function RegistrarSalidaModal({
 
       // Cargar todas las clínicas si no están cargadas
       if (clinicas.length === 0) {
-        console.log('🔄 Cargando clínicas...');
+        console.log("🔄 Cargando clínicas...");
         await loadAllData();
       }
 
       // Solo cargar números de serie si el producto los tiene
-      const tieneNumerosSerie = producto.detallesNumerosSerie.conNumeroSerie.length > 0;
+      const tieneNumerosSerie =
+        producto.detallesNumerosSerie.conNumeroSerie.length > 0;
       if (!tieneNumerosSerie) {
         setNumerosSerieDisponibles([]);
         return;
@@ -117,9 +128,9 @@ export function RegistrarSalidaModal({
           producto.modelo
         );
         setNumerosSerieDisponibles(numerosDisponibles);
-        console.log('✅ Números de serie cargados:', numerosDisponibles);
+        console.log("✅ Números de serie cargados:", numerosDisponibles);
       } catch (error) {
-        console.error('❌ Error cargando números de serie:', error);
+        console.error("❌ Error cargando números de serie:", error);
         setNumerosSerieDisponibles([]);
       } finally {
         setLoadingNumerosSerie(false);
@@ -131,11 +142,11 @@ export function RegistrarSalidaModal({
 
   // 🆕 NUEVO: Manejar selección de números de serie
   const toggleNumeroSerie = (numeroSerie: string) => {
-    setNumerosSerieSeleccionados(prev => {
+    setNumerosSerieSeleccionados((prev) => {
       const isSelected = prev.includes(numeroSerie);
       if (isSelected) {
         // Deseleccionar
-        const nuevaSeleccion = prev.filter(sn => sn !== numeroSerie);
+        const nuevaSeleccion = prev.filter((sn) => sn !== numeroSerie);
         setCantidad(nuevaSeleccion.length || 1);
         return nuevaSeleccion;
       } else {
@@ -148,55 +159,67 @@ export function RegistrarSalidaModal({
   };
 
   const motivosComunes = [
-    'Venta a cliente',
-    'Asignación a equipo',
-    'Transferencia a técnico',
-    'Reparación externa',
-    'Devolución a proveedor',
-    'Producto defectuoso',
-    'Uso interno',
-    'Otro'
+    "Venta a cliente",
+    "Asignación a equipo",
+    "Transferencia a técnico",
+    "Reparación externa",
+    "Devolución a proveedor",
+    "Producto defectuoso",
+    "Uso interno",
+    "Otro",
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!producto) return;
 
     // Validaciones
     if (cantidad <= 0) {
-      toast.error('La cantidad debe ser mayor a 0');
+      toast.error("La cantidad debe ser mayor a 0");
       return;
     }
 
     if (cantidad > producto.cantidadTotal) {
-      toast.error(`No hay suficiente stock. Disponible: ${producto.cantidadTotal}`);
+      toast.error(
+        `No hay suficiente stock. Disponible: ${producto.cantidadTotal}`
+      );
       return;
     }
 
     // 🆕 NUEVO: Validar números de serie si están disponibles
-    if (numerosSerieDisponibles.length > 0 && numerosSerieSeleccionados.length === 0) {
-      toast.error('Debes seleccionar los números de serie específicos para este producto');
+    if (
+      numerosSerieDisponibles.length > 0 &&
+      numerosSerieSeleccionados.length === 0
+    ) {
+      toast.error(
+        "Debes seleccionar los números de serie específicos para este producto"
+      );
       return;
     }
 
-    if (numerosSerieSeleccionados.length > 0 && numerosSerieSeleccionados.length !== cantidad) {
-      toast.error(`Debes seleccionar exactamente ${cantidad} número(s) de serie`);
+    if (
+      numerosSerieSeleccionados.length > 0 &&
+      numerosSerieSeleccionados.length !== cantidad
+    ) {
+      toast.error(
+        `Debes seleccionar exactamente ${cantidad} número(s) de serie`
+      );
       return;
     }
 
     if (!motivo.trim()) {
-      toast.error('El motivo es requerido');
+      toast.error("El motivo es requerido");
       return;
     }
 
     if (!destino.trim()) {
-      toast.error('El destino es requerido');
+      toast.error("El destino es requerido");
       return;
     }
 
     if (!responsable.trim()) {
-      toast.error('El responsable es requerido');
+      toast.error("El responsable es requerido");
       return;
     }
 
@@ -205,56 +228,62 @@ export function RegistrarSalidaModal({
 
       // 🔧 CORRECCIÓN: Obtener el ID del componente específico por número de serie
       let itemId: string;
-      
+
       if (numerosSerieSeleccionados.length > 0) {
         // Si hay número de serie seleccionado, buscar el componente específico
         const numeroSerieSeleccionado = numerosSerieSeleccionados[0];
-        const componenteConNumeroSerie = producto.detallesNumerosSerie.conNumeroSerie.find(
-          detalle => detalle.numeroSerie === numeroSerieSeleccionado
-        );
-        
+        const componenteConNumeroSerie =
+          producto.detallesNumerosSerie.conNumeroSerie.find(
+            (detalle) => detalle.numeroSerie === numeroSerieSeleccionado
+          );
+
         if (componenteConNumeroSerie) {
           itemId = componenteConNumeroSerie.componenteId;
-          console.log('✅ Usando ID específico para número de serie:', {
+          console.log("✅ Usando ID específico para número de serie:", {
             numeroSerie: numeroSerieSeleccionado,
-            componenteId: itemId
+            componenteId: itemId,
           });
         } else {
-          throw new Error(`No se encontró el componente con número de serie ${numeroSerieSeleccionado}`);
+          throw new Error(
+            `No se encontró el componente con número de serie ${numeroSerieSeleccionado}`
+          );
         }
       } else {
         // Si no hay número de serie, usar el primer componente disponible
         itemId = producto.ubicaciones[0]?.componenteIds[0] || producto.id;
-        console.log('✅ Usando primer componente disponible:', itemId);
+        console.log("✅ Usando primer componente disponible:", itemId);
       }
 
       // Determinar el cliente final
-      const clienteFinal = cliente === 'Otro' ? clientePersonalizado.trim() : cliente.trim();
+      const clienteFinal =
+        cliente === "Otro" ? clientePersonalizado.trim() : cliente.trim();
 
       // 🆕 NUEVO: Incluir números de serie en las observaciones
       let observacionesFinales = observaciones.trim();
       if (numerosSerieSeleccionados.length > 0) {
-        const numerosSerieTexto = `Números de serie: ${numerosSerieSeleccionados.join(', ')}`;
-        observacionesFinales = observacionesFinales 
+        const numerosSerieTexto = `Números de serie: ${numerosSerieSeleccionados.join(
+          ", "
+        )}`;
+        observacionesFinales = observacionesFinales
           ? `${observacionesFinales}\n\n${numerosSerieTexto}`
           : numerosSerieTexto;
       }
 
       // 🔧 CORRECCIÓN: Calcular cantidad anterior correcta
       let cantidadAnteriorCorrecta: number;
-      
+
       if (numerosSerieSeleccionados.length > 0) {
         // Para productos con número de serie, cada componente individual tiene cantidad 1
         cantidadAnteriorCorrecta = 1;
-        console.log('✅ Usando cantidad individual para producto con S/N:', {
+        console.log("✅ Usando cantidad individual para producto con S/N:", {
           numeroSerie: numerosSerieSeleccionados[0],
-          cantidadAnterior: cantidadAnteriorCorrecta
+          cantidadAnterior: cantidadAnteriorCorrecta,
         });
       } else {
         // Para productos sin número de serie, usar la cantidad total agrupada
         cantidadAnteriorCorrecta = producto.cantidadTotal;
-        console.log('✅ Usando cantidad total para producto sin S/N:', {
-          cantidadAnterior: cantidadAnteriorCorrecta
+        console.log("✅ Usando cantidad total para producto sin S/N:", {
+          cantidadAnterior: cantidadAnteriorCorrecta,
         });
       }
 
@@ -272,15 +301,14 @@ export function RegistrarSalidaModal({
         cliente: clienteFinal || undefined,
         numeroFactura: numeroFactura.trim() || undefined,
         observaciones: observacionesFinales || undefined,
-        carpetaOrigen: carpeta
+        carpetaOrigen: carpeta,
       });
 
-      toast.success('Salida registrada exitosamente');
+      toast.success("Salida registrada exitosamente");
       handleClose();
-
     } catch (error) {
-      console.error('Error registrando salida:', error);
-      toast.error('Error al registrar la salida');
+      console.error("Error registrando salida:", error);
+      toast.error("Error al registrar la salida");
     } finally {
       setIsLoading(false);
     }
@@ -288,13 +316,13 @@ export function RegistrarSalidaModal({
 
   const handleClose = () => {
     setCantidad(1);
-    setMotivo('');
-    setDestino('');
-    setResponsable('');
-    setCliente('');
-    setClientePersonalizado('');
-    setNumeroFactura('');
-    setObservaciones('');
+    setMotivo("");
+    setDestino("");
+    setResponsable("");
+    setCliente("");
+    setClientePersonalizado("");
+    setNumeroFactura("");
+    setObservaciones("");
     // 🆕 NUEVO: Limpiar estados de números de serie
     setNumerosSerieDisponibles([]);
     setNumerosSerieSeleccionados([]);
@@ -325,7 +353,9 @@ export function RegistrarSalidaModal({
               <div className="flex items-center space-x-3">
                 <ArrowDownCircle className="h-6 w-6 text-red-500" />
                 <div>
-                  <CardTitle className="text-xl">Registrar Salida de Stock</CardTitle>
+                  <CardTitle className="text-xl">
+                    Registrar Salida de Stock
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     {producto.nombre} - {producto.marca} {producto.modelo}
                   </p>
@@ -369,7 +399,10 @@ export function RegistrarSalidaModal({
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Cantidad */}
                 <div>
-                  <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="cantidad"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Cantidad a Retirar *
                   </label>
                   <Input
@@ -382,7 +415,10 @@ export function RegistrarSalidaModal({
                       const nuevaCantidad = parseInt(e.target.value) || 1;
                       setCantidad(nuevaCantidad);
                       // Si hay números de serie, limpiar selección si la cantidad cambia manualmente
-                      if (numerosSerieDisponibles.length > 0 && numerosSerieSeleccionados.length !== nuevaCantidad) {
+                      if (
+                        numerosSerieDisponibles.length > 0 &&
+                        numerosSerieSeleccionados.length !== nuevaCantidad
+                      ) {
                         setNumerosSerieSeleccionados([]);
                       }
                     }}
@@ -393,7 +429,9 @@ export function RegistrarSalidaModal({
                   {cantidad > producto.cantidadTotal && (
                     <div className="flex items-center space-x-2 mt-2 text-red-600">
                       <AlertTriangle className="h-4 w-4" />
-                      <span className="text-sm">No hay suficiente stock disponible</span>
+                      <span className="text-sm">
+                        No hay suficiente stock disponible
+                      </span>
                     </div>
                   )}
                 </div>
@@ -412,9 +450,9 @@ export function RegistrarSalidaModal({
                         </div>
                       )}
                     </div>
-                    
-                    <Select 
-                      value={numerosSerieSeleccionados[0] || ""} 
+
+                    <Select
+                      value={numerosSerieSeleccionados[0] || ""}
                       onValueChange={(value) => {
                         if (value) {
                           setNumerosSerieSeleccionados([value]);
@@ -427,7 +465,9 @@ export function RegistrarSalidaModal({
                           {numerosSerieSeleccionados[0] && (
                             <div className="flex items-center space-x-2">
                               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="font-mono text-sm">{numerosSerieSeleccionados[0]}</span>
+                              <span className="font-mono text-sm">
+                                {numerosSerieSeleccionados[0]}
+                              </span>
                             </div>
                           )}
                         </SelectValue>
@@ -452,7 +492,8 @@ export function RegistrarSalidaModal({
                     </Select>
 
                     <p className="text-xs text-gray-600 mt-2">
-                      Este producto requiere selección de número de serie específico para trazabilidad completa.
+                      Este producto requiere selección de número de serie
+                      específico para trazabilidad completa.
                     </p>
 
                     {/* Mostrar selección actual */}
@@ -474,7 +515,10 @@ export function RegistrarSalidaModal({
 
                 {/* Motivo */}
                 <div>
-                  <label htmlFor="motivo" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="motivo"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Motivo de la Salida *
                   </label>
                   <Select value={motivo} onValueChange={setMotivo}>
@@ -489,7 +533,7 @@ export function RegistrarSalidaModal({
                       ))}
                     </SelectContent>
                   </Select>
-                  {motivo === 'Otro' && (
+                  {motivo === "Otro" && (
                     <Input
                       className="mt-2"
                       placeholder="Especificar otro motivo..."
@@ -500,7 +544,10 @@ export function RegistrarSalidaModal({
 
                 {/* Destino */}
                 <div>
-                  <label htmlFor="destino" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="destino"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     <MapPin className="inline h-4 w-4 mr-1" />
                     Destino *
                   </label>
@@ -508,7 +555,7 @@ export function RegistrarSalidaModal({
                     id="destino"
                     value={destino}
                     onChange={(e) => setDestino(e.target.value)}
-                    placeholder="Ej: Cliente ABC, Técnico Juan, Almacén Central..."
+                    placeholder="Ej: Ares Paraguay..."
                     className="w-full"
                     required
                   />
@@ -516,7 +563,10 @@ export function RegistrarSalidaModal({
 
                 {/* Responsable */}
                 <div>
-                  <label htmlFor="responsable" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="responsable"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     <User className="inline h-4 w-4 mr-1" />
                     Responsable de la Salida *
                   </label>
@@ -532,7 +582,10 @@ export function RegistrarSalidaModal({
 
                 {/* Cliente (opcional) */}
                 <div>
-                  <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="cliente"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Cliente (opcional)
                   </label>
                   <Select value={cliente} onValueChange={setCliente}>
@@ -545,12 +598,10 @@ export function RegistrarSalidaModal({
                           {clinica.nombre}
                         </SelectItem>
                       ))}
-                      <SelectItem value="Otro">
-                        Otro cliente
-                      </SelectItem>
+                      <SelectItem value="Otro">Otro cliente</SelectItem>
                     </SelectContent>
                   </Select>
-                  {cliente === 'Otro' && (
+                  {cliente === "Otro" && (
                     <Input
                       className="mt-2"
                       placeholder="Especificar nombre del cliente..."
@@ -562,7 +613,10 @@ export function RegistrarSalidaModal({
 
                 {/* Número de factura (opcional) */}
                 <div>
-                  <label htmlFor="numeroFactura" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="numeroFactura"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     <FileText className="inline h-4 w-4 mr-1" />
                     Número de Factura (opcional)
                   </label>
@@ -577,7 +631,10 @@ export function RegistrarSalidaModal({
 
                 {/* Observaciones */}
                 <div>
-                  <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="observaciones"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Observaciones (opcional)
                   </label>
                   <Textarea
@@ -606,7 +663,9 @@ export function RegistrarSalidaModal({
                     className="flex items-center space-x-2"
                   >
                     <ArrowDownCircle className="h-4 w-4" />
-                    <span>{isLoading ? 'Registrando...' : 'Registrar Salida'}</span>
+                    <span>
+                      {isLoading ? "Registrando..." : "Registrar Salida"}
+                    </span>
                   </Button>
                 </div>
               </form>

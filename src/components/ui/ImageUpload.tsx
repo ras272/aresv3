@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabaseSimple } from '@/lib/supabase-simple';
+import { supabase } from '@/lib/database/shared/supabase';
 
 interface ImageUploadProps {
   currentImageUrl?: string;
@@ -56,7 +56,7 @@ export function ImageUpload({
       const filePath = `stock-images/${fileName}`;
 
       // Subir archivo a Supabase Storage
-      const { data, error } = await supabaseSimple.storage
+      const { data, error } = await supabase.storage
         .from('images')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -68,7 +68,7 @@ export function ImageUpload({
       }
 
       // Obtener URL pública
-      const { data: { publicUrl } } = supabaseSimple.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('images')
         .getPublicUrl(filePath);
 
@@ -109,7 +109,7 @@ export function ImageUpload({
         const fileName = urlParts[urlParts.length - 1];
         const filePath = `stock-images/${fileName}`;
 
-        await supabaseSimple.storage
+        await supabase.storage
           .from('images')
           .remove([filePath]);
       }

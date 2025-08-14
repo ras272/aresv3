@@ -3,7 +3,7 @@
  * Reduce el uso de espacio y mejora el rendimiento
  */
 
-import { supabase } from './supabase';
+import { supabase } from './database/shared/supabase';
 
 export class DatabaseOptimizer {
   

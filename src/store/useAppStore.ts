@@ -78,7 +78,7 @@ import {
   DocumentoCarga,
 } from "@/lib/documentos-database";
 import { procesarProductoParaStock } from "@/lib/stock-flow";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/database/shared/supabase";
 
 // Sistema inicializado vacío - Los datos se cargan desde Supabase
 export const useAppStore = create<AppState>()(
@@ -232,7 +232,7 @@ export const useAppStore = create<AppState>()(
           itemId: string,
           nuevaCantidad: number,
           motivo: string
-        ) => {
+        ) => {  
           try {
             // 🔧 DETECCIÓN AUTOMÁTICA: Copiar lógica de registrarSalidaStock
             const { data: stockItem } = await supabase
@@ -272,7 +272,8 @@ export const useAppStore = create<AppState>()(
           updates: { imagen?: string; observaciones?: string }
         ) => {
           try {
-            const { updateStockItemDetails } = await import("@/lib/database");
+            // Importar desde el módulo correcto de stock
+            const { updateStockItemDetails } = await import("@/lib/database/stock");
 
             // Actualizar solo en componentes_disponibles (donde están los datos reales)
             await updateStockItemDetails(productId, updates);
@@ -540,31 +541,27 @@ export const useAppStore = create<AppState>()(
         },
 
         // 🎯 NUEVAS FUNCIONES HÍBRIDAS PARA REPORTES DE SERVICIO TÉCNICO
-        registrarSalidaStockReporte: async (salidaData: {
-          itemId: string;
-          productoNombre: string;
-          productoMarca?: string;
-          productoModelo?: string;
-          cantidad: number;
-          cantidadAnterior: number;
-          mantenimientoId?: string;
-          equipoId?: string;
-          tecnicoResponsable?: string;
-          observaciones?: string;
-        }) => {
+        registrarSalidaStockReporte: async (
+          salidaData: {
+            itemId: string;
+            productoNombre: string;
+            productoMarca?: string;
+            productoModelo?: string;
+            cantidad: number;
+            cantidadAnterior: number;
+            mantenimientoId?: string;
+            equipoId?: string;
+            tecnicoResponsable?: string;
+            observaciones?: string;
+          },
+          currentUser?: { nombre: string } | null
+        ) => {
           try {
-            // 👤 Obtener usuario actual para tracking
-            const currentUser =
-              typeof window !== "undefined"
-                ? JSON.parse(
-                    localStorage.getItem("ares_current_user") || "null"
-                  )
-                : null;
-
+            // 👤 Usar usuario actual pasado como parámetro desde el componente
             const salidaDataConUsuario = {
               ...salidaData,
               tecnicoResponsable:
-                salidaData.tecnicoResponsable || currentUser?.name || "Sistema",
+                salidaData.tecnicoResponsable || currentUser?.nombre || "Sistema",
             };
 
             await registrarSalidaStockReporte(salidaDataConUsuario);
@@ -577,7 +574,7 @@ export const useAppStore = create<AppState>()(
 
             console.log(
               "✅ Salida de stock para reporte registrada exitosamente por:",
-              currentUser?.name
+              currentUser?.nombre || "Sistema"
             );
           } catch (error) {
             console.error(

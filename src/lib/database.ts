@@ -1,7 +1,7 @@
 // Cleaned up database.ts - Contains only non-extracted functions
 // This file contains functions that haven't been moved to specific modules yet
 
-import { supabase } from './supabase'
+import { supabase } from './database/shared/supabase'
 import type { DocumentoCarga } from '@/types'
 
 // ===============================================
