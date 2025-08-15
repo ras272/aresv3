@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   Activity,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -82,6 +83,13 @@ const navigationSections: NavigationSection[] = [
         icon: Plus,
         permission: "equipos",
         requiresWrite: true,
+      },
+      {
+        name: "Cartuchero HIFU",
+        href: "/cartuchos",
+        icon: Zap,
+        permission: "equipos",
+        badge: "new",
       },
       {
         name: "Inventario Técnico",

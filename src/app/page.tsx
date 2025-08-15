@@ -33,6 +33,7 @@ import {
   IngresosMensualesRecharts,
   KPIsRecharts
 } from '@/components/charts/RechartsComponents';
+import { UniversalSearch } from '@/components/search/UniversalSearch';
 
 // 🎨 Componente de título animado
 const AnimatedTitle = () => {
@@ -300,6 +301,25 @@ export default function Dashboard() {
     <DashboardLayout title="Dashboard" subtitle={<AnimatedTitle />}>
       <div className="space-y-6">
         
+        {/* 🔍 Búsqueda Universal */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="max-w-2xl mx-auto"
+        >
+          <div className="space-y-2">
+            <UniversalSearch 
+              placeholder="🔍 Buscar equipos, clientes, servicios, componentes..."
+              className="w-full"
+            />
+            {/* Debug: Mostrar cantidad de datos */}
+            <div className="text-xs text-gray-500 text-center">
+              Datos: {equipos.length} equipos, {mantenimientos.length} mantenimientos, {componentesDisponibles.length} componentes
+            </div>
+          </div>
+        </motion.div>
+
         {/* 📊 Métricas Ejecutivas Principales */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {metricasPrincipales.map((metrica) => (

@@ -60,7 +60,9 @@ export default function NuevoEquipoPage() {
   } = useForm<EquipoFormData>({
     resolver: zodResolver(equipoSchema),
     defaultValues: {
+      tipoEquipo: 'Equipo Médico', // Agregar valor por defecto para tipoEquipo
       fechaEntrega: new Date().toISOString().split('T')[0],
+      accesorios: '', // Agregar valor por defecto para accesorios
       componentes: [
         {
           nombre: 'Unidad Principal',
@@ -71,6 +73,13 @@ export default function NuevoEquipoPage() {
       ]
     },
   });
+
+  // Log para debuggear errores de validación
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('🚨 Errores de validación del formulario:', errors);
+    }
+  }, [errors]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -94,6 +103,66 @@ export default function NuevoEquipoPage() {
 
   const onSubmit = async (data: EquipoFormData) => {
     console.log('🔄 Iniciando envío del formulario...', data);
+    console.log('🔍 Datos del formulario completos:', JSON.stringify(data, null, 2));
+    
+    // Validar que todos los campos requeridos estén presentes
+    if (!data.cliente) {
+      toast.error('El cliente es obligatorio');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!data.ubicacion) {
+      toast.error('La ubicación es obligatoria');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!data.nombreEquipo) {
+      toast.error('El nombre del equipo es obligatorio');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!data.marca) {
+      toast.error('La marca es obligatoria');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!data.numeroSerieBase) {
+      toast.error('El número de serie base es obligatorio');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!data.accesorios) {
+      toast.error('Los accesorios son obligatorios');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!data.componentes || data.componentes.length === 0) {
+      toast.error('Debe agregar al menos un componente');
+      setIsLoading(false);
+      return;
+    }
+    
+    // Validar componentes
+    for (let i = 0; i < data.componentes.length; i++) {
+      const comp = data.componentes[i];
+      if (!comp.nombre) {
+        toast.error(`El componente ${i + 1} debe tener un nombre`);
+        setIsLoading(false);
+        return;
+      }
+      if (!comp.numeroSerie) {
+        toast.error(`El componente ${i + 1} debe tener un número de serie`);
+        setIsLoading(false);
+        return;
+      }
+    }
+    
     setIsLoading(true);
     
     try {
@@ -204,6 +273,10 @@ export default function NuevoEquipoPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  
+                  {/* Campo oculto para registrar el cliente en react-hook-form */}
+                  <input type="hidden" {...register('cliente')} />
+                  
                   {errors.cliente && (
                     <p className="text-sm text-red-600 mt-1">{errors.cliente.message}</p>
                   )}
@@ -480,6 +553,22 @@ export default function NuevoEquipoPage() {
             >
               Cancelar
             </Button>
+            
+            {/* Botón de debug temporal */}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const formData = watch();
+                console.log('🔍 DEBUG - Datos actuales del formulario:', formData);
+                console.log('🔍 DEBUG - Errores de validación:', errors);
+                console.log('🔍 DEBUG - Clínica seleccionada:', selectedClinica);
+                console.log('🔍 DEBUG - Lista de clínicas:', clinicas);
+              }}
+            >
+              Debug Form
+            </Button>
+            
             <Button
               type="submit"
               disabled={isLoading}

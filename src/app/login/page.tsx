@@ -1,34 +1,46 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
-import { Eye, EyeOff, LogIn, User, Lock, AlertTriangle, Clock } from 'lucide-react';
-import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { validatePasswordStrength, getPasswordStrengthColor, getPasswordStrengthPercentage } from '@/lib/crypto';
-import { z } from 'zod';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import {
+  Eye,
+  EyeOff,
+  LogIn,
+  User,
+  Lock,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { useAuth } from "@/components/auth/AuthProvider";
+import {
+  validatePasswordStrength,
+  getPasswordStrengthColor,
+  getPasswordStrengthPercentage,
+} from "@/lib/crypto";
+import { z } from "zod";
 
 // Validation schema
 const loginSchema = z.object({
   email: z
     .string()
-    .min(1, 'El email es requerido')
-    .email('Formato de email inválido')
-    .max(255, 'Email demasiado largo'),
+    .min(1, "El email es requerido")
+    .email("Formato de email inválido")
+    .max(255, "Email demasiado largo"),
   password: z
     .string()
-    .min(1, 'La contraseña es requerida')
-    .max(128, 'Contraseña demasiado larga'),
-  rememberMe: z.boolean().optional()
+    .min(1, "La contraseña es requerida")
+    .max(128, "Contraseña demasiado larga"),
+  rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -41,18 +53,24 @@ interface ValidationErrors {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading: authLoading, error: authError, clearError, isAuthenticated } = useAuth();
-  
+  const {
+    login,
+    isLoading: authLoading,
+    error: authError,
+    clearError,
+    isAuthenticated,
+  } = useAuth();
+
   // Form state
   const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
-    password: '',
-    rememberMe: false
+    email: "",
+    password: "",
+    rememberMe: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Security feedback state
   const [showPasswordStrength, setShowPasswordStrength] = useState(false);
   const [rateLimitInfo, setRateLimitInfo] = useState<{
@@ -68,7 +86,7 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      router.push('/');
+      router.push("/");
     }
   }, [isAuthenticated, authLoading, router]);
 
@@ -83,13 +101,13 @@ export default function LoginPage() {
 
     if (rateLimitInfo?.isLimited && rateLimitInfo.remainingTime > 0) {
       interval = setInterval(() => {
-        setRateLimitInfo(prev => {
+        setRateLimitInfo((prev) => {
           if (!prev || prev.remainingTime <= 1) {
             return null;
           }
           return {
             ...prev,
-            remainingTime: prev.remainingTime - 1
+            remainingTime: prev.remainingTime - 1,
           };
         });
       }, 1000);
@@ -97,13 +115,13 @@ export default function LoginPage() {
 
     if (lockoutInfo?.isLocked && lockoutInfo.remainingTime > 0) {
       interval = setInterval(() => {
-        setLockoutInfo(prev => {
+        setLockoutInfo((prev) => {
           if (!prev || prev.remainingTime <= 1) {
             return null;
           }
           return {
             ...prev,
-            remainingTime: prev.remainingTime - 1
+            remainingTime: prev.remainingTime - 1,
           };
         });
       }, 1000);
@@ -135,21 +153,24 @@ export default function LoginPage() {
   };
 
   // Handle input changes
-  const handleInputChange = (field: keyof LoginFormData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+  const handleInputChange = (
+    field: keyof LoginFormData,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear field-specific errors
     if (errors[field as keyof ValidationErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-    
+
     // Clear auth errors
     if (authError) {
       clearError();
     }
 
     // Show password strength indicator when typing password
-    if (field === 'password' && typeof value === 'string') {
+    if (field === "password" && typeof value === "string") {
       setShowPasswordStrength(value.length > 0);
     }
   };
@@ -157,27 +178,30 @@ export default function LoginPage() {
   // Parse error messages for security feedback
   const parseErrorMessage = (errorMessage: string) => {
     // Rate limiting error
-    if (errorMessage.includes('rate limit') || errorMessage.includes('too many attempts')) {
+    if (
+      errorMessage.includes("rate limit") ||
+      errorMessage.includes("too many attempts")
+    ) {
       const timeMatch = errorMessage.match(/(\d+)\s*minutes?/);
       const attemptsMatch = errorMessage.match(/(\d+)\s*attempts?/);
-      
+
       if (timeMatch) {
         setRateLimitInfo({
           isLimited: true,
           remainingTime: parseInt(timeMatch[1]) * 60,
-          remainingAttempts: attemptsMatch ? parseInt(attemptsMatch[1]) : 0
+          remainingAttempts: attemptsMatch ? parseInt(attemptsMatch[1]) : 0,
         });
       }
     }
-    
+
     // Account lockout error
-    if (errorMessage.includes('locked') || errorMessage.includes('blocked')) {
+    if (errorMessage.includes("locked") || errorMessage.includes("blocked")) {
       const timeMatch = errorMessage.match(/(\d+)\s*minutes?/);
-      
+
       if (timeMatch) {
         setLockoutInfo({
           isLocked: true,
-          remainingTime: parseInt(timeMatch[1]) * 60
+          remainingTime: parseInt(timeMatch[1]) * 60,
         });
       }
     }
@@ -186,7 +210,7 @@ export default function LoginPage() {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -200,22 +224,22 @@ export default function LoginPage() {
 
     try {
       await login(formData.email, formData.password, formData.rememberMe);
-      
-      toast.success('Login exitoso', {
-        description: 'Bienvenido al sistema Ares Tech'
+
+      toast.success("Login exitoso", {
+        description: "Bienvenido al sistema Ares Tech",
       });
-      
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error de autenticación';
-      
+      const errorMessage =
+        error instanceof Error ? error.message : "Error de autenticación";
+
       // Parse error for security feedback
       parseErrorMessage(errorMessage);
-      
+
       // Set general error
       setErrors({ general: errorMessage });
-      
-      toast.error('Error de autenticación', {
-        description: errorMessage
+
+      toast.error("Error de autenticación", {
+        description: errorMessage,
       });
     } finally {
       setIsSubmitting(false);
@@ -223,17 +247,23 @@ export default function LoginPage() {
   };
 
   // Get password strength for display
-  const passwordStrength = formData.password ? validatePasswordStrength(formData.password) : null;
+  const passwordStrength = formData.password
+    ? validatePasswordStrength(formData.password)
+    : null;
 
   // Format time for display
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   // Check if form is disabled due to security restrictions
-  const isFormDisabled = authLoading || isSubmitting || rateLimitInfo?.isLimited || lockoutInfo?.isLocked;
+  const isFormDisabled =
+    authLoading ||
+    isSubmitting ||
+    rateLimitInfo?.isLimited ||
+    lockoutInfo?.isLocked;
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -256,11 +286,9 @@ export default function LoginPage() {
               />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800">
-              Sistema Ares 
+              Sistema Ares
             </CardTitle>
-            <p className="text-gray-600 text-sm">
-              Acceso al sistema
-            </p>
+            <p className="text-gray-600 text-sm">Acceso al sistema</p>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -269,11 +297,14 @@ export default function LoginPage() {
               {lockoutInfo?.isLocked && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
+                  animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Alert variant="destructive" className="border-red-200 bg-red-50">
+                  <Alert
+                    variant="destructive"
+                    className="border-red-200 bg-red-50"
+                  >
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription className="flex items-center justify-between">
                       <span>Cuenta bloqueada por seguridad</span>
@@ -289,14 +320,20 @@ export default function LoginPage() {
               {rateLimitInfo?.isLimited && !lockoutInfo?.isLocked && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
+                  animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Alert variant="destructive" className="border-orange-200 bg-orange-50">
+                  <Alert
+                    variant="destructive"
+                    className="border-orange-200 bg-orange-50"
+                  >
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription className="flex items-center justify-between">
-                      <span>Demasiados intentos. Espera {formatTime(rateLimitInfo.remainingTime)}</span>
+                      <span>
+                        Demasiados intentos. Espera{" "}
+                        {formatTime(rateLimitInfo.remainingTime)}
+                      </span>
                       <div className="text-xs">
                         {rateLimitInfo.remainingAttempts} intentos restantes
                       </div>
@@ -319,16 +356,22 @@ export default function LoginPage() {
                     type="email"
                     placeholder="tu@arestech.com"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`pl-10 ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className={`pl-10 ${
+                      errors.email ? "border-red-500 focus:border-red-500" : ""
+                    }`}
                     disabled={isFormDisabled}
-                    aria-describedby={errors.email ? 'email-error' : undefined}
+                    aria-describedby={errors.email ? "email-error" : undefined}
                     aria-invalid={!!errors.email}
                     autoComplete="email"
                   />
                 </div>
                 {errors.email && (
-                  <p id="email-error" className="text-sm text-red-600" role="alert">
+                  <p
+                    id="email-error"
+                    className="text-sm text-red-600"
+                    role="alert"
+                  >
                     {errors.email}
                   </p>
                 )}
@@ -343,13 +386,21 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`pl-10 pr-10 ${errors.password ? 'border-red-500 focus:border-red-500' : ''}`}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
+                    className={`pl-10 pr-10 ${
+                      errors.password
+                        ? "border-red-500 focus:border-red-500"
+                        : ""
+                    }`}
                     disabled={isFormDisabled}
-                    aria-describedby={errors.password ? 'password-error' : undefined}
+                    aria-describedby={
+                      errors.password ? "password-error" : undefined
+                    }
                     aria-invalid={!!errors.password}
                     autoComplete="current-password"
                   />
@@ -358,57 +409,88 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
                     disabled={isFormDisabled}
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    aria-label={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
-                  <p id="password-error" className="text-sm text-red-600" role="alert">
+                  <p
+                    id="password-error"
+                    className="text-sm text-red-600"
+                    role="alert"
+                  >
                     {errors.password}
                   </p>
                 )}
 
                 {/* Password Strength Indicator */}
                 <AnimatePresence>
-                  {showPasswordStrength && passwordStrength && formData.password.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-2"
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600">Fortaleza de contraseña:</span>
-                        <span 
-                          className="font-medium capitalize"
-                          style={{ color: getPasswordStrengthColor(passwordStrength.strength) }}
-                        >
-                          {passwordStrength.strength === 'very-strong' ? 'Muy fuerte' : 
-                           passwordStrength.strength === 'strong' ? 'Fuerte' :
-                           passwordStrength.strength === 'medium' ? 'Media' : 'Débil'}
-                        </span>
-                      </div>
-                      <Progress 
-                        value={getPasswordStrengthPercentage(passwordStrength.score)} 
-                        className="h-2"
-                        style={{
-                          '--progress-background': getPasswordStrengthColor(passwordStrength.strength)
-                        } as React.CSSProperties}
-                      />
-                      {passwordStrength.suggestions.length > 0 && !passwordStrength.isValid && (
-                        <div className="text-xs text-gray-600">
-                          <p className="font-medium mb-1">Sugerencias:</p>
-                          <ul className="list-disc list-inside space-y-0.5">
-                            {passwordStrength.suggestions.slice(0, 3).map((suggestion, index) => (
-                              <li key={index}>{suggestion}</li>
-                            ))}
-                          </ul>
+                  {showPasswordStrength &&
+                    passwordStrength &&
+                    formData.password.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">
+                            Fortaleza de contraseña:
+                          </span>
+                          <span
+                            className="font-medium capitalize"
+                            style={{
+                              color: getPasswordStrengthColor(
+                                passwordStrength.strength
+                              ),
+                            }}
+                          >
+                            {passwordStrength.strength === "very-strong"
+                              ? "Muy fuerte"
+                              : passwordStrength.strength === "strong"
+                              ? "Fuerte"
+                              : passwordStrength.strength === "medium"
+                              ? "Media"
+                              : "Débil"}
+                          </span>
                         </div>
-                      )}
-                    </motion.div>
-                  )}
+                        <Progress
+                          value={getPasswordStrengthPercentage(
+                            passwordStrength.score
+                          )}
+                          className="h-2"
+                          style={
+                            {
+                              "--progress-background": getPasswordStrengthColor(
+                                passwordStrength.strength
+                              ),
+                            } as React.CSSProperties
+                          }
+                        />
+                        {passwordStrength.suggestions.length > 0 &&
+                          !passwordStrength.isValid && (
+                            <div className="text-xs text-gray-600">
+                              <p className="font-medium mb-1">Sugerencias:</p>
+                              <ul className="list-disc list-inside space-y-0.5">
+                                {passwordStrength.suggestions
+                                  .slice(0, 3)
+                                  .map((suggestion, index) => (
+                                    <li key={index}>{suggestion}</li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
+                      </motion.div>
+                    )}
                 </AnimatePresence>
               </div>
 
@@ -417,11 +499,13 @@ export default function LoginPage() {
                 <Checkbox
                   id="rememberMe"
                   checked={formData.rememberMe}
-                  onCheckedChange={(checked) => handleInputChange('rememberMe', !!checked)}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("rememberMe", !!checked)
+                  }
                   disabled={isFormDisabled}
                 />
-                <Label 
-                  htmlFor="rememberMe" 
+                <Label
+                  htmlFor="rememberMe"
                   className="text-sm text-gray-600 cursor-pointer select-none"
                 >
                   Recordarme por 30 días
