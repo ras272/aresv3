@@ -262,7 +262,13 @@ export class WordReporteService {
     return `Asunción, ${dia.toString().padStart(2, '0')} de ${mes} del ${año}`;
   }
 
+  /**
+   * @deprecated Usar NumberingService.generateReportNumber() para nueva numeración unificada
+   * Mantenido para compatibilidad con reportes existentes
+   */
   static generarNumeroReporte(equipoNombre: string, fecha: string): string {
+    console.warn('⚠️ WordReporteService.generarNumeroReporte() está deprecado. Usar NumberingService.generateReportNumber()');
+    
     const fechaObj = new Date(fecha);
     const año = fechaObj.getFullYear();
     const mes = (fechaObj.getMonth() + 1).toString().padStart(2, '0');
@@ -276,7 +282,13 @@ export class WordReporteService {
     return `${secuencial} ${equipoNombre}`;
   }
 
+  /**
+   * @deprecated Usar NumberingService.generateFormNumber() para nueva numeración unificada
+   * Mantenido para compatibilidad con formularios existentes
+   */
   static generarNumeroFormulario(): string {
+    console.warn('⚠️ WordReporteService.generarNumeroFormulario() está deprecado. Usar NumberingService.generateFormNumber()');
+    
     // ✅ FIXED: Use deterministic generation to prevent hydration errors
     const timestamp = Date.now();
     return Math.floor((timestamp % 900) + 100).toString();

@@ -122,34 +122,36 @@ export default function EquiposPage() {
       title="Gestión de Equipos" 
       subtitle="Administra todos los equipos médicos y sus componentes registrados en el sistema"
     >
-      <div className="h-full flex flex-col space-y-4 sm:space-y-6">
+      <div className="w-full max-w-full overflow-hidden">
+        <div className="h-full flex flex-col space-y-3 sm:space-y-4 lg:space-y-6 px-2 sm:px-4 lg:px-6">
         {/* Header Actions - Mobile Optimized */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4 px-1 sm:px-0">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 flex-shrink-0" />
               <Input
                 placeholder="Buscar equipos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full"
+                className="pl-10 w-full min-w-0"
               />
             </div>
             {/* 🎯 Botones solo para roles que no sean técnico */}
             {!esTecnico && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 sm:gap-3 flex-shrink-0">
                 <Button
                   variant="outline"
                   onClick={exportarCSV}
-                  className="flex items-center space-x-2 flex-1 sm:flex-none"
+                  className="flex items-center space-x-2 flex-1 sm:flex-none px-3 sm:px-4"
+                  size="sm"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-4 w-4 flex-shrink-0" />
                   <span className="hidden sm:inline">Exportar CSV</span>
                   <span className="sm:hidden">CSV</span>
                 </Button>
                 <Link href="/equipos/nuevo" className="flex-1 sm:flex-none">
-                  <Button className="w-full flex items-center justify-center space-x-2">
-                    <Plus className="h-4 w-4" />
+                  <Button className="w-full flex items-center justify-center space-x-2 px-3 sm:px-4" size="sm">
+                    <Plus className="h-4 w-4 flex-shrink-0" />
                     <span className="hidden sm:inline">Nuevo Equipo</span>
                     <span className="sm:hidden">Nuevo</span>
                   </Button>
@@ -264,17 +266,15 @@ export default function EquiposPage() {
             </div>
             
             <div className="flex-1 min-h-0 overflow-hidden">
-              <MobileTable
+              <div className="w-full overflow-hidden">
+                <MobileTable
                 data={equiposFiltrados}
                 columns={[
-                  { key: 'cliente', label: 'Cliente & Ubicación' },
                   { key: 'equipo', label: 'Equipo' },
-                  { key: 'marca', label: 'Marca/Modelo' },
-                  { key: 'serie', label: 'Serie Base' },
-                  { key: 'estado', label: 'Estado General' },
-                  { key: 'componentes', label: 'Componentes' },
-                  { key: 'fecha', label: 'Fecha Entrega' },
-                  { key: 'mantenimientos', label: 'Mantenimientos' },
+                  { key: 'cliente', label: 'Cliente' },
+                  { key: 'estado', label: 'Estado' },
+                  { key: 'componentes', label: 'Comp.' },
+                  { key: 'mantenimientos', label: 'Mant.' },
                   { key: 'acciones', label: 'Acciones' },
                 ]}
                 renderMobileCard={(equipo, index) => {
@@ -303,111 +303,75 @@ export default function EquiposPage() {
                   
                   return (
                     <>
-                      <TableCell className="px-2 py-2">
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate text-xs">{equipo.cliente}</p>
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <MapPin className="h-2.5 w-2.5 mr-1 flex-shrink-0" />
-                            <span className="truncate">{equipo.ubicacion}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell className="px-2 py-2">
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate text-xs">{equipo.nombreEquipo}</p>
+                      <TableCell className="px-3 py-3 min-w-0 overflow-hidden">
+                        <div className="min-w-0 overflow-hidden">
+                          <p className="font-medium text-gray-900 truncate text-sm">{equipo.nombreEquipo}</p>
                           <p className="text-xs text-gray-500 truncate">{equipo.tipoEquipo}</p>
                         </div>
                       </TableCell>
                       
-                      <TableCell className="px-2 py-2">
-                        <div className="min-w-0">
-                          <p className="font-medium truncate text-xs">{equipo.marca}</p>
-                          <p className="text-xs text-gray-500 truncate">{equipo.modelo}</p>
+                      <TableCell className="px-3 py-3 min-w-0 overflow-hidden">
+                        <div className="min-w-0 overflow-hidden">
+                          <p className="font-medium text-gray-900 truncate text-sm">{equipo.cliente}</p>
+                          <div className="flex items-center text-xs text-gray-500 mt-1 min-w-0">
+                            <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{equipo.ubicacion}</span>
+                          </div>
                         </div>
                       </TableCell>
-                      
-                      <TableCell className="px-2 py-2">
-                        <code className="bg-gray-100 px-1 py-1 rounded text-xs block truncate">
-                          {equipo.numeroSerieBase}
-                        </code>
-                      </TableCell>
 
-                      <TableCell className="px-2 py-2">
-                        <div className="flex flex-col space-y-1 min-w-0">
+                      <TableCell className="px-3 py-3 min-w-0 overflow-hidden">
+                        <div className="flex justify-center">
                           {estadoGeneral === 'CRITICO' && (
-                            <Badge variant="destructive" className="w-fit flex items-center space-x-1 text-xs">
-                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                              <span>CRÍTICO</span>
+                            <Badge variant="destructive" className="text-xs">
+                              CRÍTICO
                             </Badge>
                           )}
                           {estadoGeneral === 'REPARACION' && (
-                            <Badge variant="secondary" className="w-fit flex items-center space-x-1 bg-yellow-600 text-white text-xs">
-                              <Wrench className="w-2.5 h-2.5" />
-                              <span>REPARACIÓN</span>
+                            <Badge variant="secondary" className="bg-yellow-600 text-white text-xs">
+                              REPARACIÓN
                             </Badge>
                           )}
                           {estadoGeneral === 'OPERATIVO' && (
-                            <Badge variant="default" className="w-fit flex items-center space-x-1 bg-green-600 text-xs">
-                              <CheckCircle className="w-2.5 h-2.5" />
-                              <span>OPERATIVO</span>
+                            <Badge variant="default" className="bg-green-600 text-xs">
+                              OPERATIVO
                             </Badge>
                           )}
                           {estadoGeneral === 'SIN_DATOS' && (
-                            <Badge variant="outline" className="w-fit text-xs">
+                            <Badge variant="outline" className="text-xs">
                               Sin datos
                             </Badge>
                           )}
                         </div>
                       </TableCell>
                       
-                      <TableCell className="px-2 py-2">
-                        <div className="flex flex-col space-y-1 min-w-0">
-                          <Badge variant="outline" className="w-fit text-xs">
-                            {total}
-                          </Badge>
-                          <div className="flex flex-wrap gap-1">
+                      <TableCell className="px-3 py-3 text-center min-w-0 overflow-hidden">
+                        <div className="flex justify-center items-center space-x-1 min-w-0">
+                          <span className="text-sm font-medium">{total}</span>
+                          <div className="flex space-x-1 overflow-hidden">
                             {operativos > 0 && (
-                              <Badge variant="default" className="w-fit text-xs">
-                                {operativos}✓
-                              </Badge>
+                              <span className="text-green-600 text-xs">({operativos}✓)</span>
                             )}
                             {enReparacion > 0 && (
-                              <Badge variant="secondary" className="w-fit text-xs bg-yellow-100 text-yellow-800">
-                                {enReparacion}🔧
-                              </Badge>
+                              <span className="text-yellow-600 text-xs">({enReparacion}🔧)</span>
                             )}
                             {fueraServicio > 0 && (
-                              <Badge variant="destructive" className="w-fit text-xs">
-                                {fueraServicio}❌
-                              </Badge>
+                              <span className="text-red-600 text-xs">({fueraServicio}❌)</span>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       
-                      <TableCell className="px-2 py-2">
-                        <span className="text-xs">
-                          {new Date(equipo.fechaEntrega).toLocaleDateString('es-ES', { 
-                            day: '2-digit', 
-                            month: '2-digit', 
-                            year: '2-digit' 
-                          })}
-                        </span>
-                      </TableCell>
-                      
-                      <TableCell className="px-2 py-2">
-                        <div className="flex flex-col space-y-1 min-w-0">
-                          <Badge variant={mantenimientosCount > 0 ? 'default' : 'secondary'} className="w-fit text-xs">
-                            {mantenimientosCount}
-                          </Badge>
+                      <TableCell className="px-3 py-3 text-center min-w-0 overflow-hidden">
+                        <div className="flex flex-col items-center space-y-1 min-w-0">
+                          <span className="text-sm font-medium">{mantenimientosCount}</span>
                           {ultimoMantenimiento && (
                             <Badge 
                               variant={
                                 ultimoMantenimiento.estado === 'Finalizado' ? 'default' :
                                 ultimoMantenimiento.estado === 'En proceso' ? 'secondary' : 'destructive'
                               }
-                              className="w-fit text-xs"
+                              className="text-xs"
                             >
                               {ultimoMantenimiento.estado === 'Finalizado' ? 'OK' : 
                                ultimoMantenimiento.estado === 'En proceso' ? 'Proc' : 'Pend'}
@@ -416,11 +380,12 @@ export default function EquiposPage() {
                         </div>
                       </TableCell>
                       
-                      <TableCell className="px-2 py-2">
-                        <div className="flex items-center space-x-1">
+                      <TableCell className="px-3 py-3 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-center space-x-2 min-w-0">
                           <Link href={`/equipo/${equipo.id}`}>
-                            <Button variant="outline" size="sm" className="h-7 px-1">
-                              <Eye className="h-3 w-3" />
+                            <Button variant="outline" size="sm" className="h-8 px-3">
+                              <Eye className="h-4 w-4 mr-1" />
+                              <span className="hidden lg:inline">Ver</span>
                             </Button>
                           </Link>
                           {/* 🎯 Botón eliminar solo para roles que no sean técnico */}
@@ -429,9 +394,9 @@ export default function EquiposPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => setEquipoAEliminar({ id: equipo.id, nombre: equipo.nombreEquipo })}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-7 px-1"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-8 px-3"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
@@ -445,9 +410,10 @@ export default function EquiposPage() {
                   ? 'Intenta con otros términos de búsqueda' 
                   : 'Comienza registrando tu primer equipo'
                 }
-              />
+                />
+              </div>
             </div>
-          </Card>
+            </Card>
         </motion.div>
 
         {/* Dialog de confirmación para eliminación */}
@@ -462,6 +428,7 @@ export default function EquiposPage() {
           isDangerous={true}
           isLoading={eliminando}
         />
+        </div>
       </div>
     </DashboardLayout>
   );

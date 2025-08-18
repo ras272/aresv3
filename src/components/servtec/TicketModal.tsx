@@ -10,8 +10,9 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { TicketForm } from './TicketForm';
-import { crearTicket, obtenerTecnicosDisponibles } from '@/lib/database/tickets';
+import { crearTicket } from '@/lib/database/tickets';
 import { useAppStore } from '@/store/useAppStore';
+import { TECNICO_PRINCIPAL } from '@/lib/constants/technician';
 import type { TicketFormData, EquipoOption, TecnicoOption } from './types';
 
 interface TicketModalProps {
@@ -29,10 +30,14 @@ export function TicketModal({ isOpen, onClose, onTicketCreated }: TicketModalPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
 
-  // Cargar técnicos disponibles cuando se abre el modal
+  // Auto-asignar a Javier Lopez - No necesitamos cargar técnicos
   useEffect(() => {
     if (isOpen) {
-      cargarTecnicos();
+      // Auto-asignar al técnico principal al abrir el modal
+      setFormData(prev => ({
+        ...prev,
+        tecnicoAsignado: TECNICO_PRINCIPAL.nombre
+      }));
     }
   }, [isOpen]);
 
@@ -73,15 +78,21 @@ export function TicketModal({ isOpen, onClose, onTicketCreated }: TicketModalPro
     setError(undefined);
 
     try {
-      // Validar datos requeridos
+      // Validar datos requeridos (técnico se auto-asigna)
       if (!formData.equipoId || !formData.titulo || !formData.descripcion || !formData.prioridad || !formData.tipo) {
         setError('Por favor completa todos los campos requeridos');
         setLoading(false);
         return;
       }
 
-      // Crear el ticket
-      const response = await crearTicket(formData as TicketFormData);
+      // Asegurar que el técnico principal esté asignado
+      const formDataConTecnico = {
+        ...formData,
+        tecnicoAsignado: TECNICO_PRINCIPAL.nombre
+      };
+
+      // Crear el ticket con técnico auto-asignado
+      const response = await crearTicket(formDataConTecnico as TicketFormData);
 
       if (response.success) {
         toast.success('¡Ticket creado exitosamente!', {

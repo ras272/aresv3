@@ -16,16 +16,14 @@ import { RegistrarSalidaModal } from "@/components/stock/RegistrarSalidaModal";
 import {
   Package,
   Search,
-  AlertTriangle,
   Plus,
-  Minus,
-  Edit3,
   Folder,
   ChevronRight,
   ChevronDown,
   Image as ImageIcon,
   BarChart3,
   ArrowDownCircle,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -60,7 +58,6 @@ export default function StockPage() {
     loadStock,
     updateStockItem,
     updateStockItemDetails,
-    getEstadisticasStockGeneral,
     loadMovimientosStock,
     registrarSalidaStock,
   } = useAppStore();
@@ -69,7 +66,6 @@ export default function StockPage() {
   const [carpetasAbiertas, setCarpetasAbiertas] = useState<Set<string>>(
     new Set(["ares"])
   );
-  const [estadisticasAbiertas, setEstadisticasAbiertas] = useState(false);
 
   // Estados para el modal de edición de producto
   const [modalEditOpen, setModalEditOpen] = useState(false);
@@ -217,7 +213,6 @@ export default function StockPage() {
   };
 
   const productosAgrupados = agruparProductos();
-  const estadisticas = getEstadisticasStockGeneral();
 
   const handleCrearCarpeta = () => {
     if (!nombreNuevaCarpeta.trim()) {
@@ -270,422 +265,311 @@ export default function StockPage() {
       title="Stock"
       subtitle="Gestión de inventario organizado por carpetas"
     >
-      <div className="space-y-6">
-        {/* Estadísticas colapsables */}
-        <Card>
-          <CardHeader
-            className="cursor-pointer hover:bg-muted/50 pb-3"
-            onClick={() => setEstadisticasAbiertas(!estadisticasAbiertas)}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {estadisticasAbiertas ? (
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                )}
-                <div>
-                  <CardTitle className="text-lg">
-                    Estadísticas de Stock
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {estadisticas.totalProductos} productos •{" "}
-                    {estadisticas.productosConStockBajo} con stock bajo
-                  </p>
+      <div className="max-w-7xl mx-auto p-4 bg-gray-50 rounded-xl shadow-sm">
+        <div className="space-y-6">
+          {/* Estadísticas de Trazabilidad */}
+          <TrazabilidadStats />
+
+          {/* Búsqueda y Acciones */}
+          <Card className="border-none shadow-md">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar productos..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="pl-10 border-gray-300 focus:border-blue-500 rounded-lg"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 w-full md:w-auto">
+                  <Button
+                    onClick={() => setModalMovimientosGeneralOpen(true)}
+                    variant="outline"
+                    className="flex items-center space-x-2 text-blue-600 border-blue-300 hover:bg-blue-100 transition-colors"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Movimientos Recientes</span>
+                  </Button>
+                  <Button
+                    onClick={() => (window.location.href = "/stock/nuevo")}
+                    className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Nuevo Item</span>
+                  </Button>
+                  <Button
+                    onClick={() => setModalCrearCarpeta(true)}
+                    variant="outline"
+                    className="flex items-center space-x-2 border-gray-300 hover:bg-gray-100"
+                  >
+                    <Folder className="h-4 w-4" />
+                    <span>Nueva Carpeta</span>
+                  </Button>
                 </div>
               </div>
-              <BarChart3 className="h-5 w-5 text-blue-500" />
-            </div>
-          </CardHeader>
+            </CardContent>
+          </Card>
 
-          <AnimatePresence>
-            {estadisticasAbiertas && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Total Productos
-                        </CardTitle>
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">
-                          {estadisticas.totalProductos}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Stock Bajo
-                        </CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-orange-500" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-orange-600">
-                          {estadisticas.productosConStockBajo}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Entradas Mes
-                        </CardTitle>
-                        <Plus className="h-4 w-4 text-green-500" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
-                          {estadisticas.entradasMes}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Salidas Mes
-                        </CardTitle>
-                        <Minus className="h-4 w-4 text-red-500" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-red-600">
-                          {estadisticas.salidasMes}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </CardContent>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
+          {/* Productos organizados por carpetas */}
+          <div className="space-y-4">
+            {/* Mostrar carpetas vacías creadas manualmente */}
+            {Array.from(carpetasVacias).map((carpeta) => {
+              const carpetaId = carpeta.toLowerCase().replace(/\s+/g, "-");
+              const estaAbierta = carpetasAbiertas.has(carpetaId);
 
-        {/* Estadísticas de Trazabilidad */}
-        <TrazabilidadStats />
-
-        {/* Búsqueda y Acciones */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar productos..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={() => setModalMovimientosGeneralOpen(true)}
-                  variant="outline"
-                  className="flex items-center space-x-2 text-blue-600 border-blue-200 hover:bg-blue-50"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Movimientos Recientes</span>
-                </Button>
-                <Button
-                  onClick={() => (window.location.href = "/stock/nuevo")}
-                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Nuevo Item</span>
-                </Button>
-                <Button
-                  onClick={() => setModalCrearCarpeta(true)}
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                >
-                  <Folder className="h-4 w-4" />
-                  <span>Nueva Carpeta</span>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Productos organizados por carpetas */}
-        <div className="space-y-4">
-          {/* Mostrar carpetas vacías creadas manualmente */}
-          {Array.from(carpetasVacias).map((carpeta) => {
-            const carpetaId = carpeta.toLowerCase().replace(/\s+/g, "-");
-            const estaAbierta = carpetasAbiertas.has(carpetaId);
-
-            return (
-              <Card key={`empty-${carpeta}`}>
-                <CardHeader
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => toggleCarpeta(carpetaId)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {estaAbierta ? (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      )}
-                      <Folder className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <CardTitle className="text-lg text-gray-600">
-                          {carpeta}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          0 unidades • 0 productos
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-gray-500">
-                      Vacía
-                    </Badge>
-                  </div>
-                </CardHeader>
-
-                <AnimatePresence>
-                  {estaAbierta && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CardContent className="pt-0">
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>Esta carpeta está vacía</p>
-                          <p className="text-xs mt-2">
-                            Los productos se organizarán aquí automáticamente
-                            cuando coincidan con el nombre de la carpeta
+              return (
+                <Card key={`empty-${carpeta}`} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+                  <CardHeader
+                    className="cursor-pointer hover:bg-gray-50 transition-colors p-4"
+                    onClick={() => toggleCarpeta(carpetaId)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {estaAbierta ? (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-gray-500" />
+                        )}
+                        <Folder className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-gray-700">
+                            {carpeta}
+                          </CardTitle>
+                          <p className="text-sm text-gray-500">
+                            0 unidades • 0 productos
                           </p>
                         </div>
-                      </CardContent>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </Card>
-            );
-          })}
-
-          {/* Mostrar carpetas con productos */}
-          {Object.entries(productosAgrupados).map(([carpeta, productos]) => {
-            const carpetaId = carpeta.toLowerCase().replace(/\s+/g, "-");
-            const estaAbierta = carpetasAbiertas.has(carpetaId);
-            const productosFiltrados = filtrarProductos(productos);
-
-            if (productosFiltrados.length === 0 && busqueda.trim()) {
-              return null;
-            }
-
-            return (
-              <Card key={carpeta}>
-                <CardHeader
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => toggleCarpeta(carpetaId)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {estaAbierta ? (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      )}
-                      <Folder className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <CardTitle className="text-lg">{carpeta}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {productos.reduce(
-                            (sum, p) => sum + p.cantidadTotal,
-                            0
-                          )}{" "}
-                          unidades • {productos.length} productos
-                        </p>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCarpetaSeleccionada(carpeta);
-                          setModalMovimientosOpen(true);
-                        }}
-                        className="flex items-center space-x-1"
-                        title="Ver movimientos de esta carpeta"
-                      >
-                        <BarChart3 className="h-4 w-4" />
-                        <span>Movimientos</span>
-                      </Button>
-                      <Badge variant="outline">
-                        {productosFiltrados.length} productos
+                      <Badge variant="outline" className="text-gray-500 border-gray-300">
+                        Vacía
                       </Badge>
                     </div>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
 
-                <AnimatePresence>
-                  {estaAbierta && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CardContent className="pt-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {productosFiltrados.map((producto) => (
-                            <Card
-                              key={producto.id}
-                              className="hover:shadow-md transition-shadow"
-                            >
-                              <CardContent className="p-4">
-                                {/* Imagen del producto - Más grande y prominente */}
-                                {producto.imagen ? (
-                                  <div className="mb-4">
-                                    <img
-                                      src={producto.imagen}
-                                      alt={producto.nombre}
-                                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                                      onError={(e) => {
-                                        console.error('❌ Error cargando imagen:', producto.imagen);
-                                        e.currentTarget.style.display = 'none';
-                                      }}
-                                      onLoad={() => {
-                                        console.log('✅ Imagen cargada correctamente:', producto.imagen);
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="mb-4 text-center text-xs text-gray-400">
-                                    Sin imagen
-                                  </div>
-                                )}
+                  <AnimatePresence>
+                    {estaAbierta && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <CardContent className="pt-0 bg-gray-50 p-6">
+                          <div className="text-center py-8 text-gray-500">
+                            <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p className="font-medium">Esta carpeta está vacía</p>
+                            <p className="text-xs mt-2">
+                              Los productos se organizarán aquí automáticamente
+                              cuando coincidan con el nombre de la carpeta
+                            </p>
+                          </div>
+                        </CardContent>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Card>
+              );
+            })}
 
-                                <div className="space-y-3">
-                                  <div>
-                                    <h4 className="font-medium text-foreground mb-1">
-                                      {producto.nombre}
-                                    </h4>
-                                    <p className="text-sm text-muted-foreground">
-                                      {producto.marca} - {producto.modelo}
-                                    </p>
-                                    <Badge
-                                      variant="outline"
-                                      className="mt-1 text-xs"
-                                    >
-                                      {producto.tipoComponente}
-                                    </Badge>
-                                  </div>
-                                </div>
+            {/* Mostrar carpetas con productos */}
+            {Object.entries(productosAgrupados).map(([carpeta, productos]) => {
+              const carpetaId = carpeta.toLowerCase().replace(/\s+/g, "-");
+              const estaAbierta = carpetasAbiertas.has(carpetaId);
+              const productosFiltrados = filtrarProductos(productos);
 
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">
-                                      Cantidad:
-                                    </span>
-                                    <div className="flex items-center space-x-2">
+              if (productosFiltrados.length === 0 && busqueda.trim()) {
+                return null;
+              }
+
+              return (
+                <Card key={carpeta} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+                  <CardHeader
+                    className="cursor-pointer hover:bg-gray-50 transition-colors p-4"
+                    onClick={() => toggleCarpeta(carpetaId)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {estaAbierta ? (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-gray-500" />
+                        )}
+                        <Folder className="h-5 w-5 text-blue-500" />
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-gray-800">
+                            {carpeta}
+                          </CardTitle>
+                          <p className="text-sm text-gray-500">
+                            {productos.reduce(
+                              (sum, p) => sum + p.cantidadTotal,
+                              0
+                            )}{" "}
+                            unidades • {productos.length} productos
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCarpetaSeleccionada(carpeta);
+                            setModalMovimientosOpen(true);
+                          }}
+                          className="flex items-center space-x-1 border-gray-300 hover:bg-gray-100"
+                          title="Ver movimientos de esta carpeta"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                          <span>Movimientos</span>
+                        </Button>
+                        <Badge variant="outline" className="border-gray-300">
+                          {productosFiltrados.length} productos
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <AnimatePresence>
+                    {estaAbierta && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <CardContent className="pt-0 p-0">
+                          <div className="overflow-x-auto">
+                            <table className="w-full min-w-max">
+                              <thead className="text-xs text-gray-600 uppercase bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                  <th className="text-left py-3 px-4 font-semibold">Producto</th>
+                                  <th className="text-center py-3 px-4 font-semibold">Stock</th>
+                                  <th className="text-left py-3 px-4 font-semibold">Ubicación</th>
+                                  <th className="text-right py-3 px-4 font-semibold">Acciones</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {productosFiltrados.map((producto) => (
+                                  <tr key={producto.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="py-3 px-4">
+                                      <div className="flex items-center space-x-3">
+                                        {producto.imagen && (
+                                          <img
+                                            src={producto.imagen}
+                                            alt={producto.nombre}
+                                            className="w-10 h-10 object-cover rounded-md border border-gray-200"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none';
+                                            }}
+                                          />
+                                        )}
+                                        <div>
+                                          <div className="font-medium text-sm text-gray-800">
+                                            {producto.nombre}
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            {producto.marca} • {producto.modelo}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="py-3 px-4 text-center">
                                       <span
-                                        className={`text-lg font-bold ${
+                                        className={`font-bold text-lg ${
                                           producto.cantidadTotal <= 5 &&
                                           producto.cantidadTotal > 0
-                                            ? "text-orange-600"
+                                            ? "text-orange-500"
                                             : producto.cantidadTotal === 0
-                                            ? "text-red-600"
-                                            : "text-green-600"
+                                            ? "text-red-500"
+                                            : "text-green-500"
                                         }`}
                                       >
                                         {producto.cantidadTotal}
                                       </span>
-
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => abrirModalEdit(producto)}
-                                        className="h-8 w-8 p-0"
-                                        title="Editar producto (imagen y observaciones)"
-                                      >
-                                        <ImageIcon className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setProductoParaSalida(producto);
-                                          setModalSalidaOpen(true);
-                                        }}
-                                        className="h-8 w-8 p-0"
-                                        title="Registrar salida de stock"
-                                        disabled={producto.cantidadTotal === 0}
-                                      >
-                                        <ArrowDownCircle className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  </div>
-
-                                  {producto.ubicaciones.length > 0 && (
-                                    <div className="text-xs text-muted-foreground">
-                                      <strong>Ubicaciones:</strong>
-                                      {producto.ubicaciones
-                                        .slice(0, 2)
-                                        .map((ubicacion, idx) => (
-                                          <div key={idx} className="ml-2">
-                                            • {ubicacion.ubicacion}:{" "}
-                                            {ubicacion.cantidad} unidades
-                                          </div>
-                                        ))}
-                                      {producto.ubicaciones.length > 2 && (
-                                        <div className="ml-2 text-blue-600">
-                                          +{producto.ubicaciones.length - 2}{" "}
-                                          ubicaciones más...
+                                      {producto.cantidadTotal <= 5 && (
+                                        <div className="text-xs text-orange-500">
+                                          Stock bajo
                                         </div>
                                       )}
-                                    </div>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-
-                        {productosFiltrados.length === 0 && (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>
-                              No hay productos en esta carpeta que coincidan con
-                              la búsqueda
-                            </p>
+                                    </td>
+                                    <td className="py-3 px-4">
+                                      <div className="text-sm text-gray-700">
+                                        {producto.ubicaciones[0]?.ubicacion || "Sin ubicación"}
+                                        {producto.ubicaciones.length > 1 && (
+                                          <span className="text-xs text-gray-500 ml-1">
+                                            (+{producto.ubicaciones.length - 1})
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="py-3 px-4">
+                                      <div className="flex items-center justify-end space-x-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => abrirModalEdit(producto)}
+                                          className="h-8 w-8 p-0 text-gray-600 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                                          title="Editar producto"
+                                        >
+                                          <ImageIcon className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setProductoParaSalida(producto);
+                                            setModalSalidaOpen(true);
+                                          }}
+                                          className="h-8 w-8 p-0 text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                          title="Registrar salida"
+                                          disabled={producto.cantidadTotal === 0}
+                                        >
+                                          <ArrowDownCircle className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                        )}
-                      </CardContent>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </Card>
-            );
-          })}
-        </div>
 
-        {Object.keys(productosAgrupados).length === 0 && (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Package className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                No hay productos en stock
-              </h3>
-              <p className="text-muted-foreground">
-                Los productos agregados desde mercaderías aparecerán aquí
-                organizados por carpetas.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+                          {productosFiltrados.length === 0 && (
+                            <div className="text-center py-8 text-gray-500 bg-gray-50">
+                              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                              <p className="font-medium">
+                                No hay productos en esta carpeta que coincidan con
+                                la búsqueda
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Card>
+              );
+            })}
+          </div>
+
+          {Object.keys(productosAgrupados).length === 0 && (
+            <Card className="border border-gray-200 shadow-sm rounded-lg">
+              <CardContent className="p-12 text-center">
+                <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                  No hay productos en stock
+                </h3>
+                <p className="text-gray-500">
+                  Los productos agregados desde mercaderías aparecerán aquí
+                  organizados por carpetas.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* Modal de edición de producto */}
@@ -739,20 +623,22 @@ export default function StockPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+              className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center space-x-2">
+                <h3 className="text-lg font-semibold flex items-center space-x-2 text-gray-800">
                   <Folder className="h-5 w-5 text-blue-500" />
                   <span>Nueva Carpeta</span>
                 </h3>
-                <button
+                <Button
                   onClick={() => setModalCrearCarpeta(false)}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
                 >
-                  ✕
-                </button>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
 
               <div className="space-y-4">
@@ -773,6 +659,7 @@ export default function StockPage() {
                         handleCrearCarpeta();
                       }
                     }}
+                    className="border-gray-300 focus:border-blue-500 rounded-lg"
                     autoFocus
                   />
                 </div>
@@ -781,13 +668,14 @@ export default function StockPage() {
                   <Button
                     variant="outline"
                     onClick={() => setModalCrearCarpeta(false)}
+                    className="border-gray-300 hover:bg-gray-100"
                   >
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleCrearCarpeta}
                     disabled={!nombreNuevaCarpeta.trim()}
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white"
                   >
                     <Folder className="h-4 w-4" />
                     <span>Crear Carpeta</span>
@@ -801,14 +689,14 @@ export default function StockPage() {
 
       {/* Modal de Movimientos Generales */}
       <Dialog open={modalMovimientosGeneralOpen} onOpenChange={setModalMovimientosGeneralOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden rounded-xl">
+          <DialogHeader className="border-b border-gray-200 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-gray-800">
               <BarChart3 className="w-5 h-5 text-blue-500" />
               Movimientos Recientes del Stock
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[80vh]">
+          <div className="overflow-y-auto max-h-[80vh] p-4">
             <MovimientosStock />
           </div>
         </DialogContent>

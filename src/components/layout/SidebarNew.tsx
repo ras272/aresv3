@@ -84,13 +84,7 @@ const navigationSections: NavigationSection[] = [
         permission: "equipos",
         requiresWrite: true,
       },
-      {
-        name: "Cartuchero HIFU",
-        href: "/cartuchos",
-        icon: Zap,
-        permission: "equipos",
-        badge: "new",
-      },
+
       {
         name: "Inventario Técnico",
         href: "/inventario-tecnico",

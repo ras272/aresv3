@@ -277,7 +277,12 @@ Ing. Javier López`;
 
 
 
+  /**
+   * @deprecated Usar NumberingService.generateReportNumber() para nueva numeración unificada
+   */
   private generarNumeroReporte(marca: string, modelo: string): string {
+    console.warn('⚠️ AIReporteService.generarNumeroReporte() está deprecado. Usar NumberingService.generateReportNumber()');
+    
     // Generar número realista basado en la marca y modelo
     // ✅ FIXED: Use deterministic generation to prevent hydration errors
     const timestamp = Date.now();

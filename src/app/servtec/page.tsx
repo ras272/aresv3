@@ -158,89 +158,90 @@ export default function ServTecPage() {
   return (
     <DashboardLayout fullWidth={true}>
       <div className="w-full h-full bg-gray-50 overflow-auto">
-        <div className="w-full min-h-full p-4">
+        <div className="w-full min-h-full p-2 sm:p-4 lg:p-6">
           {/* Header de ServTec */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <Activity className="w-8 h-8 text-blue-600" />
-                  ServTec
+          <div className="mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+                  <Activity className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-blue-600 flex-shrink-0" />
+                  <span className="truncate">ServTec</span>
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-xs sm:text-sm lg:text-base text-gray-600 mt-1 truncate">
                   Centro de Control de Servicio Técnico
                 </p>
               </div>
-              <div className="flex gap-3">
-                <Button size="sm" onClick={() => crearTicketMantenimiento()}>
+              <div className="flex gap-2 sm:gap-3 flex-shrink-0">
+                <Button size="sm" onClick={() => crearTicketMantenimiento()} className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
-                  Nuevo Ticket
+                  <span className="hidden sm:inline">Nuevo Ticket</span>
+                  <span className="sm:hidden">Ticket</span>
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Métricas Clave */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <Card className="overflow-hidden">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-3xl font-bold text-gray-900">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
                       {stats.mantenimientosPendientes}
                     </p>
-                    <p className="text-sm text-gray-600">Tickets Pendientes</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">Tickets Pendientes</p>
                   </div>
-                  <div className="p-3 bg-yellow-100 rounded-lg">
-                    <Clock className="w-6 h-6 text-yellow-600" />
+                  <div className="p-2 sm:p-3 bg-yellow-100 rounded-lg flex-shrink-0">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-yellow-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-6">
+            <Card className="overflow-hidden">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-3xl font-bold text-red-600">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600 truncate">
                       {stats.mantenimientosCriticos}
                     </p>
-                    <p className="text-sm text-gray-600">Críticos</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">Críticos</p>
                   </div>
-                  <div className="p-3 bg-red-100 rounded-lg">
-                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                  <div className="p-2 sm:p-3 bg-red-100 rounded-lg flex-shrink-0">
+                    <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-red-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-6">
+            <Card className="overflow-hidden">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-3xl font-bold text-blue-600">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600 truncate">
                       {stats.equiposTotal}
                     </p>
-                    <p className="text-sm text-gray-600">Total Equipos</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">Total Equipos</p>
                   </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <Package className="w-6 h-6 text-blue-600" />
+                  <div className="p-2 sm:p-3 bg-blue-100 rounded-lg flex-shrink-0">
+                    <Package className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-6">
+            <Card className="overflow-hidden">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-3xl font-bold text-green-600">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 truncate">
                       {stats.ticketsHoy}
                     </p>
-                    <p className="text-sm text-gray-600">Completados Hoy</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">Completados Hoy</p>
                   </div>
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  <div className="p-2 sm:p-3 bg-green-100 rounded-lg flex-shrink-0">
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-600" />
                   </div>
                 </div>
               </CardContent>
@@ -248,16 +249,16 @@ export default function ServTecPage() {
           </div>
 
           {/* Lista Completa de Mantenimientos */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-blue-600" />
-                  Todos los Mantenimientos ({mantenimientos.length})
+          <Card className="mt-4 sm:mt-6 overflow-hidden">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+                  <span className="text-sm sm:text-base truncate">Todos los Mantenimientos ({mantenimientos.length})</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
                   <select
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
                     onChange={(e) => setFiltroEstado(e.target.value)}
                     value={filtroEstado}
                   >
@@ -267,7 +268,7 @@ export default function ServTecPage() {
                     <option value="Finalizado">Finalizado</option>
                   </select>
                   <select
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
                     onChange={(e) => setFiltroPrioridad(e.target.value)}
                     value={filtroPrioridad}
                   >
@@ -303,71 +304,76 @@ export default function ServTecPage() {
                     return (
                       <div
                         key={mantenimiento.id}
-                        className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer hover:border-blue-300"
+                        className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer hover:border-blue-300 overflow-hidden"
                         onClick={() => navegarAEquipo(mantenimiento.equipoId)}
                         title={`Ver equipo: ${equipo?.nombreEquipo || "Equipo N/A"}`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-semibold text-gray-900">
-                                {equipo?.nombreEquipo || "Equipo N/A"}
-                              </h3>
-                              {mantenimiento.numeroReporte && (
-                                <Badge className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
-                                  {mantenimiento.numeroReporte}
-                                </Badge>
-                              )}
-                              <Badge
-                                className={`text-xs font-medium ${
-                                  mantenimiento.estado === "Finalizado"
-                                    ? "bg-green-100 text-green-800 border-green-300"
-                                    : mantenimiento.estado === "En proceso"
-                                    ? "bg-blue-100 text-blue-800 border-blue-300"
-                                    : "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                }`}
-                              >
-                                {mantenimiento.estado}
+                        <div className="flex flex-col gap-3">
+                          {/* Header with title and key badge */}
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate flex-1 min-w-0">
+                              {equipo?.nombreEquipo || "Equipo N/A"}
+                            </h3>
+                            {mantenimiento.numeroReporte && (
+                              <Badge className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 flex-shrink-0">
+                                {mantenimiento.numeroReporte}
                               </Badge>
-                              <Badge
-                                className={`text-xs font-medium ${
-                                  mantenimiento.prioridad === "Crítica"
-                                    ? "bg-red-100 text-red-800 border-red-300"
-                                    : mantenimiento.prioridad === "Alta"
-                                    ? "bg-orange-100 text-orange-800 border-orange-300"
-                                    : mantenimiento.prioridad === "Media"
-                                    ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                    : "bg-gray-100 text-gray-800 border-gray-300"
-                                }`}
-                              >
-                                {mantenimiento.prioridad}
-                              </Badge>
-                            </div>
+                            )}
+                          </div>
 
-                            <p className="text-sm text-gray-600 mb-2">
-                              {mantenimiento.descripcion}
-                            </p>
+                          {/* Badges row */}
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                            <Badge
+                              className={`text-xs font-medium ${
+                                mantenimiento.estado === "Finalizado"
+                                  ? "bg-green-100 text-green-800 border-green-300"
+                                  : mantenimiento.estado === "En proceso"
+                                  ? "bg-blue-100 text-blue-800 border-blue-300"
+                                  : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                              }`}
+                            >
+                              {mantenimiento.estado}
+                            </Badge>
+                            <Badge
+                              className={`text-xs font-medium ${
+                                mantenimiento.prioridad === "Crítica"
+                                  ? "bg-red-100 text-red-800 border-red-300"
+                                  : mantenimiento.prioridad === "Alta"
+                                  ? "bg-orange-100 text-orange-800 border-orange-300"
+                                  : mantenimiento.prioridad === "Media"
+                                  ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                  : "bg-gray-100 text-gray-800 border-gray-300"
+                              }`}
+                            >
+                              {mantenimiento.prioridad}
+                            </Badge>
+                          </div>
 
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Building2 className="w-3 h-3" />
-                                {equipo?.cliente || "Cliente N/A"}
+                          {/* Description */}
+                          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
+                            {mantenimiento.descripcion}
+                          </p>
+
+                          {/* Metadata */}
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-gray-500">
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Building2 className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{equipo?.cliente || "Cliente N/A"}</span>
+                            </span>
+                            <span className="flex items-center gap-1 flex-shrink-0">
+                              <Calendar className="w-3 h-3" />
+                              {diasDesdeCreacion === 0
+                                ? "Hoy"
+                                : diasDesdeCreacion === 1
+                                ? "Ayer"
+                                : `Hace ${diasDesdeCreacion} días`}
+                            </span>
+                            {mantenimiento.tecnicoAsignado && (
+                              <span className="flex items-center gap-1 min-w-0">
+                                <User className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate">{mantenimiento.tecnicoAsignado}</span>
                               </span>
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {diasDesdeCreacion === 0
-                                  ? "Hoy"
-                                  : diasDesdeCreacion === 1
-                                  ? "Ayer"
-                                  : `Hace ${diasDesdeCreacion} días`}
-                              </span>
-                              {mantenimiento.tecnicoAsignado && (
-                                <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  {mantenimiento.tecnicoAsignado}
-                                </span>
-                              )}
-                            </div>
+                            )}
                           </div>
                         </div>
                       </div>

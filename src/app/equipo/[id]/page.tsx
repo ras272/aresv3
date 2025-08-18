@@ -595,7 +595,7 @@ export default function EquipoDetailPage() {
       const reporteData = {
         fecha: selectedMantenimiento?.fecha || fechaHoy,
         cliente: equipo.cliente,
-        numeroReporte: WordReporteService.generarNumeroReporte(equipo.nombreEquipo, selectedMantenimiento?.fecha || fechaHoy),
+        numeroReporte: selectedMantenimiento?.numeroReporte || WordReporteService.generarNumeroReporte(equipo.nombreEquipo, selectedMantenimiento?.fecha || fechaHoy),
         descripcionProblema: selectedMantenimiento?.descripcion || 'Mantenimiento preventivo',
         formularioAsistencia: WordReporteService.generarNumeroFormulario(),
         trabajoRealizado: trabajoRealizado,

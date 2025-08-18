@@ -34,11 +34,6 @@ import { toast } from 'sonner';
 const tiposComponentes = [
   'Unidad Principal',
   'Paleta/Pieza de Mano',
-  'Sensor',
-  'Electrodo',
-  'Cable',
-  'Transductor',
-  'Sonda',
   'Cabezal',
   'Aplicador',
   'Otro'
@@ -230,32 +225,34 @@ export default function NuevoEquipoPage() {
       title="Registrar Nuevo Equipo" 
       subtitle="Completa la información del equipo médico y sus componentes"
     >
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Volver</span>
-          </Button>
-        </div>
+      <div className="max-w-4xl mx-auto">
+        <div className="space-y-4 sm:space-y-6">
+            {/* Header - Mobile Optimized */}
+            <div className="flex items-center space-x-3 sm:space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4"
+              size="sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </Button>
+          </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Información del Cliente y Ubicación */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card className="p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <Building className="h-5 w-5 text-blue-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Información del Cliente</h3>
-              </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+            {/* Información del Cliente y Ubicación */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="p-4 sm:p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Building className="h-5 w-5 text-blue-500" />
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">Información del Cliente</h3>
+                </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="clinica">Clínica/Cliente *</Label>
                   <Select onValueChange={handleClinicaChange} value={selectedClinica}>
@@ -288,7 +285,7 @@ export default function NuevoEquipoPage() {
                     id="ubicacion"
                     placeholder="Se completará automáticamente al seleccionar la clínica..."
                     {...register('ubicacion')}
-                    className="bg-gray-50"
+                    className="bg-gray-50 h-11 sm:h-10"
                   />
                   {errors.ubicacion && (
                     <p className="text-sm text-red-600 mt-1">{errors.ubicacion.message}</p>
@@ -307,19 +304,20 @@ export default function NuevoEquipoPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6">
               <div className="flex items-center space-x-2 mb-4">
                 <Heart className="h-5 w-5 text-red-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Información del Equipo</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Información del Equipo</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="marca">Marca *</Label>
                   <Input
                     id="marca"
                     placeholder="Ej: Classys, Coocon, Edge Systems..."
                     {...register('marca')}
+                    className="h-11 sm:h-10"
                   />
                   {errors.marca && (
                     <p className="text-sm text-red-600 mt-1">{errors.marca.message}</p>
@@ -332,6 +330,7 @@ export default function NuevoEquipoPage() {
                     id="nombreEquipo"
                     placeholder="Ej: Ultraformer MPT, CMSlim Neo, Hydrafacial MD..."
                     {...register('nombreEquipo')}
+                    className="h-11 sm:h-10"
                   />
                   {errors.nombreEquipo && (
                     <p className="text-sm text-red-600 mt-1">{errors.nombreEquipo.message}</p>
@@ -340,25 +339,27 @@ export default function NuevoEquipoPage() {
 
 
                 
-                <div className="md:col-span-2">
+                <div className="lg:col-span-2">
                   <Label htmlFor="numeroSerieBase">Número de Serie Base *</Label>
                   <Input
                     id="numeroSerieBase"
                     placeholder="Ej: CSU123456..."
                     {...register('numeroSerieBase')}
+                    className="h-11 sm:h-10"
                   />
                   {errors.numeroSerieBase && (
                     <p className="text-sm text-red-600 mt-1">{errors.numeroSerieBase.message}</p>
                   )}
                 </div>
                 
-                <div className="md:col-span-2">
+                <div className="lg:col-span-2">
                   <Label htmlFor="accesorios">Accesorios Incluidos *</Label>
                   <Textarea
                     id="accesorios"
-                    placeholder="Ej: Cable de Alimentancion, Soportes..."
+                    placeholder="Ej: Cable de Alimentación, Soportes..."
                     {...register('accesorios')}
                     rows={3}
+                    className="min-h-[88px] sm:min-h-[80px]"
                   />
                   {errors.accesorios && (
                     <p className="text-sm text-red-600 mt-1">{errors.accesorios.message}</p>
@@ -374,17 +375,18 @@ export default function NuevoEquipoPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
+            <Card className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
                 <div className="flex items-center space-x-2">
                   <Wrench className="h-5 w-5 text-green-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">Componentes/Piezas del Equipo</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">Componentes/Piezas del Equipo</h3>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={agregarComponente}
-                  className="flex items-center space-x-2"
+                  className="flex items-center justify-center space-x-2 w-full sm:w-auto px-4 py-2 h-10"
+                  size="sm"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Agregar Componente</span>
@@ -393,7 +395,7 @@ export default function NuevoEquipoPage() {
 
               <div className="space-y-4">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="border rounded-lg p-4 bg-gray-50">
+                  <div key={field.id} className="border rounded-lg p-3 sm:p-4 bg-gray-50">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-medium text-gray-700">
                         Componente {index + 1}
@@ -404,14 +406,14 @@ export default function NuevoEquipoPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => remove(index)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 hover:text-red-800 h-8 w-8 p-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
                         <Label>Tipo de Componente *</Label>
                         <Select onValueChange={(value) => setValue(`componentes.${index}.nombre`, value)}>
@@ -438,6 +440,7 @@ export default function NuevoEquipoPage() {
                         <Input
                           placeholder="Ej: CSU123456..."
                           {...register(`componentes.${index}.numeroSerie`)}
+                          className="h-11 sm:h-10"
                         />
                         {errors.componentes?.[index]?.numeroSerie && (
                           <p className="text-sm text-red-600 mt-1">
@@ -468,6 +471,7 @@ export default function NuevoEquipoPage() {
                         <Input
                           placeholder="Detalles específicos del componente..."
                           {...register(`componentes.${index}.observaciones`)}
+                          className="h-11 sm:h-10"
                         />
                       </div>
                     </div>
@@ -489,19 +493,20 @@ export default function NuevoEquipoPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6">
               <div className="flex items-center space-x-2 mb-4">
                 <Calendar className="h-5 w-5 text-green-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Información de Entrega</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Información de Entrega</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="fechaEntrega">Fecha de Entrega *</Label>
                   <Input
                     id="fechaEntrega"
                     type="date"
                     {...register('fechaEntrega')}
+                    className="h-11 sm:h-10"
                   />
                   {errors.fechaEntrega && (
                     <p className="text-sm text-red-600 mt-1">{errors.fechaEntrega.message}</p>
@@ -517,10 +522,10 @@ export default function NuevoEquipoPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6">
               <div className="flex items-center space-x-2 mb-4">
                 <FileText className="h-5 w-5 text-gray-500" />
-                <h3 className="text-lg font-semibold text-gray-900">Observaciones Adicionales</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Observaciones Adicionales</h3>
               </div>
               
               <div>
@@ -530,6 +535,7 @@ export default function NuevoEquipoPage() {
                   placeholder="Observaciones adicionales sobre la instalación, condiciones especiales, configuración específica..."
                   {...register('observaciones')}
                   rows={4}
+                  className="min-h-[100px] sm:min-h-[96px]"
                 />
                 {errors.observaciones && (
                   <p className="text-sm text-red-600 mt-1">{errors.observaciones.message}</p>
@@ -538,57 +544,46 @@ export default function NuevoEquipoPage() {
             </Card>
           </motion.div>
 
-          {/* Botones de Acción */}
+          {/* Botones de Acción - Mobile Optimized */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4 justify-end"
+            className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 justify-end"
           >
             <Button
               type="button"
               variant="outline"
               onClick={() => router.back()}
               disabled={isLoading}
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 h-12 sm:h-10"
+              size="lg"
             >
               Cancelar
-            </Button>
-            
-            {/* Botón de debug temporal */}
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                const formData = watch();
-                console.log('🔍 DEBUG - Datos actuales del formulario:', formData);
-                console.log('🔍 DEBUG - Errores de validación:', errors);
-                console.log('🔍 DEBUG - Clínica seleccionada:', selectedClinica);
-                console.log('🔍 DEBUG - Lista de clínicas:', clinicas);
-              }}
-            >
-              Debug Form
             </Button>
             
             <Button
               type="submit"
               disabled={isLoading}
-              className="flex items-center space-x-2"
+              className="flex items-center justify-center space-x-2 w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 h-12 sm:h-10 text-base sm:text-sm"
+              size="lg"
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-5 w-5 sm:h-4 sm:w-4 border-2 border-white border-t-transparent" />
                   <span>Guardando...</span>
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4" />
+                  <Save className="h-5 w-5 sm:h-4 sm:w-4" />
                   <span>Registrar Equipo</span>
                 </>
               )}
             </Button>
           </motion.div>
         </form>
+        </div>
       </div>
     </DashboardLayout>
   );
-} 
+}

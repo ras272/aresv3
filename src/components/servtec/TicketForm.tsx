@@ -20,6 +20,7 @@ import {
   Zap
 } from 'lucide-react';
 import type { TicketFormData, EquipoOption, TecnicoOption } from './types';
+import { TECNICO_PRINCIPAL } from '@/lib/constants/technician';
 
 interface TicketFormProps {
   formData: Partial<TicketFormData>;
@@ -49,7 +50,7 @@ export function TicketForm({
 
   const equipoSeleccionado = equipos.find(e => e.id === formData.equipoId);
 
-  // Validar si el formulario está completo
+  // Validar si el formulario está completo (técnico auto-asignado)
   const isFormValid = formData.equipoId && 
                      formData.titulo && 
                      formData.descripcion && 
@@ -215,31 +216,22 @@ export function TicketForm({
       {/* Asignación de Técnico y Fecha */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
-        {/* Técnico Asignado */}
+        {/* Técnico Asignado - Auto-asignado */}
         <div className="space-y-2">
           <Label className="text-sm font-semibold flex items-center gap-2">
             <User className="w-4 h-4" />
             Técnico Asignado
           </Label>
-          <Select 
-            value={formData.tecnicoAsignado || ''} 
-            onValueChange={(value) => handleInputChange('tecnicoAsignado', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Asignar más tarde..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="sin-asignar">Sin asignar</SelectItem>
-              {tecnicos.map((tecnico) => (
-                <SelectItem key={tecnico.id} value={tecnico.id}>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${tecnico.disponible ? 'bg-green-500' : 'bg-red-500'}`} />
-                    {tecnico.nombre}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="flex-1">
+              <p className="font-medium text-blue-900">{TECNICO_PRINCIPAL.nombre}</p>
+              <p className="text-sm text-blue-600">{TECNICO_PRINCIPAL.titulo} - Auto-asignado</p>
+            </div>
+            <div className="text-xs text-blue-500 bg-blue-100 px-2 py-1 rounded">
+              Automático
+            </div>
+          </div>
         </div>
 
         {/* Fecha Programada */}

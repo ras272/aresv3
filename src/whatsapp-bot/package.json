@@ -1,0 +1,40 @@
+{
+  "name": "ares-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Bot de WhatsApp para gestión automática de tickets de ServTec",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "nodemon --exec ts-node src/index.ts",
+    "test": "npm run build && node test-all.js",
+    "test:complete": "npm run build && node test-complete.js",
+    "test:priority": "npm run build && node test-priority.js",
+    "test:interactive": "npm run build && node test-interactive.js",
+    "test:javier": "npm run build && node test-javier-commands.js",
+    "monitor": "node monitor.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.6.7",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.23.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/node-fetch": "^2.6.13",
+    "@types/qrcode-terminal": "^0.12.2",
+    "nodemon": "^3.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}

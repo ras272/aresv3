@@ -45,7 +45,10 @@ export function MobileTable({
   emptyStateTitle = "No hay datos",
   emptyStateMessage = "No se encontraron elementos"
 }: MobileTableProps) {
-  const { isFieldMode } = useFieldMode();
+  const { isFieldMode, screenWidth } = useFieldMode();
+  
+  // 🔧 EXTREMO: Forzar móvil en cualquier pantalla pequeña
+  const shouldUseMobile = isFieldMode || screenWidth < 1000 || window?.innerWidth < 1000;
 
   if (data.length === 0) {
     return (
@@ -57,7 +60,7 @@ export function MobileTable({
     );
   }
 
-  if (isFieldMode) {
+  if (shouldUseMobile) {
     // Versión móvil: Cards apiladas
     return (
       <div className="space-y-3">
@@ -75,27 +78,24 @@ export function MobileTable({
     );
   }
 
-  // Versión desktop: Tabla normal con scroll optimizado y sin scroll horizontal
+  // Versión desktop: Tabla con scroll horizontal obligatorio en pantallas pequeñas
   return (
     <div className="h-full flex flex-col">
-      <div className="overflow-y-auto flex-1">
-        <table className="w-full table-fixed">
+      <div className="overflow-x-auto overflow-y-auto flex-1">
+        <table className="w-full table-auto min-w-[800px]">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
               {columns.filter(col => col.desktop !== false).map((column, index) => {
-                // Definir anchos específicos ultra compactos para eliminar scroll horizontal completamente
+                // Definir anchos flexibles para evitar scroll horizontal
                 const getColumnWidth = (key: string) => {
                   switch (key) {
-                    case 'cliente': return 'w-36'; // Cliente & Ubicación - más reducido
-                    case 'equipo': return 'w-32'; // Equipo - más reducido
-                    case 'marca': return 'w-28'; // Marca/Modelo - más reducido
-                    case 'serie': return 'w-24'; // Serie Base - más reducido
-                    case 'estado': return 'w-28'; // Estado General - más reducido
-                    case 'componentes': return 'w-20'; // Componentes - más reducido
-                    case 'fecha': return 'w-20'; // Fecha Entrega - más reducido
-                    case 'mantenimientos': return 'w-24'; // Mantenimientos - más reducido
-                    case 'acciones': return 'w-20'; // Acciones - más reducido
-                    default: return 'w-20';
+                    case 'equipo': return 'w-1/4 min-w-0'; // Equipo - 25%
+                    case 'cliente': return 'w-1/4 min-w-0'; // Cliente - 25%
+                    case 'estado': return 'w-1/6 min-w-0'; // Estado - 16.67%
+                    case 'componentes': return 'w-1/12 min-w-0'; // Componentes - 8.33%
+                    case 'mantenimientos': return 'w-1/12 min-w-0'; // Mantenimientos - 8.33%
+                    case 'acciones': return 'w-1/6 min-w-0'; // Acciones - 16.67%
+                    default: return 'min-w-0 flex-1';
                   }
                 };
                 

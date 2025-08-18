@@ -149,9 +149,9 @@ export class GrokIAService {
     const palabrasClave = this.extraerPalabrasClave(consulta);
     const memoriaRelevante = await this.cargarMemoria(palabrasClave, 15);
     
-    let contexto = `# CARTUCHERO IA - SISTEMA ARES
+    let contexto = `# ASISTENTE IA - SISTEMA ARES
     
-Eres el Cartuchero IA, un asistente especializado en cartuchos HIFU para equipos Classys (Ultraformer MPT y Ultraformer III).
+Eres un asistente especializado en equipos médicos y gestión de inventario para el sistema ARES.
 
 ## DATOS ACTUALES DEL SISTEMA:
 ${JSON.stringify(datosAres, null, 2)}
@@ -174,9 +174,9 @@ ${memoriaRelevante.map(m => `
 6. Aprende de cada interacción para futuras consultas
 
 ## ESPECIALIDADES:
-- Trazabilidad completa de cartuchos HIFU
+- Gestión de equipos médicos y componentes
 - Estados: Disponible, En Uso, Con Error, Standby, Agotado, Vencido
-- Historial de remisiones y movimientos
+- Historial de mantenimientos y movimientos
 - Problemas comunes y soluciones
 - Estadísticas y análisis de uso
 
@@ -270,7 +270,7 @@ Consulta del usuario: "${consulta}"`;
       // Guardar memoria de la consulta
       await this.guardarMemoria(
         'conversacion',
-        { consulta, respuesta, contexto: 'cartuchos_hifu' },
+        { consulta, respuesta, contexto: 'equipos_medicos' },
         this.extraerPalabrasClave(consulta + ' ' + respuesta),
         7, // Relevancia alta para conversaciones
         'grok_consulta'
@@ -330,13 +330,13 @@ Consulta del usuario: "${consulta}"`;
       
       if (consultaLower.includes('serie') && consultaLower.includes('quién')) {
         tipoPatron = 'consulta_trazabilidad';
-        descripcion = 'Usuario pregunta sobre el historial/propietario de un cartucho específico';
+        descripcion = 'Usuario pregunta sobre el historial/propietario de un componente específico';
       } else if (consultaLower.includes('standby') || consultaLower.includes('error')) {
         tipoPatron = 'consulta_problemas';
-        descripcion = 'Usuario pregunta sobre cartuchos con problemas o en standby';
+        descripcion = 'Usuario pregunta sobre componentes con problemas o en standby';
       } else if (consultaLower.includes('cuántos') || consultaLower.includes('disponible')) {
         tipoPatron = 'consulta_inventario';
-        descripcion = 'Usuario pregunta sobre disponibilidad de cartuchos';
+        descripcion = 'Usuario pregunta sobre disponibilidad de componentes';
       } else if (consultaLower.includes('acuerdas') || consultaLower.includes('recuerdas')) {
         tipoPatron = 'consulta_memoria';
         descripcion = 'Usuario pregunta sobre información previa o memoria';
@@ -386,53 +386,53 @@ Consulta del usuario: "${consulta}"`;
   private async fallbackSistemaLocal(consulta: string, datosAres: any): Promise<string> {
     const consultaLower = consulta.toLowerCase();
     
-    // Obtener cartuchos HIFU
-    const cartuchos = datosAres.cartuchos || [];
+    // Obtener componentes disponibles
+    const componentes = datosAres.componentesDisponibles || [];
     
     // Consultas sobre número de serie específico
     if (consultaLower.includes('serie') && consultaLower.match(/[a-z0-9-]+/)) {
       const numeroSerie = consulta.match(/[A-Z0-9-]+/)?.[0];
       if (numeroSerie) {
-        const cartucho = cartuchos.find((c: any) => 
+        const componente = componentes.find((c: any) => 
           c.numeroSerie?.includes(numeroSerie) || 
           c.id.includes(numeroSerie)
         );
         
-        if (cartucho) {
-          let respuesta = `📋 **Cartucho ${numeroSerie}** (Sistema Local):\n\n`;
-          respuesta += `• **Estado actual**: ${cartucho.estado}\n`;
-          respuesta += `• **Marca**: ${cartucho.marca}\n`;
-          respuesta += `• **Cantidad disponible**: ${cartucho.cantidadDisponible}\n`;
-          respuesta += `• **Fecha de ingreso**: ${new Date(cartucho.fechaIngreso).toLocaleDateString()}\n`;
+        if (componente) {
+          let respuesta = `📋 **Componente ${numeroSerie}** (Sistema Local):\n\n`;
+          respuesta += `• **Estado actual**: ${componente.estado}\n`;
+          respuesta += `• **Marca**: ${componente.marca}\n`;
+          respuesta += `• **Cantidad disponible**: ${componente.cantidadDisponible}\n`;
+          respuesta += `• **Fecha de ingreso**: ${new Date(componente.fechaIngreso).toLocaleDateString()}\n`;
           
-          if (cartucho.equipoPadre) {
-            respuesta += `• **Cliente actual**: ${cartucho.equipoPadre.cliente}\n`;
-            respuesta += `• **Equipo**: ${cartucho.equipoPadre.nombreEquipo}\n`;
+          if (componente.equipoPadre) {
+            respuesta += `• **Cliente actual**: ${componente.equipoPadre.cliente}\n`;
+            respuesta += `• **Equipo**: ${componente.equipoPadre.nombreEquipo}\n`;
           }
           
-          if (cartucho.observaciones) {
-            respuesta += `\n⚠️ **Observaciones**: ${cartucho.observaciones}\n`;
+          if (componente.observaciones) {
+            respuesta += `\n⚠️ **Observaciones**: ${componente.observaciones}\n`;
           }
           
           respuesta += `\n💡 *Para obtener respuestas más detalladas, configura tu API key de Grok.*`;
           return respuesta;
         } else {
-          return `❌ No encontré ningún cartucho con el número de serie "${numeroSerie}". ¿Podrías verificar el número?`;
+          return `❌ No encontré ningún componente con el número de serie "${numeroSerie}". ¿Podrías verificar el número?`;
         }
       }
     }
 
     // Consultas sobre estado
     if (consultaLower.includes('standby') || consultaLower.includes('espera')) {
-      const cartuchosStandby = cartuchos.filter((c: any) => 
+      const componentesStandby = componentes.filter((c: any) => 
         c.estado === 'En reparación' || 
         c.observaciones?.toLowerCase().includes('standby') ||
         c.observaciones?.toLowerCase().includes('error')
       );
       
-      if (cartuchosStandby.length > 0) {
-        let respuesta = `⏸️ **Cartuchos en Standby/Con Error** (${cartuchosStandby.length}) - Sistema Local:\n\n`;
-        cartuchosStandby.forEach((c: any) => {
+      if (componentesStandby.length > 0) {
+        let respuesta = `⏸️ **Componentes en Standby/Con Error** (${componentesStandby.length}) - Sistema Local:\n\n`;
+        componentesStandby.forEach((c: any) => {
           respuesta += `• **${c.numeroSerie || c.id.slice(0, 8)}** - ${c.marca}\n`;
           respuesta += `  Estado: ${c.estado}\n`;
           if (c.observaciones) {
@@ -443,20 +443,20 @@ Consulta del usuario: "${consulta}"`;
         respuesta += `💡 *Para análisis más profundo, configura tu API key de Grok.*`;
         return respuesta;
       } else {
-        return `✅ ¡Excelente! No hay cartuchos en standby actualmente. (Sistema Local)`;
+        return `✅ ¡Excelente! No hay componentes en standby actualmente. (Sistema Local)`;
       }
     }
 
-    // Consultas sobre disponibilidad por profundidad
-    const profundidadMatch = consultaLower.match(/(\d+\.?\d*)\s*mm/);
-    if (profundidadMatch) {
-      const profundidad = profundidadMatch[1] + 'mm';
-      const cartuchosProfundidad = cartuchos.filter((c: any) => 
-        c.nombre.includes(profundidad) && c.cantidadDisponible > 0
+    // Consultas sobre disponibilidad por especificación
+    const especMatch = consultaLower.match(/(\d+\.?\d*)\s*(mm|mhz|hz)/);
+    if (especMatch) {
+      const especificacion = especMatch[1] + especMatch[2];
+      const componentesEspec = componentes.filter((c: any) => 
+        c.nombre.includes(especificacion) && c.cantidadDisponible > 0
       );
       
-      return `🎯 **Cartuchos ${profundidad} disponibles**: ${cartuchosProfundidad.length} (Sistema Local)\n\n` +
-        cartuchosProfundidad.map((c: any) => 
+      return `🎯 **Componentes ${especificacion} disponibles**: ${componentesEspec.length} (Sistema Local)\n\n` +
+        componentesEspec.map((c: any) => 
           `• ${c.numeroSerie || 'SIN-SERIE'} - ${c.marca} (${c.cantidadDisponible} unidades)`
         ).join('\n') +
         `\n\n💡 *Para información más detallada, configura tu API key de Grok.*`;
@@ -464,18 +464,15 @@ Consulta del usuario: "${consulta}"`;
 
     // Estadísticas generales
     if (consultaLower.includes('estadística') || consultaLower.includes('resumen') || consultaLower.includes('total')) {
-      const disponibles = cartuchos.filter((c: any) => c.cantidadDisponible > 0).length;
-      const enUso = cartuchos.filter((c: any) => c.equipoPadre).length;
-      const conError = cartuchos.filter((c: any) => c.estado === 'En reparación').length;
+      const disponibles = componentes.filter((c: any) => c.cantidadDisponible > 0).length;
+      const enUso = componentes.filter((c: any) => c.equipoPadre).length;
+      const conError = componentes.filter((c: any) => c.estado === 'En reparación').length;
       
-      return `📊 **Resumen de Cartuchos HIFU** (Sistema Local):\n\n` +
-        `• **Total**: ${cartuchos.length} cartuchos\n` +
+      return `📊 **Resumen de Componentes** (Sistema Local):\n\n` +
+        `• **Total**: ${componentes.length} componentes\n` +
         `• **Disponibles**: ${disponibles}\n` +
         `• **En uso**: ${enUso}\n` +
         `• **Con error/standby**: ${conError}\n\n` +
-        `🏭 **Por marca**:\n` +
-        `• Classys: ${cartuchos.filter((c: any) => c.marca.toLowerCase() === 'classys').length}\n` +
-        `• Otras: ${cartuchos.filter((c: any) => c.marca.toLowerCase() !== 'classys').length}\n\n` +
         `💡 *Para análisis más avanzado y memoria persistente, configura tu API key de Grok.*`;
     }
 
@@ -499,10 +496,10 @@ Consulta del usuario: "${consulta}"`;
     // Respuesta por defecto con sugerencias
     return `🤖 **Sistema Local Activo** - Grok no configurado\n\n` +
       `Puedo ayudarte con:\n\n` +
-      `• **Buscar por serie**: "¿De quién era el cartucho serie CL-UF3-2024-001?"\n` +
-      `• **Estado standby**: "¿Qué cartuchos están en standby?"\n` +
-      `• **Por profundidad**: "¿Cuántos cartuchos 4.5mm tenemos?"\n` +
-      `• **Estadísticas**: "Dame un resumen de cartuchos"\n` +
+      `• **Buscar por serie**: "¿De quién era el componente serie CL-UF3-2024-001?"\n` +
+      `• **Estado standby**: "¿Qué componentes están en standby?"\n` +
+      `• **Por especificación**: "¿Cuántos componentes 4.5mm tenemos?"\n` +
+      `• **Estadísticas**: "Dame un resumen de componentes"\n` +
       `• **Memoria**: "¿Te acuerdas de...?"\n\n` +
       `💡 **Para activar Grok IA completa**:\n` +
       `1. Obtén tu API key en https://console.x.ai/\n` +

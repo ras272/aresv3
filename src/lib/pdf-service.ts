@@ -400,7 +400,8 @@ export class PDFReporteService {
    * Generar datos del reporte desde un mantenimiento
    */
   static generarDatosReporte(mantenimiento: any, equipo: any, cliente: any): ReporteData {
-    const numeroReporte = WordReporteService.generarNumeroReporte(
+    // Usar el número de reporte del mantenimiento si existe, sino generar uno nuevo
+    const numeroReporte = mantenimiento.numeroReporte || WordReporteService.generarNumeroReporte(
       equipo.nombreEquipo, 
       mantenimiento.fecha
     );

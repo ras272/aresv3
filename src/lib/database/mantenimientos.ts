@@ -1,54 +1,16 @@
 import { supabase } from './shared/supabase';
 import type { Mantenimiento } from './shared/types';
 
+// Importar el nuevo servicio de numeración
+import { NumberingService } from '@/lib/services/numbering-service';
+
 /**
- * Genera un número de reporte único para mantenimientos
- * Formato: RPT-YYYYMMDD-XXX
- * @returns Promise<string> Número de reporte único
+ * @deprecated Usar NumberingService.generateReportNumber() en su lugar
+ * Mantenido para compatibilidad con código existente
  */
 export async function generateNumeroReporte(): Promise<string> {
-  try {
-    const hoy = new Date();
-    const fechaStr = hoy.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
-    
-    // Buscar el último número de reporte del día
-    const { data: ultimosReportes, error } = await supabase
-      .from('mantenimientos')
-      .select('numero_reporte')
-      .like('numero_reporte', `RPT-${fechaStr}-%`)
-      .order('numero_reporte', { ascending: false })
-      .limit(1);
-
-    if (error) {
-      console.warn('Error buscando últimos reportes, usando secuencial 001:', error);
-      return `RPT-${fechaStr}-001`;
-    }
-
-    let siguienteNumero = 1;
-    
-    if (ultimosReportes && ultimosReportes.length > 0) {
-      const ultimoReporte = ultimosReportes[0].numero_reporte;
-      if (ultimoReporte) {
-        // Extraer el número secuencial del último reporte
-        const match = ultimoReporte.match(/RPT-\d{8}-(\d{3})$/);
-        if (match) {
-          siguienteNumero = parseInt(match[1]) + 1;
-        }
-      }
-    }
-
-    // Formatear con ceros a la izquierda (001, 002, etc.)
-    const numeroSecuencial = siguienteNumero.toString().padStart(3, '0');
-    const numeroReporte = `RPT-${fechaStr}-${numeroSecuencial}`;
-
-    console.log(`✅ Número de reporte generado: ${numeroReporte}`);
-    return numeroReporte;
-  } catch (error) {
-    console.error('❌ Error generando número de reporte:', error);
-    // Fallback con timestamp
-    const timestamp = Date.now().toString().slice(-6);
-    return `RPT-FALLBACK-${timestamp}`;
-  }
+  console.warn('⚠️ generateNumeroReporte() está deprecado. Usar NumberingService.generateReportNumber()');
+  return NumberingService.generateReportNumber();
 }
 
 /**
@@ -195,8 +157,8 @@ export async function createMantenimiento(mantenimientoData: {
   tiempoReal?: number;
 }): Promise<Mantenimiento> {
   try {
-    // 🆕 Generar número de reporte único automáticamente
-    const numeroReporte = await generateNumeroReporte();
+    // 🆕 Generar número de reporte único automáticamente usando el servicio centralizado
+    const numeroReporte = await NumberingService.generateReportNumber();
     
     const { data, error } = await supabase
       .from('mantenimientos')

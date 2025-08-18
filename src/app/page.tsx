@@ -30,8 +30,7 @@ import {
   EquiposStatusRecharts,
   MantenimientosTrendRecharts,
   StockPorMarcaRecharts,
-  IngresosMensualesRecharts,
-  KPIsRecharts
+  IngresosMensualesRecharts
 } from '@/components/charts/RechartsComponents';
 import { UniversalSearch } from '@/components/search/UniversalSearch';
 
@@ -96,7 +95,7 @@ const AnimatedTitle = () => {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { equipos, mantenimientos, componentesDisponibles } = useAppStore();
+  const { equipos, mantenimientos, componentesDisponibles, stockItems } = useAppStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -218,12 +217,17 @@ export default function Dashboard() {
     }
   ];
 
-  // 🔧 Estado operacional
+  // 🔧 Estado operacional - ACTUALIZADO para usar stockItems reales
   const mantenimientosPendientes = mantenimientos.filter(m => m.estado === 'Pendiente');
   const mantenimientosEnProceso = mantenimientos.filter(m => m.estado === 'En proceso');
-  const stockBajo = componentesDisponibles.filter(c => c.cantidadDisponible <= 2);
-  const valorTotalStock = componentesDisponibles.reduce((total, c) => total + (c.cantidadDisponible * 150), 0);
-  const stockSaludable = ((componentesDisponibles.length - stockBajo.length) / componentesDisponibles.length * 100) || 85;
+  
+  // 📦 Usar stockItems reales en lugar de componentesDisponibles
+  const stockBajo = stockItems.filter(item => item.cantidadDisponible <= 5 && item.cantidadDisponible > 0);
+  const stockSinExistencias = stockItems.filter(item => item.cantidadDisponible === 0);
+  const valorTotalStock = stockItems.reduce((total, item) => total + (item.cantidadDisponible * 200), 0);
+  const stockSaludable = stockItems.length > 0 
+    ? ((stockItems.length - stockBajo.length - stockSinExistencias.length) / stockItems.length * 100) 
+    : 100;
 
   // 🚨 Alertas ejecutivas
   const generarAlertasEjecutivas = () => {
@@ -315,7 +319,7 @@ export default function Dashboard() {
             />
             {/* Debug: Mostrar cantidad de datos */}
             <div className="text-xs text-gray-500 text-center">
-              Datos: {equipos.length} equipos, {mantenimientos.length} mantenimientos, {componentesDisponibles.length} componentes
+              Datos: {equipos.length} equipos, {mantenimientos.length} mantenimientos, {stockItems.length} items stock, {componentesDisponibles.length} componentes
             </div>
           </div>
         </motion.div>
@@ -364,20 +368,47 @@ export default function Dashboard() {
             fueraDeServicio={equipos.filter(e => e.componentes?.some(c => c.estado === 'Fuera de servicio') ?? false).length}
           />
 
-          {/* KPIs Principales */}
-          <KPIsRecharts
-            satisfaccionCliente={Math.round(metricas.satisfaccion * 20)} // Convertir de 0-5 a 0-100
-            eficienciaOperativa={metricas.tiempoPromedio <= 2.5 ? 85 : 65}
-            cumplimientoSLA={Math.round(stockSaludable)}
+          {/* Tendencia de Mantenimientos */}
+          <MantenimientosTrendRecharts
+            data={(() => {
+              // Generar datos de los últimos 6 meses
+              const hoy = new Date();
+              const ultimosSeisMeses = Array.from({ length: 6 }, (_, i) => {
+                const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - (5 - i), 1);
+                return {
+                  mes: fecha.toLocaleDateString('es-PY', { month: 'short' }),
+                  fecha: fecha
+                };
+              });
+              
+              return ultimosSeisMeses.map(({ mes, fecha }) => {
+                const inicioMes = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+                const finMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0);
+                
+                const mantenimientosMes = mantenimientos.filter(m => {
+                  const fechaMantenimiento = new Date(m.fecha);
+                  return fechaMantenimiento >= inicioMes && fechaMantenimiento <= finMes;
+                });
+                
+                const preventivos = mantenimientosMes.filter(m => m.tipo === 'Preventivo').length;
+                const correctivos = mantenimientosMes.filter(m => m.tipo === 'Correctivo').length;
+                
+                return {
+                  mes,
+                  preventivos,
+                  correctivos
+                };
+              });
+            })()}
           />
 
           {/* Stock por Marca */}
           <StockPorMarcaRecharts
             data={(() => {
               const stockPorMarca = {};
-              componentesDisponibles.forEach(c => {
-                const marca = c.marca || 'Sin Marca';
-                stockPorMarca[marca] = (stockPorMarca[marca] || 0) + c.cantidadDisponible;
+              stockItems.forEach(item => {
+                const marca = item.marca || 'Sin Marca';
+                stockPorMarca[marca] = (stockPorMarca[marca] || 0) + item.cantidadDisponible;
               });
               return Object.entries(stockPorMarca)
                 .map(([marca, cantidad]) => ({ marca, cantidad }))
@@ -453,12 +484,12 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-orange-700 flex items-center">
                 <Package className="h-5 w-5 mr-2" />
-                Inventario
+                Stock
               </h3>
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => router.push('/inventario-tecnico')}
+                onClick={() => router.push('/stock')}
                 className="text-orange-600 hover:text-orange-700"
               >
                 Ver stock

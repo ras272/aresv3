@@ -234,7 +234,7 @@ export function MovimientosStock() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-blue-500" />
-              📊 Historial de Movimientos
+              Historial de Movimientos
             </CardTitle>
             <CardDescription>
               Trazabilidad completa de todos los movimientos de stock - {movimientosFiltrados.length} registros
@@ -246,7 +246,7 @@ export function MovimientosStock() {
               Exportar CSV
             </Button>
             <Button onClick={cargarMovimientos}>
-              🔄 Actualizar
+              Actualizar
             </Button>
           </div>
         </div>

@@ -31,9 +31,9 @@ export function useDevice(): DeviceInfo {
       const width = window.innerWidth;
       const height = window.innerHeight;
       
-      const isMobile = width < 768;
-      const isTablet = width >= 768 && width < 1024;
-      const isDesktop = width >= 1024;
+      const isMobile = width < 900; // Ampliado para incluir tablets pequeñas
+      const isTablet = width >= 900 && width < 1200;
+      const isDesktop = width >= 1200;
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       const orientation = width > height ? 'landscape' : 'portrait';
 
@@ -73,11 +73,13 @@ export function useFieldMode() {
 
   useEffect(() => {
     // Activar modo campo si:
-    // 1. Es móvil Y es touch device
-    // 2. O si está en orientación portrait en tablet
+    // 1. Es móvil (ancho < 900px) - MÁS AGRESIVO
+    // 2. O si es tablet en portrait
+    // 3. O si la pantalla es táctil y menor a 1000px
     const shouldActivateFieldMode = 
-      (device.isMobile && device.isTouchDevice) ||
-      (device.isTablet && device.orientation === 'portrait');
+      device.isMobile || // Cualquier pantalla < 900px
+      (device.isTablet && device.orientation === 'portrait') ||
+      (device.isTouchDevice && device.screenWidth < 1000); // Táctil < 1000px
 
     setIsFieldMode(shouldActivateFieldMode);
   }, [device]);

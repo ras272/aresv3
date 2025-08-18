@@ -114,9 +114,9 @@ const PLANTILLAS_CARGAS_2025 = {
     marca: 'Classys',
     tipo: 'Insumo' as const,
     productos: [
-      { nombre: 'Cartuchos HIFU 1.5mm', cantidad: 20 },
-      { nombre: 'Cartuchos HIFU 3.0mm', cantidad: 25 },
-      { nombre: 'Cartuchos HIFU 4.5mm', cantidad: 15 },
+      { nombre: 'Transductores HIFU 1.5mm', cantidad: 20 },
+      { nombre: 'Transductores HIFU 3.0mm', cantidad: 25 },
+      { nombre: 'Transductores HIFU 4.5mm', cantidad: 15 },
       { nombre: 'Gel Conductor Classys', cantidad: 30 },
       { nombre: 'Tips de Aplicación', cantidad: 40 },
       { nombre: 'Filtros de Aire', cantidad: 10 },
@@ -374,9 +374,9 @@ const INSUMOS_POR_MARCA: { [key: string]: string[] } = {
     'Otro insumo Servicio Técnico'
   ],
   'Classys': [
-    'Cartuchos HIFU 1.5mm',
-    'Cartuchos HIFU 3.0mm',
-    'Cartuchos HIFU 4.5mm',
+    'Transductores HIFU 1.5mm',
+    'Transductores HIFU 3.0mm',
+    'Transductores HIFU 4.5mm',
     'Transductores Doublo',
     'Transductores Ultraformer',
     'Gel Conductor Classys',
@@ -399,7 +399,7 @@ const INSUMOS_POR_MARCA: { [key: string]: string[] } = {
 
 const TIPOS_INSUMOS_ESTETICOS = [
   // Insumos específicos
-  'Cartuchos HIFU',
+  'Transductores HIFU',
   'Tips de Ultrasonido',
   'Puntas de Radiofrecuencia',
   'Gel Conductor',

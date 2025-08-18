@@ -37,6 +37,8 @@ import {
   type MovimientoStock,
 } from "@/lib/database/stock";
 
+import { NumberingService } from "@/lib/services/numbering-service";
+
 import {
   getAllEquipos,
   createEquipo,

@@ -363,8 +363,8 @@ function determinarTipoComponenteBasico(nombreProducto: string): string {
   if (nombre.includes('pieza de mano') || nombre.includes('handpiece')) {
     return 'Pieza de mano';
   }
-  if (nombre.includes('cartucho') || nombre.includes('cartridge')) {
-    return 'Cartucho';
+  if (nombre.includes('transductor') || nombre.includes('transducer')) {
+    return 'Transductor';
   }
   if (nombre.includes('transductor') || nombre.includes('transducer')) {
     return 'Transductor';

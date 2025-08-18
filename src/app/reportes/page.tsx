@@ -96,7 +96,7 @@ export default function ReportesPage() {
           ...mantenimiento,
           equipo,
           componente,
-          cliente: equipo?.cliente || "N/A",
+          cliente: equipo?.cliente || "N/A",  
           nombreEquipo: equipo?.nombreEquipo || "N/A",
           ubicacion: equipo?.ubicacion || "N/A",
         };
