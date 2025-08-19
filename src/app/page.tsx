@@ -95,7 +95,7 @@ const AnimatedTitle = () => {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { equipos, mantenimientos, componentesDisponibles, stockItems } = useAppStore();
+  const { equipos, mantenimientos, stockItems } = useAppStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -319,7 +319,7 @@ export default function Dashboard() {
             />
             {/* Debug: Mostrar cantidad de datos */}
             <div className="text-xs text-gray-500 text-center">
-              Datos: {equipos.length} equipos, {mantenimientos.length} mantenimientos, {stockItems.length} items stock, {componentesDisponibles.length} componentes
+              Datos: {equipos.length} equipos, {mantenimientos.length} mantenimientos, {stockItems.length} items stock
             </div>
           </div>
         </motion.div>

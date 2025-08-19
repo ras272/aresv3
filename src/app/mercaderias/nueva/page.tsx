@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { ProductSelectorSimple as ProductSelector } from '@/components/mercaderias/ProductSelectorSimple';
 import { createProductoCatalogo } from '@/lib/catalogo-productos';
 import { supabase } from '@/lib/database/shared/supabase';
+import EquipoIngresadoModal from '@/components/servtec/EquipoIngresadoModal';
 
 // Componente ClienteSelector para dropdown de clínicas
 function ClienteSelector({ value, onChange, error }: {
@@ -394,6 +395,9 @@ export default function NuevaCargaPage() {
   const [marcasDisponibles, setMarcasDisponibles] = useState<string[]>([]);
   const [cargandoMarcas, setCargandoMarcas] = useState(true);
 
+  // Estado para modal de equipos ingresados
+  const [equipoIngresadoModalOpen, setEquipoIngresadoModalOpen] = useState(false);
+
   // Función para cargar marcas desde el catálogo
   const cargarMarcasDelCatalogo = async () => {
     try {
@@ -502,6 +506,14 @@ export default function NuevaCargaPage() {
       console.log('🔄 Productos resincronizados por cambio de marca/tipo:', productosFormateados);
     }
   }, [marcaSeleccionada, tipoProductoComun, productosRapidos, modoFormulario, setValue]);
+
+  // 🔧 NUEVO: Abrir modal automáticamente cuando se selecciona reparación
+  useEffect(() => {
+    if (tipoCargaWatched === 'reparacion') {
+      console.log('🔧 Tipo de carga "reparación" seleccionado, abriendo modal de equipos ingresados...');
+      setEquipoIngresadoModalOpen(true);
+    }
+  }, [tipoCargaWatched]);
 
   const agregarProductoManual = () => {
     if (!nombreProducto.trim()) {
@@ -1562,7 +1574,19 @@ export default function NuevaCargaPage() {
             </Button>
           </motion.div>
         </form>
+
+        {/* 🔧 NUEVO: Modal de equipos ingresados para reparación */}
+        <EquipoIngresadoModal
+          open={equipoIngresadoModalOpen}
+          onOpenChange={setEquipoIngresadoModalOpen}
+          onSave={async (equipoData) => {
+            console.log('🔧 Equipo ingresado guardado desde modal:', equipoData);
+            toast.success('Equipo registrado para servicio técnico exitosamente');
+            // Cerrar el modal después de guardar
+            setEquipoIngresadoModalOpen(false);
+          }}
+        />
       </div>
     </DashboardLayout>
   );
-} 
+}

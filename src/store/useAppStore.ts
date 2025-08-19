@@ -6,13 +6,14 @@ import {
   ComponenteEquipo,
   CargaMercaderia,
   ProductoCarga,
-  ComponenteDisponible,
-  AsignacionComponente,
+  ProductoStock,
   PlanMantenimiento,
   Tecnico,
   AppState,
   PermisosRol,
   Usuario,
+  SesionUsuario,
+  Clinica,
 } from "@/types";
 import { EquipoFormData, CargaMercaderiaFormData } from "@/lib/schemas";
 // Imports específicos por módulo (mejores prácticas)
@@ -43,9 +44,6 @@ import {
   getAllEquipos,
   createEquipo,
   deleteEquipo,
-  getAllComponentesDisponibles,
-  asignarComponenteAEquipo,
-  getHistorialAsignaciones as dbGetHistorialAsignaciones,
   updateComponente as dbUpdateComponente,
 } from "@/lib/database/equipos";
 
@@ -94,10 +92,8 @@ export const useAppStore = create<AppState>()(
         mantenimientos: [],
         cargasMercaderia: [],
         documentosCarga: [],
-        componentesDisponibles: [],
-        stockItems: [], // 🎯 NUEVO: Campo separado para stock general
-        movimientosStock: [], // 🎯 NUEVO: Para trazabilidad completa
-        historialAsignaciones: [],
+        stockItems: [], // 🎯 Para stock general
+        movimientosStock: [], // 🎯 Para trazabilidad completa
         remisiones: [],
         clinicas: [],
         transaccionesStock: [],
@@ -105,6 +101,7 @@ export const useAppStore = create<AppState>()(
         // 🆕 NUEVOS ARRAYS PARA CALENDARIO
         planesMantenimiento: [],
         tecnicos: [],
+
 
         // ===============================================
         // FUNCIONES DE CARGA DE DATOS
@@ -142,34 +139,27 @@ export const useAppStore = create<AppState>()(
               mantenimientos = mantenimientosDB;
 
               // Cargar el resto de datos
-              const [
-                cargas,
-                componentes,
-                historial,
-                clinicas,
-                remisiones,
-                transacciones,
-                documentos,
-                stockItems,
-                movimientos,
-              ] = await Promise.all([
-                getAllCargas(),
-                getAllComponentesDisponibles(),
-                dbGetHistorialAsignaciones(),
-                getAllClinicas(),
-                getAllRemisiones(),
-                getAllTransaccionesStock(),
-                getAllDocumentosCarga(),
-                getAllStockItems(),
-                getAllMovimientosStock(),
-              ]);
+            const [cargas,
+              clinicas,
+              remisiones,
+              transacciones,
+              documentos,
+              stockItems,
+              movimientos,
+            ] = await Promise.all([
+              getAllCargas(),
+              getAllClinicas(),
+              getAllRemisiones(),
+              getAllTransaccionesStock(),
+              getAllDocumentosCarga(),
+              getAllStockItems(),
+              getAllMovimientosStock(),
+            ]);
 
               set({
                 cargasMercaderia: cargas,
                 equipos: equipos,
                 mantenimientos: mantenimientos,
-                componentesDisponibles: componentes,
-                historialAsignaciones: historial,
                 clinicas: clinicas,
                 remisiones: remisiones,
                 transaccionesStock: transacciones,
@@ -192,8 +182,6 @@ export const useAppStore = create<AppState>()(
                 equipos: equiposReales,
                 mantenimientos: mantenimientosReales,
                 cargasMercaderia: [],
-                componentesDisponibles: [],
-                historialAsignaciones: [],
                 clinicas: [],
                 remisiones: [],
                 transaccionesStock: [],
@@ -283,7 +271,6 @@ export const useAppStore = create<AppState>()(
             // Recargar datos
             await Promise.all([
               get().loadStock(),
-              get().loadInventarioTecnico(),
             ]);
 
             console.log("✅ Detalles del producto actualizados exitosamente");
@@ -569,10 +556,7 @@ export const useAppStore = create<AppState>()(
             await registrarSalidaStockReporte(salidaDataConUsuario);
 
             // Recargar datos para mantener consistencia
-            await Promise.all([
-              get().loadInventarioTecnico(),
-              get().loadMovimientosStock(),
-            ]);
+            await get().loadMovimientosStock();
 
             console.log(
               "✅ Salida de stock para reporte registrada exitosamente por:",
@@ -603,10 +587,7 @@ export const useAppStore = create<AppState>()(
             await devolverRepuestosAlStockReporte(devolucionData);
 
             // Recargar datos para mantener consistencia
-            await Promise.all([
-              get().loadInventarioTecnico(),
-              get().loadMovimientosStock(),
-            ]);
+            await get().loadMovimientosStock();
 
             console.log("✅ Devolución de repuestos registrada exitosamente");
           } catch (error) {
@@ -691,10 +672,8 @@ export const useAppStore = create<AppState>()(
               movimientosStock: movimientos,
             });
 
-            // 🎯 RECARGAR INVENTARIO TÉCNICO para que aparezcan los nuevos componentes
-            await get().loadInventarioTecnico();
             console.log(
-              "✅ Stock, movimientos e inventario técnico recargados exitosamente después de agregar carga"
+              "✅ Stock y movimientos recargados exitosamente después de agregar carga"
             );
 
             return nuevaCarga;
@@ -782,92 +761,6 @@ export const useAppStore = create<AppState>()(
           }
         },
 
-        // ===============================================
-        // FUNCIONES DE INVENTARIO TÉCNICO
-        // ===============================================
-        loadInventarioTecnico: async () => {
-          try {
-            console.log("🔄 Cargando inventario técnico desde Supabase...");
-            const [componentes, historial] = await Promise.all([
-              getAllComponentesDisponibles(),
-              dbGetHistorialAsignaciones(),
-            ]);
-            set({
-              componentesDisponibles: componentes,
-              historialAsignaciones: historial,
-            });
-            console.log("✅ Inventario técnico cargado exitosamente:", {
-              componentes: componentes.length,
-              asignaciones: historial.length,
-            });
-          } catch (error) {
-            console.error("❌ Error loading inventario técnico:", error);
-          }
-        },
-
-        asignarComponente: async (
-          componenteId: string,
-          equipoId: string,
-          cantidadAsignada: number,
-          motivo: string,
-          tecnicoResponsable?: string,
-          observaciones?: string
-        ) => {
-          try {
-            await asignarComponenteAEquipo(
-              componenteId,
-              equipoId,
-              cantidadAsignada,
-              motivo,
-              tecnicoResponsable,
-              observaciones
-            );
-            const [componentes, historial, equipos] = await Promise.all([
-              getAllComponentesDisponibles(),
-              dbGetHistorialAsignaciones(),
-              getAllEquipos(),
-            ]);
-            set({
-              componentesDisponibles: componentes,
-              historialAsignaciones: historial,
-              equipos: equipos,
-            });
-            console.log("✅ Componente asignado exitosamente");
-          } catch (error) {
-            console.error("❌ Error asignando componente:", error);
-            throw error;
-          }
-        },
-
-        getComponentesDisponibles: () => {
-          const { componentesDisponibles } = get();
-          return componentesDisponibles.filter(
-            (comp) =>
-              comp.estado === "Disponible" && comp.cantidadDisponible > 0
-          );
-        },
-
-        getHistorialAsignaciones: (
-          componenteId?: string,
-          equipoId?: string
-        ) => {
-          const { historialAsignaciones } = get();
-          if (componenteId && equipoId) {
-            return historialAsignaciones.filter(
-              (asig) =>
-                asig.componenteId === componenteId && asig.equipoId === equipoId
-            );
-          } else if (componenteId) {
-            return historialAsignaciones.filter(
-              (asig) => asig.componenteId === componenteId
-            );
-          } else if (equipoId) {
-            return historialAsignaciones.filter(
-              (asig) => asig.equipoId === equipoId
-            );
-          }
-          return historialAsignaciones;
-        },
 
         // ===============================================
         // HYDRATION FUNCTIONS
@@ -1337,7 +1230,6 @@ export const useAppStore = create<AppState>()(
 
             // Recargar inventarios
             await Promise.all([
-              get().loadInventarioTecnico(),
               get().loadStock(),
               get().loadMovimientosStock(),
             ]);
@@ -1696,6 +1588,8 @@ export const useAppStore = create<AppState>()(
               equipo.ubicacion.toLowerCase().includes(searchTerm)
           );
         },
+
+
       };
     },
     {

@@ -76,26 +76,15 @@ class StockModuleImpl implements StockModule {
   }
 
   /**
-   * Get all stock items from both componentes_disponibles and stock_items tables
+   * Get all stock items from stock_items table only
    */
   async getAllStockItems() {
     try {
       if (this.config?.enableLogging) {
-        console.log('🔄 Obteniendo stock desde ambas tablas (componentes_disponibles + stock_items)...');
-      }
-      
-      // Obtener datos de componentes_disponibles (productos nuevos)
-      const { data: componentes, error: componentesError } = await supabase
-        .from('componentes_disponibles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (componentesError) {
-        console.error('❌ Error obteniendo componentes_disponibles:', componentesError);
-        throw componentesError;
+        console.log('🔄 Obteniendo stock desde tabla stock_items...');
       }
 
-      // Obtener datos de stock_items (productos existentes)
+      // Solo obtener datos de stock_items
       const { data: stockItems, error: stockError } = await supabase
         .from('stock_items')
         .select('*')
@@ -107,33 +96,8 @@ class StockModuleImpl implements StockModule {
       }
 
       if (this.config?.enableLogging) {
-        console.log(`✅ Obtenidos ${componentes?.length || 0} componentes + ${stockItems?.length || 0} stock items`);
+        console.log(`✅ Obtenidos ${stockItems?.length || 0} stock items`);
       }
-
-      // Mapear componentes_disponibles al formato esperado
-      const componentesFormateados = (componentes || []).map((item: any) => ({
-        id: item.id,
-        nombre: item.nombre,
-        marca: item.marca,
-        modelo: item.modelo,
-        numeroSerie: item.numero_serie,
-        tipoComponente: item.tipo_componente || 'Producto',
-        cantidadDisponible: item.cantidad_disponible,
-        cantidadOriginal: item.cantidad_original || item.cantidad_disponible,
-        ubicacionFisica: item.ubicacion_fisica || `Almacén ${item.marca}`,
-        estado: item.estado,
-        observaciones: item.observaciones,
-        codigoCargaOrigen: item.codigo_carga_origen,
-        carpetaPrincipal: item.carpeta_principal || item.marca,
-        subcarpeta: item.subcarpeta,
-        rutaCarpeta: item.ruta_carpeta || item.marca,
-        tipoDestino: item.tipo_destino || 'stock',
-        fechaIngreso: item.fecha_ingreso,
-        imagen: item.imagen,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        fuente: 'componentes_disponibles'
-      }));
 
       // Mapear stock_items al formato esperado
       const stockItemsFormateados = (stockItems || []).map((item: any) => ({
@@ -142,10 +106,10 @@ class StockModuleImpl implements StockModule {
         marca: item.marca,
         modelo: item.modelo,
         numeroSerie: item.numero_serie,
-        tipoComponente: 'Producto',
+        tipoComponente: item.tipo_componente || 'Producto',
         cantidadDisponible: item.cantidad_actual,
         cantidadOriginal: item.cantidad_actual,
-        ubicacionFisica: `Almacén ${item.marca}`,
+        ubicacionFisica: item.ubicacion_fisica || `Almacén ${item.marca}`,
         estado: item.estado,
         observaciones: item.observaciones,
         codigoCargaOrigen: item.codigo_carga_origen,
@@ -160,19 +124,14 @@ class StockModuleImpl implements StockModule {
         fuente: 'stock_items'
       }));
 
-      // Combinar ambas fuentes
-      const todosLosItems = [...componentesFormateados, ...stockItemsFormateados];
-
       if (this.config?.enableLogging) {
-        console.log('✅ Stock items combinados correctamente:', {
-          componentes: componentesFormateados.length,
-          stockItems: stockItemsFormateados.length,
-          total: todosLosItems.length,
-          marcas: [...new Set(todosLosItems.map(item => item.marca))]
+        console.log('✅ Stock items obtenidos correctamente:', {
+          total: stockItemsFormateados.length,
+          marcas: [...new Set(stockItemsFormateados.map(item => item.marca))]
         });
       }
 
-      return todosLosItems;
+      return stockItemsFormateados;
     } catch (error) {
       console.error('❌ Error getting stock items:', error);
       throw error;
@@ -690,43 +649,11 @@ class StockModuleImpl implements StockModule {
    */
   async getAllTransaccionesStock() {
     try {
-      const { data, error } = await supabase
-        .from('transacciones_stock')
-        .select(`
-          *,
-          componentes_disponibles (
-            nombre,
-            marca,
-            modelo,
-            numero_serie
-          )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      return data.map((trans: any) => ({
-        id: trans.id,
-        componenteId: trans.componente_id,
-        tipo: trans.tipo,
-        cantidad: trans.cantidad,
-        cantidadAnterior: trans.cantidad_anterior,
-        cantidadNueva: trans.cantidad_nueva,
-        motivo: trans.motivo,
-        referencia: trans.referencia,
-        numeroFactura: trans.numero_factura,
-        cliente: trans.cliente,
-        tecnicoResponsable: trans.tecnico_responsable,
-        observaciones: trans.observaciones,
-        fecha: trans.fecha,
-        createdAt: trans.created_at,
-        componente: trans.componentes_disponibles ? {
-          nombre: trans.componentes_disponibles.nombre,
-          marca: trans.componentes_disponibles.marca,
-          modelo: trans.componentes_disponibles.modelo,
-          numeroSerie: trans.componentes_disponibles.numero_serie
-        } : undefined
-      }))
+      // Por ahora, devolver un array vacío ya que las transacciones_stock
+      // estaban vinculadas a componentes_disponibles que ya no existe
+      // TODO: Migrar transacciones_stock para usar stock_items
+      console.warn('⚠️ getAllTransaccionesStock: Retornando array vacío - tabla necesita migración');
+      return [];
     } catch (error) {
       console.error('❌ Error loading transacciones stock:', error)
       throw error

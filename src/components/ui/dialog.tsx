@@ -140,3 +140,29 @@ export function DialogTitle({ children, className = '' }: DialogTitleProps) {
     </h2>
   );
 }
+
+interface DialogDescriptionProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function DialogDescription({ children, className = '' }: DialogDescriptionProps) {
+  return (
+    <p className={`text-sm text-gray-600 mt-2 ${className}`}>
+      {children}
+    </p>
+  );
+}
+
+interface DialogFooterProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function DialogFooter({ children, className = '' }: DialogFooterProps) {
+  return (
+    <div className={`px-6 py-4 border-t border-gray-200 flex justify-end gap-2 ${className}`}>
+      {children}
+    </div>
+  );
+}

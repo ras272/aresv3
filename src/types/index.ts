@@ -160,58 +160,6 @@ export interface CargaMercaderia {
   createdAt: string;
 }
 
-// Tipos para Inventario Técnico
-export interface ComponenteDisponible {
-  id: string;
-  nombre: string;
-  marca: string;
-  modelo: string;
-  numeroSerie?: string;
-  tipoComponente: string;
-  cantidadDisponible: number;
-  cantidadOriginal: number;
-  ubicacionFisica?: string;
-  estado: 'Disponible' | 'Asignado' | 'En reparación';
-  observaciones?: string;
-  fechaIngreso: string;
-  codigoCargaOrigen?: string;
-  imagen?: string; // 🆕 URL de la imagen del producto
-  cargaInfo?: {
-    codigoCarga: string;
-    fechaIngreso: string;
-  } | null;
-  // 🎯 NUEVA INFORMACIÓN DEL EQUIPO PADRE
-  equipoPadre?: {
-    equipoId: string;
-    nombreEquipo: string;
-    cliente: string;
-    numeroSerieBase: string;
-  } | null;
-  createdAt: string;
-}
-
-export interface AsignacionComponente {
-  id: string;
-  componenteId: string;
-  equipoId: string;
-  cantidadAsignada: number;
-  fechaAsignacion: string;
-  tecnicoResponsable?: string;
-  motivo: string;
-  observaciones?: string;
-  componente?: {
-    nombre: string;
-    marca: string;
-    modelo: string;
-    tipoComponente: string;
-  };
-  equipo?: {
-    nombreEquipo: string;
-    cliente: string;
-    ubicacion: string;
-  };
-  createdAt: string;
-}
 
 // 🆕 TIPOS PARA CLÍNICAS
 export interface Clinica {
@@ -255,7 +203,6 @@ export interface PermisosModulo {
 export interface PermisosRol {
   dashboard: PermisosModulo;
   equipos: PermisosModulo;
-  inventarioTecnico: PermisosModulo;
   calendario: PermisosModulo;
   mercaderias: PermisosModulo;
   documentos: PermisosModulo;
@@ -267,6 +214,29 @@ export interface PermisosRol {
   stock: PermisosModulo;
   reportes: PermisosModulo;
   configuracion: PermisosModulo;
+}
+
+// 🆕 TIPO PARA PRODUCTOS EN STOCK GENERAL
+export interface ProductoStock {
+  id: string;
+  nombre: string;
+  marca: string;
+  modelo: string;
+  numeroSerie?: string;
+  tipoProducto: string;
+  cantidadDisponible: number;
+  cantidadOriginal: number;
+  ubicacionFisica?: string;
+  estado: 'Disponible' | 'Agotado' | 'Descontinuado';
+  observaciones?: string;
+  fechaIngreso: string;
+  codigoCargaOrigen?: string;
+  imagen?: string;
+  cargaInfo?: {
+    codigoCarga: string;
+    fechaIngreso: string;
+  } | null;
+  createdAt: string;
 }
 
 // 🆕 TIPOS PARA SISTEMA DE STOCK
@@ -338,6 +308,7 @@ export interface Remision {
   updatedAt: string;
 }
 
+
 // 🆕 TIPOS PARA GESTIÓN DOCUMENTAL
 export interface DocumentoCarga {
   id: string;
@@ -369,14 +340,13 @@ export interface AppState {
   equipos: Equipo[];
   mantenimientos: Mantenimiento[];
   cargasMercaderia: CargaMercaderia[];
-  componentesDisponibles: ComponenteDisponible[]; // Para inventario técnico
-  stockItems: ComponenteDisponible[]; // 🎯 NUEVO: Para stock general
-  historialAsignaciones: AsignacionComponente[];
+  stockItems: ProductoStock[]; // 🎯 Para stock general
   remisiones: Remision[];
   clinicas: Clinica[];
   transaccionesStock: TransaccionStock[];
   documentosCarga: DocumentoCarga[];
   movimientosStock: import('@/lib/database').MovimientoStock[];
+  
   
   // 🆕 NUEVOS ARRAYS PARA CALENDARIO
   planesMantenimiento: PlanMantenimiento[];
@@ -402,11 +372,6 @@ export interface AppState {
     equiposMedicos: number;
   }>;
   
-  // Funciones para inventario técnico
-  loadInventarioTecnico: () => Promise<void>;
-  asignarComponente: (componenteId: string, equipoId: string, cantidadAsignada: number, motivo: string, tecnicoResponsable?: string, observaciones?: string) => Promise<void>;
-  getComponentesDisponibles: () => ComponenteDisponible[];
-  getHistorialAsignaciones: (componenteId?: string, equipoId?: string) => AsignacionComponente[];
 
   // 🆕 FUNCIONES PARA STOCK GENERAL
   loadStock: () => Promise<void>;
@@ -553,6 +518,8 @@ export interface AppState {
   deleteDocumentoCarga: (id: string) => Promise<void>;
   getDocumentosByCarga: (cargaId: string) => DocumentoCarga[];
   getCargasConDocumentos: () => CargaConDocumentos[];
+
+
 
   // Hydration functions
   setHydrated: () => void;

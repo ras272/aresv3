@@ -84,13 +84,6 @@ const navigationSections: NavigationSection[] = [
         permission: "equipos",
         requiresWrite: true,
       },
-
-      {
-        name: "Inventario Técnico",
-        href: "/inventario-tecnico",
-        icon: Wrench,
-        permission: "inventarioTecnico",
-      },
       {
         name: "Calendario",
         href: "/calendario",

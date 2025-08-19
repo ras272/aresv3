@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppStore } from "@/store/useAppStore";
 import { useRouter } from "next/navigation";
 import {
@@ -23,12 +24,14 @@ import {
   Target,
   Zap,
   Building2,
+  Settings,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTicketModal } from "@/components/servtec/TicketModal";
 
 export default function ServTecPage() {
-  const { equipos, mantenimientos, componentesDisponibles, loadAllData } =
+  const { equipos, mantenimientos, loadAllData } =
     useAppStore();
   const router = useRouter();
 
@@ -112,8 +115,7 @@ export default function ServTecPage() {
     mantenimientosCriticos: mantenimientos.filter(
       (m) => m.estado === "Pendiente" && m.prioridad === "Crítica"
     ).length,
-    stockBajo: componentesDisponibles.filter((c) => c.cantidadDisponible <= 2)
-      .length,
+    stockBajo: 0, // Removed as technical inventory was eliminated
     ticketsHoy,
     ticketsSemana,
   };
@@ -248,141 +250,142 @@ export default function ServTecPage() {
             </Card>
           </div>
 
-          {/* Lista Completa de Mantenimientos */}
-          <Card className="mt-4 sm:mt-6 overflow-hidden">
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
-                  <span className="text-sm sm:text-base truncate">Todos los Mantenimientos ({mantenimientos.length})</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
-                  <select
-                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
-                    onChange={(e) => setFiltroEstado(e.target.value)}
-                    value={filtroEstado}
-                  >
-                    <option value="todos">Todos los estados</option>
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="En proceso">En proceso</option>
-                    <option value="Finalizado">Finalizado</option>
-                  </select>
-                  <select
-                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
-                    onChange={(e) => setFiltroPrioridad(e.target.value)}
-                    value={filtroPrioridad}
-                  >
-                    <option value="todas">Todas las prioridades</option>
-                    <option value="Crítica">Crítica</option>
-                    <option value="Alta">Alta</option>
-                    <option value="Media">Media</option>
-                    <option value="Baja">Baja</option>
-                  </select>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {mantenimientosFiltrados.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Activity className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                    <p>No hay mantenimientos que coincidan con los filtros</p>
-                  </div>
-                ) : (
-                  mantenimientosFiltrados.map((mantenimiento) => {
-                    const equipo = equipos.find(
-                      (e) => e.id === mantenimiento.equipoId
-                    );
-                    const fechaCreacion = new Date(
-                      mantenimiento.fecha || mantenimiento.created_at
-                    );
-                    const diasDesdeCreacion = Math.floor(
-                      (new Date().getTime() - fechaCreacion.getTime()) /
-                        (1000 * 3600 * 24)
-                    );
+          {/* Contenido principal - Lista de Tickets */}
 
-                    return (
-                      <div
-                        key={mantenimiento.id}
-                        className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer hover:border-blue-300 overflow-hidden"
-                        onClick={() => navegarAEquipo(mantenimiento.equipoId)}
-                        title={`Ver equipo: ${equipo?.nombreEquipo || "Equipo N/A"}`}
+              <Card className="overflow-hidden mt-4">
+                <CardHeader className="pb-3 sm:pb-4">
+                  <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+                      <span className="text-sm sm:text-base truncate">Todos los Mantenimientos ({mantenimientos.length})</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
+                      <select
+                        className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
+                        onChange={(e) => setFiltroEstado(e.target.value)}
+                        value={filtroEstado}
                       >
-                        <div className="flex flex-col gap-3">
-                          {/* Header with title and key badge */}
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate flex-1 min-w-0">
-                              {equipo?.nombreEquipo || "Equipo N/A"}
-                            </h3>
-                            {mantenimiento.numeroReporte && (
-                              <Badge className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 flex-shrink-0">
-                                {mantenimiento.numeroReporte}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Badges row */}
-                          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                            <Badge
-                              className={`text-xs font-medium ${
-                                mantenimiento.estado === "Finalizado"
-                                  ? "bg-green-100 text-green-800 border-green-300"
-                                  : mantenimiento.estado === "En proceso"
-                                  ? "bg-blue-100 text-blue-800 border-blue-300"
-                                  : "bg-yellow-100 text-yellow-800 border-yellow-300"
-                              }`}
-                            >
-                              {mantenimiento.estado}
-                            </Badge>
-                            <Badge
-                              className={`text-xs font-medium ${
-                                mantenimiento.prioridad === "Crítica"
-                                  ? "bg-red-100 text-red-800 border-red-300"
-                                  : mantenimiento.prioridad === "Alta"
-                                  ? "bg-orange-100 text-orange-800 border-orange-300"
-                                  : mantenimiento.prioridad === "Media"
-                                  ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                  : "bg-gray-100 text-gray-800 border-gray-300"
-                              }`}
-                            >
-                              {mantenimiento.prioridad}
-                            </Badge>
-                          </div>
-
-                          {/* Description */}
-                          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
-                            {mantenimiento.descripcion}
-                          </p>
-
-                          {/* Metadata */}
-                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1 min-w-0">
-                              <Building2 className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{equipo?.cliente || "Cliente N/A"}</span>
-                            </span>
-                            <span className="flex items-center gap-1 flex-shrink-0">
-                              <Calendar className="w-3 h-3" />
-                              {diasDesdeCreacion === 0
-                                ? "Hoy"
-                                : diasDesdeCreacion === 1
-                                ? "Ayer"
-                                : `Hace ${diasDesdeCreacion} días`}
-                            </span>
-                            {mantenimiento.tecnicoAsignado && (
-                              <span className="flex items-center gap-1 min-w-0">
-                                <User className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">{mantenimiento.tecnicoAsignado}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        <option value="todos">Todos los estados</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En proceso">En proceso</option>
+                        <option value="Finalizado">Finalizado</option>
+                      </select>
+                      <select
+                        className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
+                        onChange={(e) => setFiltroPrioridad(e.target.value)}
+                        value={filtroPrioridad}
+                      >
+                        <option value="todas">Todas las prioridades</option>
+                        <option value="Crítica">Crítica</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Media">Media</option>
+                        <option value="Baja">Baja</option>
+                      </select>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {mantenimientosFiltrados.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Activity className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                        <p>No hay mantenimientos que coincidan con los filtros</p>
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    ) : (
+                      mantenimientosFiltrados.map((mantenimiento) => {
+                        const equipo = equipos.find(
+                          (e) => e.id === mantenimiento.equipoId
+                        );
+                        const fechaCreacion = new Date(
+                          mantenimiento.fecha || mantenimiento.created_at
+                        );
+                        const diasDesdeCreacion = Math.floor(
+                          (new Date().getTime() - fechaCreacion.getTime()) /
+                            (1000 * 3600 * 24)
+                        );
+
+                        return (
+                          <div
+                            key={mantenimiento.id}
+                            className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer hover:border-blue-300 overflow-hidden"
+                            onClick={() => navegarAEquipo(mantenimiento.equipoId)}
+                            title={`Ver equipo: ${equipo?.nombreEquipo || "Equipo N/A"}`}
+                          >
+                            <div className="flex flex-col gap-3">
+                              {/* Header with title and key badge */}
+                              <div className="flex items-start justify-between gap-2">
+                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate flex-1 min-w-0">
+                                  {equipo?.nombreEquipo || "Equipo N/A"}
+                                </h3>
+                                {mantenimiento.numeroReporte && (
+                                  <Badge className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 flex-shrink-0">
+                                    {mantenimiento.numeroReporte}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Badges row */}
+                              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                <Badge
+                                  className={`text-xs font-medium ${
+                                    mantenimiento.estado === "Finalizado"
+                                      ? "bg-green-100 text-green-800 border-green-300"
+                                      : mantenimiento.estado === "En proceso"
+                                      ? "bg-blue-100 text-blue-800 border-blue-300"
+                                      : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                  }`}
+                                >
+                                  {mantenimiento.estado}
+                                </Badge>
+                                <Badge
+                                  className={`text-xs font-medium ${
+                                    mantenimiento.prioridad === "Crítica"
+                                      ? "bg-red-100 text-red-800 border-red-300"
+                                      : mantenimiento.prioridad === "Alta"
+                                      ? "bg-orange-100 text-orange-800 border-orange-300"
+                                      : mantenimiento.prioridad === "Media"
+                                      ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                      : "bg-gray-100 text-gray-800 border-gray-300"
+                                  }`}
+                                >
+                                  {mantenimiento.prioridad}
+                                </Badge>
+                              </div>
+
+                              {/* Description */}
+                              <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
+                                {mantenimiento.descripcion}
+                              </p>
+
+                              {/* Metadata */}
+                              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-gray-500">
+                                <span className="flex items-center gap-1 min-w-0">
+                                  <Building2 className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">{equipo?.cliente || "Cliente N/A"}</span>
+                                </span>
+                                <span className="flex items-center gap-1 flex-shrink-0">
+                                  <Calendar className="w-3 h-3" />
+                                  {diasDesdeCreacion === 0
+                                    ? "Hoy"
+                                    : diasDesdeCreacion === 1
+                                    ? "Ayer"
+                                    : `Hace ${diasDesdeCreacion} días`}
+                                </span>
+                                {mantenimiento.tecnicoAsignado && (
+                                  <span className="flex items-center gap-1 min-w-0">
+                                    <User className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">{mantenimiento.tecnicoAsignado}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
         </div>
       </div>
 
