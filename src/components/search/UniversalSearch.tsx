@@ -42,7 +42,7 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   
-  const { equipos, mantenimientos, componentesDisponibles, loadAllData } = useAppStore();
+  const { equipos, mantenimientos, stockItems, loadAllData } = useAppStore();
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -113,7 +113,7 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
     console.log('🔍 Datos disponibles para búsqueda:', {
       equipos: equipos.length,
       mantenimientos: mantenimientos.length,
-      componentesDisponibles: componentesDisponibles.length,
+      stockItems: stockItems.length,
       query: query
     });
 
@@ -180,27 +180,26 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
       }
     });
 
-    // Buscar en componentes
-    componentesDisponibles.forEach(componente => {
+    // Buscar en stock items
+    stockItems.forEach(item => {
       const matches = [
-        componente.nombre?.toLowerCase().includes(query),
-        componente.marca?.toLowerCase().includes(query),
-        componente.tipoComponente?.toLowerCase().includes(query),
-        componente.numeroSerie?.toLowerCase().includes(query),
-        componente.modelo?.toLowerCase().includes(query)
+        item.nombre?.toLowerCase().includes(query),
+        item.marca?.toLowerCase().includes(query),
+        item.categoria?.toLowerCase().includes(query),
+        item.descripcion?.toLowerCase().includes(query)
       ].some(Boolean);
 
       if (matches) {
         searchResults.push({
-          id: componente.id,
+          id: item.id,
           type: 'componente',
-          title: componente.nombre || 'Componente sin nombre',
-          subtitle: `${componente.marca} - ${componente.tipoComponente}`,
-          description: `Stock: ${componente.cantidadDisponible} unidades`,
+          title: item.nombre || 'Item sin nombre',
+          subtitle: `${item.marca || 'Sin marca'} - ${item.categoria || 'Sin categoría'}`,
+          description: `Stock: ${item.cantidadDisponible} unidades`,
           icon: Package,
-          route: `/inventario-tecnico`,
+          route: `/stock`,
           metadata: {
-            estado: componente.cantidadDisponible <= 2 ? 'Stock bajo' : 'Disponible'
+            estado: item.cantidadDisponible <= 5 ? 'Stock bajo' : 'Disponible'
           }
         });
       }

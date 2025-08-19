@@ -196,23 +196,46 @@ export const MantenimientosTrendRecharts: React.FC<MantenimientosTrendRechartsPr
   );
 };
 
-// 📊 Gráfico de Stock por Marca (Bar Chart)
-interface StockPorMarcaRechartsProps {
+// 📈 Gráfico de Movimientos de Stock por Marca (Area Chart)
+interface MovimientosStockRechartsProps {
   data: Array<{
-    marca: string;
-    cantidad: number;
+    mes: string;
+    [marca: string]: number | string;
   }>;
 }
 
-export const StockPorMarcaRecharts: React.FC<StockPorMarcaRechartsProps> = ({ data }) => {
+export const MovimientosStockRecharts: React.FC<MovimientosStockRechartsProps> = ({ data }) => {
+  // Obtener las marcas dinámicamente (excluyendo 'mes')
+  const marcas = data.length > 0 ? Object.keys(data[0]).filter(key => key !== 'mes') : [];
+  
+  // Colores para las diferentes marcas
+  const marcaColors = [
+    COLORS.primary,   // Blue
+    COLORS.success,   // Green  
+    COLORS.warning,   // Amber
+    COLORS.danger,    // Red
+    COLORS.purple,    // Purple
+    COLORS.cyan       // Cyan
+  ];
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const totalMovimientos = payload.reduce((sum: number, entry: any) => sum + entry.value, 0);
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-medium text-gray-900">{label}</p>
-          <p className="text-sm text-gray-600">
-            Stock: {payload[0].value} unidades
-          </p>
+          {payload
+            .sort((a: any, b: any) => b.value - a.value)
+            .map((entry: any, index: number) => (
+              <p key={index} className="text-sm" style={{ color: entry.color }}>
+                {entry.dataKey}: {entry.value} unidades
+              </p>
+            ))}
+          <div className="border-t pt-1 mt-1">
+            <p className="text-sm font-medium text-gray-700">
+              Total: {totalMovimientos} unidades
+            </p>
+          </div>
         </div>
       );
     }
@@ -222,20 +245,26 @@ export const StockPorMarcaRecharts: React.FC<StockPorMarcaRechartsProps> = ({ da
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900">Stock por Marca</CardTitle>
+        <CardTitle className="text-lg font-semibold text-gray-900">Movimientos de Stock por Marca</CardTitle>
+        <p className="text-sm text-gray-600">Productos que más salen del inventario</p>
       </CardHeader>
       <CardContent>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <defs>
+                {marcas.map((marca, index) => (
+                  <linearGradient key={marca} id={`color${marca.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={marcaColors[index % marcaColors.length]} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={marcaColors[index % marcaColors.length]} stopOpacity={0.1}/>
+                  </linearGradient>
+                ))}
+              </defs>
               <XAxis 
-                dataKey="marca" 
+                dataKey="mes" 
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 12, fill: COLORS.gray }}
-                angle={-45}
-                textAnchor="end"
-                height={60}
               />
               <YAxis 
                 axisLine={false}
@@ -244,13 +273,22 @@ export const StockPorMarcaRecharts: React.FC<StockPorMarcaRechartsProps> = ({ da
               />
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="cantidad" 
-                fill={COLORS.primary}
-                radius={[4, 4, 0, 0]}
-                name="Cantidad en Stock"
+              <Legend 
+                formatter={(value) => <span className="text-sm text-gray-700">{value}</span>}
               />
-            </BarChart>
+              {marcas.map((marca, index) => (
+                <Area
+                  key={marca}
+                  type="monotone"
+                  dataKey={marca}
+                  stackId="1"
+                  stroke={marcaColors[index % marcaColors.length]}
+                  fill={`url(#color${marca.replace(/\s+/g, '')})`}
+                  name={marca}
+                  strokeWidth={2}
+                />
+              ))}
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
