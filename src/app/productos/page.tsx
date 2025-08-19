@@ -21,17 +21,28 @@ import {
   AlertTriangle,
   CheckCircle,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  DollarSign,
+  Coins
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/database/shared/supabase';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ProductoCatalogo {
   id: string;
   marca: string;
   nombre: string;
   descripcion?: string;
+  categoria?: string;
+  codigo_producto?: string;
+  precio: number;
+  moneda: 'USD' | 'GS';
+  precio_minimo?: number;
+  precio_maximo?: number;
+  margen_utilidad?: number;
+  disponible_para_venta: boolean;
   activo: boolean;
   created_at: string;
   updated_at: string;
@@ -59,7 +70,15 @@ export default function CatalogoProductosPage() {
   const [formProducto, setFormProducto] = useState({
     marca: '',
     nombre: '',
-    descripcion: ''
+    descripcion: '',
+    categoria: '',
+    codigoProducto: '',
+    precio: '',
+    moneda: 'USD' as 'USD' | 'GS',
+    precioMinimo: '',
+    precioMaximo: '',
+    margenUtilidad: '',
+    disponibleParaVenta: true
   });
   const [nuevaMarca, setNuevaMarca] = useState('');
 
@@ -115,22 +134,44 @@ export default function CatalogoProductosPage() {
       setFormProducto({
         marca: producto.marca,
         nombre: producto.nombre,
-        descripcion: producto.descripcion || ''
+        descripcion: producto.descripcion || '',
+        categoria: producto.categoria || '',
+        codigoProducto: producto.codigo_producto || '',
+        precio: producto.precio.toString(),
+        moneda: producto.moneda,
+        precioMinimo: producto.precio_minimo?.toString() || '',
+        precioMaximo: producto.precio_maximo?.toString() || '',
+        margenUtilidad: producto.margen_utilidad?.toString() || '',
+        disponibleParaVenta: producto.disponible_para_venta
       });
     } else {
       setProductoEditando(null);
       setFormProducto({
         marca: marca || '',
         nombre: '',
-        descripcion: ''
+        descripcion: '',
+        categoria: '',
+        codigoProducto: '',
+        precio: '',
+        moneda: 'USD',
+        precioMinimo: '',
+        precioMaximo: '',
+        margenUtilidad: '',
+        disponibleParaVenta: true
       });
     }
     setModalProductoOpen(true);
   };
 
   const guardarProducto = async () => {
-    if (!formProducto.marca.trim() || !formProducto.nombre.trim()) {
-      toast.error('Marca y nombre son obligatorios');
+    if (!formProducto.marca.trim() || !formProducto.nombre.trim() || !formProducto.precio.trim()) {
+      toast.error('Marca, nombre y precio son obligatorios');
+      return;
+    }
+
+    const precio = parseFloat(formProducto.precio);
+    if (isNaN(precio) || precio <= 0) {
+      toast.error('El precio debe ser un número válido mayor a 0');
       return;
     }
 
@@ -143,6 +184,14 @@ export default function CatalogoProductosPage() {
             marca: formProducto.marca.trim(),
             nombre: formProducto.nombre.trim(),
             descripcion: formProducto.descripcion.trim() || null,
+            categoria: formProducto.categoria.trim() || null,
+            codigo_producto: formProducto.codigoProducto.trim() || null,
+            precio: precio,
+            moneda: formProducto.moneda,
+            precio_minimo: formProducto.precioMinimo ? parseFloat(formProducto.precioMinimo) : null,
+            precio_maximo: formProducto.precioMaximo ? parseFloat(formProducto.precioMaximo) : null,
+            margen_utilidad: formProducto.margenUtilidad ? parseFloat(formProducto.margenUtilidad) : null,
+            disponible_para_venta: formProducto.disponibleParaVenta,
             updated_at: new Date().toISOString()
           })
           .eq('id', productoEditando.id);
@@ -156,7 +205,16 @@ export default function CatalogoProductosPage() {
           .insert({
             marca: formProducto.marca.trim(),
             nombre: formProducto.nombre.trim(),
-            descripcion: formProducto.descripcion.trim() || null
+            descripcion: formProducto.descripcion.trim() || null,
+            categoria: formProducto.categoria.trim() || null,
+            codigo_producto: formProducto.codigoProducto.trim() || null,
+            precio: precio,
+            moneda: formProducto.moneda,
+            precio_minimo: formProducto.precioMinimo ? parseFloat(formProducto.precioMinimo) : null,
+            precio_maximo: formProducto.precioMaximo ? parseFloat(formProducto.precioMaximo) : null,
+            margen_utilidad: formProducto.margenUtilidad ? parseFloat(formProducto.margenUtilidad) : null,
+            disponible_para_venta: formProducto.disponibleParaVenta,
+            activo: true
           });
 
         if (error) {
@@ -403,13 +461,42 @@ export default function CatalogoProductosPage() {
                                   className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
                                 >
                                   <div className="flex-1">
-                                    <h3 className="font-medium text-gray-900">{producto.nombre}</h3>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h3 className="font-medium text-gray-900">{producto.nombre}</h3>
+                                      <div className="flex items-center gap-1 text-sm font-semibold">
+                                        {producto.moneda === 'USD' ? (
+                                          <div className="flex items-center gap-1 text-green-600">
+                                            <DollarSign className="w-4 h-4" />
+                                            <span>{producto.precio.toLocaleString('es-PY')}</span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-1 text-blue-600">
+                                            <Coins className="w-4 h-4" />
+                                            <span>₲ {producto.precio.toLocaleString('es-PY')}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
                                     {producto.descripcion && (
                                       <p className="text-sm text-gray-600 mt-1">{producto.descripcion}</p>
                                     )}
-                                    <p className="text-xs text-gray-400 mt-1">
-                                      Creado: {new Date(producto.created_at).toLocaleDateString('es-PY')}
-                                    </p>
+                                    {producto.categoria && (
+                                      <p className="text-xs text-purple-600 mt-1">Categoría: {producto.categoria}</p>
+                                    )}
+                                    <div className="flex items-center gap-4 mt-1">
+                                      <p className="text-xs text-gray-400">
+                                        Creado: {new Date(producto.created_at).toLocaleDateString('es-PY')}
+                                      </p>
+                                      {producto.codigo_producto && (
+                                        <p className="text-xs text-gray-500">Código: {producto.codigo_producto}</p>
+                                      )}
+                                      <Badge 
+                                        variant={producto.disponible_para_venta ? "default" : "secondary"}
+                                        className="text-xs"
+                                      >
+                                        {producto.disponible_para_venta ? 'Disponible' : 'No disponible'}
+                                      </Badge>
+                                    </div>
                                   </div>
                                   
                                   <div className="flex items-center gap-2">
@@ -446,7 +533,7 @@ export default function CatalogoProductosPage() {
 
         {/* Modal para agregar/editar producto */}
         <Dialog open={modalProductoOpen} onOpenChange={setModalProductoOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Package className="w-5 h-5" />
@@ -455,14 +542,26 @@ export default function CatalogoProductosPage() {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="marca">Marca *</Label>
-                <Input
-                  id="marca"
-                  value={formProducto.marca}
-                  onChange={(e) => setFormProducto(prev => ({ ...prev, marca: e.target.value }))}
-                  placeholder="Ej: Hydrafacial, Intermedic..."
-                />
+              {/* Información básica */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="marca">Marca *</Label>
+                  <Input
+                    id="marca"
+                    value={formProducto.marca}
+                    onChange={(e) => setFormProducto(prev => ({ ...prev, marca: e.target.value }))}
+                    placeholder="Ej: Hydrafacial, Intermedic..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="categoria">Categoría</Label>
+                  <Input
+                    id="categoria"
+                    value={formProducto.categoria}
+                    onChange={(e) => setFormProducto(prev => ({ ...prev, categoria: e.target.value }))}
+                    placeholder="Ej: Insumo, Repuesto..."
+                  />
+                </div>
               </div>
               
               <div>
@@ -474,9 +573,19 @@ export default function CatalogoProductosPage() {
                   placeholder="Ej: Britenol, Kit Hydra..."
                 />
               </div>
+
+              <div>
+                <Label htmlFor="codigoProducto">Código de Producto</Label>
+                <Input
+                  id="codigoProducto"
+                  value={formProducto.codigoProducto}
+                  onChange={(e) => setFormProducto(prev => ({ ...prev, codigoProducto: e.target.value }))}
+                  placeholder="Código interno o SKU"
+                />
+              </div>
               
               <div>
-                <Label htmlFor="descripcion">Descripción (Opcional)</Label>
+                <Label htmlFor="descripcion">Descripción</Label>
                 <Textarea
                   id="descripcion"
                   value={formProducto.descripcion}
@@ -484,6 +593,110 @@ export default function CatalogoProductosPage() {
                   placeholder="Descripción adicional del producto..."
                   rows={3}
                 />
+              </div>
+
+              {/* Información de precios */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  Información de Precios
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="precio">Precio *</Label>
+                    <Input
+                      id="precio"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formProducto.precio}
+                      onChange={(e) => setFormProducto(prev => ({ ...prev, precio: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="moneda">Moneda *</Label>
+                    <Select
+                      value={formProducto.moneda}
+                      onValueChange={(value: 'USD' | 'GS') => setFormProducto(prev => ({ ...prev, moneda: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar moneda" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-green-600" />
+                            USD - Dólares
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="GS">
+                          <div className="flex items-center gap-2">
+                            <Coins className="w-4 h-4 text-blue-600" />
+                            GS - Guaraníes
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <Label htmlFor="precioMinimo">Precio Mínimo</Label>
+                    <Input
+                      id="precioMinimo"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formProducto.precioMinimo}
+                      onChange={(e) => setFormProducto(prev => ({ ...prev, precioMinimo: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="precioMaximo">Precio Máximo</Label>
+                    <Input
+                      id="precioMaximo"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formProducto.precioMaximo}
+                      onChange={(e) => setFormProducto(prev => ({ ...prev, precioMaximo: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="margenUtilidad">Margen de Utilidad (%)</Label>
+                  <Input
+                    id="margenUtilidad"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={formProducto.margenUtilidad}
+                    onChange={(e) => setFormProducto(prev => ({ ...prev, margenUtilidad: e.target.value }))}
+                    placeholder="Ej: 15.50"
+                  />
+                </div>
+              </div>
+
+              {/* Configuración adicional */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-medium mb-4">Configuración</h3>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="disponibleParaVenta"
+                    checked={formProducto.disponibleParaVenta}
+                    onChange={(e) => setFormProducto(prev => ({ ...prev, disponibleParaVenta: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <Label htmlFor="disponibleParaVenta">Disponible para venta</Label>
+                </div>
               </div>
             </div>
             

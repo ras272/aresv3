@@ -95,14 +95,84 @@ const AnimatedTitle = () => {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { equipos, mantenimientos, stockItems } = useAppStore();
+  const { equipos, mantenimientos, stockItems, movimientosStock, catalogoProductos, loadCatalogoProductos, loadMovimientosStock } = useAppStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simular carga inicial
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
+    const cargarDatos = async () => {
+      try {
+        // Cargar catálogo de productos y movimientos de stock
+        await Promise.all([
+          loadCatalogoProductos(),
+          loadMovimientosStock()
+        ]);
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    cargarDatos();
   }, []);
+
+  // 💰 CALCULAR VENTAS REALES BASADAS EN MOVIMIENTOS DE STOCK
+  const calcularVentasReales = () => {
+    const hoy = new Date();
+    const ultimosSeisMeses = Array.from({ length: 6 }, (_, i) => {
+      const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - (5 - i), 1);
+      return {
+        mes: fecha.toLocaleDateString('es-PY', { month: 'short' }),
+        mesNumero: fecha.getMonth(),
+        año: fecha.getFullYear(),
+        fecha: fecha
+      };
+    });
+
+    return ultimosSeisMeses.map(({ mes, mesNumero, año }) => {
+      const inicioMes = new Date(año, mesNumero, 1);
+      const finMes = new Date(año, mesNumero + 1, 0);
+      
+      // Obtener movimientos de salida del mes
+      const movimientosMes = movimientosStock.filter(mov => {
+        const fechaMovimiento = new Date(mov.fechaMovimiento);
+        return fechaMovimiento >= inicioMes && 
+               fechaMovimiento <= finMes && 
+               mov.tipoMovimiento === 'Salida';
+      });
+
+      let ventasUSD = 0;
+      let ventasGS = 0;
+
+      // Calcular ventas por movimiento usando precios del catálogo
+      movimientosMes.forEach(movimiento => {
+        // Buscar el producto en el catálogo por nombre y marca
+        const productoEnCatalogo = catalogoProductos.find(prod => 
+          prod.nombre === movimiento.productoNombre && 
+          prod.marca === movimiento.productoMarca
+        );
+
+        if (productoEnCatalogo) {
+          const valorVenta = productoEnCatalogo.precio * movimiento.cantidad;
+          
+          if (productoEnCatalogo.moneda === 'USD') {
+            ventasUSD += valorVenta;
+          } else {
+            ventasGS += valorVenta;
+          }
+        } else {
+          // Si no está en catálogo, usar precio estimado en USD por defecto
+          ventasUSD += movimiento.cantidad * 50; // Precio estimado
+        }
+      });
+
+      return {
+        mes,
+        ventasUSD: Math.round(ventasUSD),
+        ventasGS: Math.round(ventasGS)
+      };
+    });
+  };
 
   // 📊 CÁLCULOS EJECUTIVOS AVANZADOS
   const calcularMetricasEjecutivas = () => {
@@ -382,26 +452,9 @@ export default function Dashboard() {
             })()}
           />
 
-          {/* Ingresos Mensuales */}
+          {/* Ventas Mensuales - ACTUALIZADO para usar datos reales */}
           <IngresosMensualesRecharts
-            data={(() => {
-              const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
-              const hoy = new Date();
-              return meses.map((mes, index) => {
-                const fechaMes = new Date(hoy.getFullYear(), index, 1);
-                const ingresosMes = mantenimientos
-                  .filter(m => {
-                    const fechaM = new Date(m.fecha);
-                    return fechaM.getMonth() === index && 
-                           fechaM.getFullYear() === hoy.getFullYear() &&
-                           m.estado === 'Finalizado' && 
-                           m.precioServicio;
-                  })
-                  .reduce((total, m) => total + (m.precioServicio || 0), 0);
-                
-                return { mes, ingresos: ingresosMes };
-              });
-            })()}
+            data={calcularVentasReales()}
           />
         </motion.div>
 

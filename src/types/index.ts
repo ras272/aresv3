@@ -37,7 +37,8 @@ export interface Mantenimiento {
     tipo: string;
   };
   reporteGenerado?: boolean;
-  precioServicio?: number; // 💰 Precio del servicio en guaraníes (se completa al generar reporte)
+  precioServicio?: number; // 💰 Precio del servicio (se completa al generar reporte)
+  monedaServicio?: 'USD' | 'GS'; // 💱 Moneda del precio del servicio
   
   // 🔧 REPUESTOS UTILIZADOS EN EL SERVICIO
   repuestosUtilizados?: Array<{
@@ -232,6 +233,10 @@ export interface ProductoStock {
   fechaIngreso: string;
   codigoCargaOrigen?: string;
   imagen?: string;
+  // 💰 Campos de precio heredados del catálogo
+  precio?: number;
+  moneda?: 'USD' | 'GS';
+  catalogoProductoId?: string;
   cargaInfo?: {
     codigoCarga: string;
     fechaIngreso: string;
@@ -333,9 +338,30 @@ export interface CargaConDocumentos extends CargaMercaderia {
   totalDocumentos: number;
 }
 
+// 🆕 TIPOS PARA CATÁLOGO DE PRODUCTOS CON PRECIOS
+export interface CatalogoProducto {
+  id: string;
+  marca: string;
+  nombre: string;
+  descripcion?: string;
+  categoria?: string;
+  codigoProducto?: string;
+  precio: number;
+  moneda: 'USD' | 'GS';
+  precioMinimo?: number;
+  precioMaximo?: number;
+  margenUtilidad?: number;
+  disponibleParaVenta: boolean;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AppState {
   // Hydration state
   isHydrated: boolean;
+  // 🆕 CATÁLOGO DE PRODUCTOS
+  catalogoProductos: CatalogoProducto[];
   
   equipos: Equipo[];
   mantenimientos: Mantenimiento[];
@@ -519,8 +545,15 @@ export interface AppState {
   getDocumentosByCarga: (cargaId: string) => DocumentoCarga[];
   getCargasConDocumentos: () => CargaConDocumentos[];
 
-
+  // 🆕 FUNCIONES PARA CATÁLOGO DE PRODUCTOS
+  loadCatalogoProductos: () => Promise<void>;
+  addCatalogoProducto: (producto: Omit<CatalogoProducto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CatalogoProducto>;
+  updateCatalogoProducto: (id: string, updates: Partial<CatalogoProducto>) => Promise<void>;
+  deleteCatalogoProducto: (id: string) => Promise<void>;
+  getCatalogoProductos: () => CatalogoProducto[];
+  getCatalogoProductosPorMoneda: (moneda: 'USD' | 'GS') => CatalogoProducto[];
+  buscarProductosEnCatalogo: (termino: string) => CatalogoProducto[];
 
   // Hydration functions
   setHydrated: () => void;
-} 
+}

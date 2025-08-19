@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   PieChart,
   Pie,
@@ -21,6 +21,8 @@ import {
   RadialBar
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { DollarSign, Coins } from 'lucide-react';
 
 // 🎨 Paleta de colores profesional
 const COLORS = {
@@ -296,16 +298,40 @@ export const MovimientosStockRecharts: React.FC<MovimientosStockRechartsProps> =
   );
 };
 
-// 📈 Gráfico de Ingresos Mensuales (Line Chart)
+// 📈 Gráfico de Ingresos Mensuales (Line Chart) - ACTUALIZADO PARA MULTI-MONEDA
 interface IngresosMensualesRechartsProps {
   data: Array<{
     mes: string;
-    ingresos: number;
+    ventasUSD: number;
+    ventasGS: number;
   }>;
 }
 
 export const IngresosMensualesRecharts: React.FC<IngresosMensualesRechartsProps> = ({ data }) => {
-  const formatCurrency = (value: number) => `$${value.toLocaleString()}`;
+  const [monedaSeleccionada, setMonedaSeleccionada] = useState<'USD' | 'GS'>('USD');
+
+  const formatCurrency = (value: number, moneda: 'USD' | 'GS') => {
+    if (moneda === 'USD') {
+      return `$${value.toLocaleString('es-PY')}`;
+    } else {
+      return `₲ ${value.toLocaleString('es-PY')}`;
+    }
+  };
+
+  const getCurrentData = () => {
+    return data.map(item => ({
+      ...item,
+      ingresos: monedaSeleccionada === 'USD' ? item.ventasUSD : item.ventasGS
+    }));
+  };
+
+  const getCurrentColor = () => {
+    return monedaSeleccionada === 'USD' ? COLORS.success : COLORS.primary;
+  };
+
+  const getTotalIngresos = () => {
+    return getCurrentData().reduce((sum, item) => sum + item.ingresos, 0);
+  };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -313,7 +339,7 @@ export const IngresosMensualesRecharts: React.FC<IngresosMensualesRechartsProps>
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-medium text-gray-900">{label}</p>
           <p className="text-sm text-gray-600">
-            Ingresos: {formatCurrency(payload[0].value)}
+            Ventas: {formatCurrency(payload[0].value, monedaSeleccionada)}
           </p>
         </div>
       );
@@ -324,12 +350,44 @@ export const IngresosMensualesRecharts: React.FC<IngresosMensualesRechartsProps>
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900">Ingresos Mensuales</CardTitle>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg font-semibold text-gray-900">Ventas Mensuales</CardTitle>
+            <p className="text-sm text-gray-600">Basado en movimientos reales de stock</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={monedaSeleccionada === 'USD' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMonedaSeleccionada('USD')}
+              className="flex items-center gap-1"
+            >
+              <DollarSign className="w-4 h-4" />
+              USD
+            </Button>
+            <Button
+              variant={monedaSeleccionada === 'GS' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMonedaSeleccionada('GS')}
+              className="flex items-center gap-1"
+            >
+              <Coins className="w-4 h-4" />
+              GS
+            </Button>
+          </div>
+        </div>
+        {/* Mostrar total de ingresos */}
+        <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm text-gray-600">Total en los últimos 6 meses</p>
+          <p className="text-2xl font-bold" style={{ color: getCurrentColor() }}>
+            {formatCurrency(getTotalIngresos(), monedaSeleccionada)}
+          </p>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <LineChart data={getCurrentData()} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <XAxis 
                 dataKey="mes" 
                 axisLine={false}
@@ -340,18 +398,18 @@ export const IngresosMensualesRecharts: React.FC<IngresosMensualesRechartsProps>
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 12, fill: COLORS.gray }}
-                tickFormatter={formatCurrency}
+                tickFormatter={(value) => formatCurrency(value, monedaSeleccionada)}
               />
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <Tooltip content={<CustomTooltip />} />
               <Line
                 type="monotone"
                 dataKey="ingresos"
-                stroke={COLORS.success}
+                stroke={getCurrentColor()}
                 strokeWidth={3}
-                dot={{ fill: COLORS.success, strokeWidth: 2, r: 6 }}
-                activeDot={{ r: 8, fill: COLORS.success }}
-                name="Ingresos"
+                dot={{ fill: getCurrentColor(), strokeWidth: 2, r: 6 }}
+                activeDot={{ r: 8, fill: getCurrentColor() }}
+                name="Ventas"
               />
             </LineChart>
           </ResponsiveContainer>

@@ -14,6 +14,7 @@ import {
   Usuario,
   SesionUsuario,
   Clinica,
+  CatalogoProducto,
 } from "@/types";
 import { EquipoFormData, CargaMercaderiaFormData } from "@/lib/schemas";
 // Imports específicos por módulo (mejores prácticas)
@@ -88,6 +89,8 @@ export const useAppStore = create<AppState>()(
         // Hydration state
         isHydrated: false,
         isDataLoaded: false, // 🎯 Flag para evitar cargas múltiples
+        // 🆕 CATÁLOGO DE PRODUCTOS
+        catalogoProductos: [],
         equipos: [],
         mantenimientos: [],
         cargasMercaderia: [],
@@ -138,7 +141,7 @@ export const useAppStore = create<AppState>()(
               equipos = equiposDB;
               mantenimientos = mantenimientosDB;
 
-              // Cargar el resto de datos
+              // Cargar el resto de datos incluyendo catálogo de productos
             const [cargas,
               clinicas,
               remisiones,
@@ -155,6 +158,9 @@ export const useAppStore = create<AppState>()(
               getAllStockItems(),
               getAllMovimientosStock(),
             ]);
+
+            // 🆕 CARGAR CATÁLOGO DE PRODUCTOS POR SEPARADO PARA CONTROL
+            await get().loadCatalogoProductos();
 
               set({
                 cargasMercaderia: cargas,
@@ -1586,6 +1592,180 @@ export const useAppStore = create<AppState>()(
               equipo.marca.toLowerCase().includes(searchTerm) ||
               equipo.modelo.toLowerCase().includes(searchTerm) ||
               equipo.ubicacion.toLowerCase().includes(searchTerm)
+          );
+        },
+
+        // ===============================================
+        // 🆕 FUNCIONES PARA CATÁLOGO DE PRODUCTOS
+        // ===============================================
+        loadCatalogoProductos: async () => {
+          try {
+            console.log("🔄 Cargando catálogo de productos desde Supabase...");
+            const { data, error } = await supabase
+              .from("catalogo_productos")
+              .select("*")
+              .eq("activo", true)
+              .order("marca", { ascending: true });
+
+            if (error) throw error;
+
+            const catalogoProductos: CatalogoProducto[] = data.map((producto) => ({
+              id: producto.id,
+              marca: producto.marca,
+              nombre: producto.nombre,
+              descripcion: producto.descripcion,
+              categoria: producto.categoria,
+              codigoProducto: producto.codigo_producto,
+              precio: producto.precio,
+              moneda: producto.moneda as 'USD' | 'GS',
+              precioMinimo: producto.precio_minimo,
+              precioMaximo: producto.precio_maximo,
+              margenUtilidad: producto.margen_utilidad,
+              disponibleParaVenta: producto.disponible_para_venta,
+              activo: producto.activo,
+              createdAt: producto.created_at,
+              updatedAt: producto.updated_at,
+            }));
+
+            set({ catalogoProductos });
+            console.log("✅ Catálogo de productos cargado exitosamente:", catalogoProductos.length);
+          } catch (error) {
+            console.error("❌ Error loading catálogo productos:", error);
+          }
+        },
+
+        addCatalogoProducto: async (productoData: Omit<CatalogoProducto, 'id' | 'createdAt' | 'updatedAt'>) => {
+          try {
+            console.log("🔄 Agregando producto al catálogo...", productoData);
+            const { data, error } = await supabase
+              .from("catalogo_productos")
+              .insert({
+                marca: productoData.marca,
+                nombre: productoData.nombre,
+                descripcion: productoData.descripcion,
+                categoria: productoData.categoria,
+                codigo_producto: productoData.codigoProducto,
+                precio: productoData.precio,
+                moneda: productoData.moneda,
+                precio_minimo: productoData.precioMinimo,
+                precio_maximo: productoData.precioMaximo,
+                margen_utilidad: productoData.margenUtilidad,
+                disponible_para_venta: productoData.disponibleParaVenta,
+                activo: productoData.activo,
+              })
+              .select()
+              .single();
+
+            if (error) throw error;
+
+            const nuevoProducto: CatalogoProducto = {
+              id: data.id,
+              marca: data.marca,
+              nombre: data.nombre,
+              descripcion: data.descripcion,
+              categoria: data.categoria,
+              codigoProducto: data.codigo_producto,
+              precio: data.precio,
+              moneda: data.moneda as 'USD' | 'GS',
+              precioMinimo: data.precio_minimo,
+              precioMaximo: data.precio_maximo,
+              margenUtilidad: data.margen_utilidad,
+              disponibleParaVenta: data.disponible_para_venta,
+              activo: data.activo,
+              createdAt: data.created_at,
+              updatedAt: data.updated_at,
+            };
+
+            // Recargar catálogo para mantener consistencia
+            await get().loadCatalogoProductos();
+            console.log("✅ Producto agregado al catálogo exitosamente");
+            return nuevoProducto;
+          } catch (error) {
+            console.error("❌ Error adding producto al catálogo:", error);
+            throw error;
+          }
+        },
+
+        updateCatalogoProducto: async (id: string, updates: Partial<CatalogoProducto>) => {
+          try {
+            console.log("🔄 Actualizando producto del catálogo...", { id, updates });
+            const updateData: any = {};
+            
+            if (updates.marca) updateData.marca = updates.marca;
+            if (updates.nombre) updateData.nombre = updates.nombre;
+            if (updates.descripcion !== undefined) updateData.descripcion = updates.descripcion;
+            if (updates.categoria !== undefined) updateData.categoria = updates.categoria;
+            if (updates.codigoProducto !== undefined) updateData.codigo_producto = updates.codigoProducto;
+            if (updates.precio !== undefined) updateData.precio = updates.precio;
+            if (updates.moneda) updateData.moneda = updates.moneda;
+            if (updates.precioMinimo !== undefined) updateData.precio_minimo = updates.precioMinimo;
+            if (updates.precioMaximo !== undefined) updateData.precio_maximo = updates.precioMaximo;
+            if (updates.margenUtilidad !== undefined) updateData.margen_utilidad = updates.margenUtilidad;
+            if (updates.disponibleParaVenta !== undefined) updateData.disponible_para_venta = updates.disponibleParaVenta;
+            if (updates.activo !== undefined) updateData.activo = updates.activo;
+            
+            updateData.updated_at = new Date().toISOString();
+
+            const { error } = await supabase
+              .from("catalogo_productos")
+              .update(updateData)
+              .eq("id", id);
+
+            if (error) throw error;
+
+            // Recargar catálogo para mantener consistencia
+            await get().loadCatalogoProductos();
+            console.log("✅ Producto del catálogo actualizado exitosamente");
+          } catch (error) {
+            console.error("❌ Error updating producto del catálogo:", error);
+            throw error;
+          }
+        },
+
+        deleteCatalogoProducto: async (id: string) => {
+          try {
+            console.log("🔄 Eliminando producto del catálogo...", id);
+            // Marcar como inactivo en lugar de eliminar físicamente
+            const { error } = await supabase
+              .from("catalogo_productos")
+              .update({
+                activo: false,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", id);
+
+            if (error) throw error;
+
+            // Recargar catálogo para mantener consistencia
+            await get().loadCatalogoProductos();
+            console.log("✅ Producto del catálogo eliminado (desactivado) exitosamente");
+          } catch (error) {
+            console.error("❌ Error deleting producto del catálogo:", error);
+            throw error;
+          }
+        },
+
+        getCatalogoProductos: () => {
+          const { catalogoProductos } = get();
+          return catalogoProductos || [];
+        },
+
+        getCatalogoProductosPorMoneda: (moneda: 'USD' | 'GS') => {
+          const { catalogoProductos } = get();
+          return (catalogoProductos || []).filter(p => p.moneda === moneda);
+        },
+
+        buscarProductosEnCatalogo: (termino: string) => {
+          const { catalogoProductos } = get();
+          if (!termino.trim()) return catalogoProductos || [];
+          
+          const terminoBusqueda = termino.toLowerCase();
+          return (catalogoProductos || []).filter(producto =>
+            producto.nombre.toLowerCase().includes(terminoBusqueda) ||
+            producto.marca.toLowerCase().includes(terminoBusqueda) ||
+            (producto.descripcion && producto.descripcion.toLowerCase().includes(terminoBusqueda)) ||
+            (producto.categoria && producto.categoria.toLowerCase().includes(terminoBusqueda)) ||
+            (producto.codigoProducto && producto.codigoProducto.toLowerCase().includes(terminoBusqueda))
           );
         },
 
