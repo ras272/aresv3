@@ -177,45 +177,7 @@ export default function Dashboard() {
 
   const metricas = calcularMetricasEjecutivas();
 
-  // 📊 Métricas principales ejecutivas
-  const metricasPrincipales = [
-    {
-      name: 'Ingresos del Mes',
-      value: `$${metricas.ingresosMesActual.toLocaleString()}`,
-      change: metricas.crecimientoIngresos,
-      icon: DollarSign,
-      bgColor: 'bg-emerald-50',
-      textColor: 'text-emerald-700',
-      borderColor: 'border-emerald-200'
-    },
-    {
-      name: 'Satisfacción Cliente',
-      value: `${metricas.satisfaccion.toFixed(1)}/5.0`,
-      change: metricas.satisfaccion >= 4.5 ? 5 : -2,
-      icon: Star,
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-700',
-      borderColor: 'border-amber-200'
-    },
-    {
-      name: 'Eficiencia Operativa',
-      value: `${metricas.tiempoPromedio.toFixed(1)}h`,
-      change: metricas.tiempoPromedio <= 2.5 ? 8 : -3,
-      icon: Zap,
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700',
-      borderColor: 'border-blue-200'
-    },
-    {
-      name: 'Clientes Activos',
-      value: metricas.clientesActivos.toString(),
-      change: 12,
-      icon: Users,
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-700',
-      borderColor: 'border-purple-200'
-    }
-  ];
+  // Se eliminó la sección de métricas principales ejecutivas
 
   // 🔧 Estado operacional - ACTUALIZADO para usar stockItems reales
   const mantenimientosPendientes = mantenimientos.filter(m => m.estado === 'Pendiente');
@@ -288,11 +250,16 @@ export default function Dashboard() {
     return (
       <DashboardLayout title="Dashboard" subtitle={<AnimatedTitle />}>
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Skeleton de la búsqueda */}
+          <div className="max-w-2xl mx-auto">
+            <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          {/* Skeleton de los gráficos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="p-6 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                <div className="h-48 bg-gray-200 rounded"></div>
               </Card>
             ))}
           </div>
@@ -323,36 +290,6 @@ export default function Dashboard() {
             </div>
           </div>
         </motion.div>
-
-        {/* 📊 Métricas Ejecutivas Principales */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {metricasPrincipales.map((metrica) => (
-            <Card key={metrica.name} className="p-6 border border-gray-200 bg-white">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600 mb-1">
-                    {metrica.name}
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {metrica.value}
-                  </p>
-                  <div className="flex items-center mt-2">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      metrica.change > 0 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
-                    }`}>
-                      {metrica.change > 0 ? '+' : ''}{metrica.change.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-gray-50">
-                  {React.createElement(metrica.icon, { className: "h-6 w-6 text-gray-700" })}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
 
         {/* 📊 Gráficos Ejecutivos */}
         <motion.div
