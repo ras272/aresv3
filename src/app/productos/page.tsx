@@ -75,9 +75,6 @@ export default function CatalogoProductosPage() {
     codigoProducto: '',
     precio: '',
     moneda: 'USD' as 'USD' | 'GS',
-    precioMinimo: '',
-    precioMaximo: '',
-    margenUtilidad: '',
     disponibleParaVenta: true
   });
   const [nuevaMarca, setNuevaMarca] = useState('');
@@ -139,9 +136,6 @@ export default function CatalogoProductosPage() {
         codigoProducto: producto.codigo_producto || '',
         precio: producto.precio.toString(),
         moneda: producto.moneda,
-        precioMinimo: producto.precio_minimo?.toString() || '',
-        precioMaximo: producto.precio_maximo?.toString() || '',
-        margenUtilidad: producto.margen_utilidad?.toString() || '',
         disponibleParaVenta: producto.disponible_para_venta
       });
     } else {
@@ -154,9 +148,6 @@ export default function CatalogoProductosPage() {
         codigoProducto: '',
         precio: '',
         moneda: 'USD',
-        precioMinimo: '',
-        precioMaximo: '',
-        margenUtilidad: '',
         disponibleParaVenta: true
       });
     }
@@ -188,9 +179,6 @@ export default function CatalogoProductosPage() {
             codigo_producto: formProducto.codigoProducto.trim() || null,
             precio: precio,
             moneda: formProducto.moneda,
-            precio_minimo: formProducto.precioMinimo ? parseFloat(formProducto.precioMinimo) : null,
-            precio_maximo: formProducto.precioMaximo ? parseFloat(formProducto.precioMaximo) : null,
-            margen_utilidad: formProducto.margenUtilidad ? parseFloat(formProducto.margenUtilidad) : null,
             disponible_para_venta: formProducto.disponibleParaVenta,
             updated_at: new Date().toISOString()
           })
@@ -210,9 +198,6 @@ export default function CatalogoProductosPage() {
             codigo_producto: formProducto.codigoProducto.trim() || null,
             precio: precio,
             moneda: formProducto.moneda,
-            precio_minimo: formProducto.precioMinimo ? parseFloat(formProducto.precioMinimo) : null,
-            precio_maximo: formProducto.precioMaximo ? parseFloat(formProducto.precioMaximo) : null,
-            margen_utilidad: formProducto.margenUtilidad ? parseFloat(formProducto.margenUtilidad) : null,
             disponible_para_venta: formProducto.disponibleParaVenta,
             activo: true
           });
@@ -595,11 +580,11 @@ export default function CatalogoProductosPage() {
                 />
               </div>
 
-              {/* Información de precios */}
+              {/* Información de precios - SIMPLIFICADO */}
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-green-600" />
-                  Información de Precios
+                  Precio del Producto
                 </h3>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -640,47 +625,6 @@ export default function CatalogoProductosPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <Label htmlFor="precioMinimo">Precio Mínimo</Label>
-                    <Input
-                      id="precioMinimo"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formProducto.precioMinimo}
-                      onChange={(e) => setFormProducto(prev => ({ ...prev, precioMinimo: e.target.value }))}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="precioMaximo">Precio Máximo</Label>
-                    <Input
-                      id="precioMaximo"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formProducto.precioMaximo}
-                      onChange={(e) => setFormProducto(prev => ({ ...prev, precioMaximo: e.target.value }))}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="margenUtilidad">Margen de Utilidad (%)</Label>
-                  <Input
-                    id="margenUtilidad"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={formProducto.margenUtilidad}
-                    onChange={(e) => setFormProducto(prev => ({ ...prev, margenUtilidad: e.target.value }))}
-                    placeholder="Ej: 15.50"
-                  />
                 </div>
               </div>
 
