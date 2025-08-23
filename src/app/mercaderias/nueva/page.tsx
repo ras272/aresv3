@@ -21,6 +21,7 @@ import { ProductSelectorSimple as ProductSelector } from '@/components/mercaderi
 import { createProductoCatalogo } from '@/lib/catalogo-productos';
 import { supabase } from '@/lib/database/shared/supabase';
 import EquipoIngresadoModal from '@/components/servtec/EquipoIngresadoModal';
+import { IngresoFraccionamiento } from '@/components/IngresoFraccionamiento';
 
 // Componente ClienteSelector para dropdown de clínicas
 function ClienteSelector({ value, onChange, error }: {
@@ -358,9 +359,20 @@ const INSUMOS_POR_MARCA: { [key: string]: string[] } = {
 const VOLTAJES_DISPONIBLES = ['110V', '220V', 'Dual (110V/220V)', 'USB/DC'];
 const FRECUENCIAS_COMUNES = ['4.5MHz', '7MHz', '2MHz', '1MHz', 'Variable', 'N/A'];
 
+// Función para generar código de carga
+const generateCodigoCarga = async () => {
+  const fecha = new Date();
+  const año = fecha.getFullYear().toString().slice(-2);
+  const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+  const dia = fecha.getDate().toString().padStart(2, '0');
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `CM-${año}${mes}${dia}-${random}`;
+};
+
 export default function NuevaCargaPage() {
   const router = useRouter();
-  const { addCargaMercaderia, generateCodigoCarga, loadClinicas } = useAppStore();
+  const { addCargaMercaderia, user, getClinicasActivas } = useAppStore();
+  const [mostrarFraccionamiento, setMostrarFraccionamiento] = useState<{visible: boolean; producto: any}>({visible: false, producto: null});
   const [codigoCarga, setCodigoCarga] = useState<string>('Generando...');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -429,16 +441,13 @@ export default function NuevaCargaPage() {
       try {
         const codigo = await generateCodigoCarga();
         setCodigoCarga(codigo);
-        await Promise.all([
-          loadClinicas(), // Cargar clínicas para el dropdown
-          cargarMarcasDelCatalogo() // Cargar marcas desde el catálogo
-        ]);
+        await cargarMarcasDelCatalogo(); // Solo cargar marcas
       } catch (error) {
         setCodigoCarga('Error al generar código');
       }
     };
     inicializar();
-  }, [generateCodigoCarga, loadClinicas]);
+  }, []);
 
   const {
     register,
@@ -1074,7 +1083,7 @@ export default function NuevaCargaPage() {
                           </div>
                           <div className="md:col-span-2">
                             <Label htmlFor="cantidadProducto" className="text-xs text-gray-600">
-                              Cantidad
+                              Cajas/Unidades
                             </Label>
                             <Input
                               id="cantidadProducto"
@@ -1083,6 +1092,7 @@ export default function NuevaCargaPage() {
                               value={cantidadProducto}
                               onChange={(e) => setCantidadProducto(parseInt(e.target.value) || 1)}
                               className="h-10 text-center"
+                              title="Si el producto viene en cajas, indica la cantidad de CAJAS. Si no, indica las unidades."
                             />
                           </div>
                           <div className="md:col-span-3">
@@ -1182,6 +1192,20 @@ export default function NuevaCargaPage() {
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
+                              {/* Botón para configurar fraccionamiento si es un insumo */}
+                              {tipoProductoComun === 'Insumo' && (
+                                <div className="md:col-span-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setMostrarFraccionamiento({visible: true, producto})}
+                                    className="text-blue-600 hover:bg-blue-50"
+                                  >
+                                    📦 Fraccionamiento
+                                  </Button>
+                                </div>
+                              )}
                             </motion.div>
                           ))}
                         </div>
@@ -1586,6 +1610,25 @@ export default function NuevaCargaPage() {
             setEquipoIngresadoModalOpen(false);
           }}
         />
+        
+        {/* Modal de Fraccionamiento */}
+        {mostrarFraccionamiento.visible && mostrarFraccionamiento.producto && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="max-w-2xl w-full mx-4">
+              <IngresoFraccionamiento
+                productoCargaId={mostrarFraccionamiento.producto.id}
+                productoNombre={mostrarFraccionamiento.producto.nombre}
+                cantidadInicial={mostrarFraccionamiento.producto.cantidad}
+                productoMarca={marcaSeleccionada}
+                productoModelo={mostrarFraccionamiento.producto.nombre} // Usar el nombre como modelo por defecto
+                onSuccess={() => {
+                  setMostrarFraccionamiento({visible: false, producto: null});
+                  toast.success('Configuración de fraccionamiento guardada');
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

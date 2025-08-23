@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/useAppStore';
-import type { MovimientoStock } from '@/lib/database';
+import type { MovimientoStock } from '@/lib/database/stock';
+import { formatearMetadatosFraccionamiento } from '@/lib/utils/formatMetadatos';
 
 interface MovimientosCarpetaModalProps {
   isOpen: boolean;
@@ -136,6 +137,9 @@ export function MovimientosCarpetaModal({
       minimumFractionDigits: 0
     }).format(value);
   };
+
+  // 🎨 NUEVA: Función para formatear metadatos del sistema de fraccionamiento
+  // Movida a archivo utilitario para reutilización
 
   if (!isOpen) return null;
 
@@ -286,10 +290,17 @@ export function MovimientosCarpetaModal({
                               </div>
                             )}
                             
+                            {/* 🎨 MEJORADO: Mostrar metadatos de fraccionamiento de forma amigable */}
                             {movimiento.descripcion && movimiento.motivo !== 'Utilizado en servicio técnico' && (
-                              <p className="text-sm text-muted-foreground">
-                                {movimiento.descripcion}
-                              </p>
+                              <div>
+                                {typeof formatearMetadatosFraccionamiento(movimiento.descripcion) === 'string' ? (
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatearMetadatosFraccionamiento(movimiento.descripcion)}
+                                  </p>
+                                ) : (
+                                  formatearMetadatosFraccionamiento(movimiento.descripcion)
+                                )}
+                              </div>
                             )}
                             
                             {movimiento.cliente && (

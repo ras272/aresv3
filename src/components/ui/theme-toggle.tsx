@@ -31,19 +31,137 @@ export function ThemeToggle({
   showLabel = true,
   showSystemOption = false
 }: ThemeToggleProps) {
-  const { theme, setTheme, resolvedTheme, systemTheme } = useTheme();
+  const themeContext = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [isHydrating, setIsHydrating] = React.useState(true);
+  const [hydrationError, setHydrationError] = React.useState(false);
 
-  // Optimized hydration handling to prevent theme flash
-  React.useEffect(() => {
-    setMounted(true);
-    
-    // Use requestAnimationFrame for smooth hydration
-    requestAnimationFrame(() => {
-      setIsHydrating(false);
-    });
+  // Safely extract theme properties with fallbacks
+  const { 
+    theme = 'system', 
+    setTheme = () => {}, 
+    resolvedTheme = 'light', 
+    systemTheme = 'light' 
+  } = themeContext || {};
+
+  // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
+  // Enhanced state management with safe access
+  const currentTheme = React.useMemo(() => {
+    try {
+      return (theme || 'system') as ThemeOption;
+    } catch {
+      return 'system' as ThemeOption;
+    }
+  }, [theme]);
+  
+  const isDarkMode = React.useMemo(() => {
+    try {
+      return theme === 'dark' || (theme === 'system' && resolvedTheme === 'dark');
+    } catch {
+      return false;
+    }
+  }, [theme, resolvedTheme]);
+
+  const getCurrentThemeLabel = React.useCallback(() => {
+    try {
+      if (currentTheme === 'system') {
+        return `System (${resolvedTheme || 'auto'})`;
+      }
+      return currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
+    } catch {
+      return 'Theme';
+    }
+  }, [currentTheme, resolvedTheme]);
+  
+  // Click handlers for cycling through theme states with error handling
+  const handleCycleTheme = React.useCallback(() => {
+    try {
+      const currentIndex = THEME_OPTIONS.indexOf(currentTheme);
+      const nextIndex = (currentIndex + 1) % THEME_OPTIONS.length;
+      const nextTheme = THEME_OPTIONS[nextIndex];
+      setTheme(nextTheme);
+    } catch (error) {
+      console.warn('ThemeToggle: Error cycling theme', error);
+    }
+  }, [currentTheme, setTheme]);
+
+  const handleToggle = React.useCallback((checked: boolean) => {
+    try {
+      if (showSystemOption && theme === 'system') {
+        // If currently on system, switch to explicit light/dark
+        setTheme(checked ? 'dark' : 'light');
+      } else {
+        // Normal light/dark toggle
+        setTheme(checked ? 'dark' : 'light');
+      }
+    } catch (error) {
+      console.warn('ThemeToggle: Error toggling theme', error);
+    }
+  }, [showSystemOption, theme, setTheme]);
+
+  const handleSystemToggle = React.useCallback(() => {
+    try {
+      setTheme('system');
+    } catch (error) {
+      console.warn('ThemeToggle: Error setting system theme', error);
+    }
+  }, [setTheme]);
+
+  // Keyboard navigation support (Enter, Space keys)
+  const handleKeyDown = React.useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (variant === 'cycle' || variant === 'button' || variant === 'compact') {
+        handleCycleTheme();
+      } else {
+        handleToggle(!isDarkMode);
+      }
+    }
+  }, [variant, handleCycleTheme, handleToggle, isDarkMode]);
+
+  // Visual feedback for current theme state with appropriate icons
+  const getThemeIcon = React.useCallback((themeType: ThemeOption) => {
+    switch (themeType) {
+      case 'light':
+        return Sun;
+      case 'dark':
+        return Moon;
+      case 'system':
+        return Monitor;
+      default:
+        return Monitor;
+    }
   }, []);
+
+  // Enhanced hydration handling with error recovery
+  React.useEffect(() => {
+    try {
+      setMounted(true);
+      
+      // Use multiple frames for smooth hydration
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsHydrating(false);
+        });
+      });
+    } catch (error) {
+      console.warn('ThemeToggle: Hydration error handled', error);
+      setHydrationError(true);
+      setIsHydrating(false);
+      setMounted(true);
+    }
+  }, []);
+
+  // NOW SAFE TO HAVE CONDITIONAL RETURNS
+  // Return safe fallback if hydration failed
+  if (hydrationError) {
+    return (
+      <div className={cn('flex items-center space-x-2 opacity-50', className)}>
+        <div className="size-4 bg-muted rounded-full" />
+        {showLabel && <span className="text-sm text-muted-foreground">Theme</span>}
+      </div>
+    );
+  }
 
   // Enhanced loading state with skeleton that matches the final component
   if (!mounted || isHydrating) {
@@ -80,65 +198,6 @@ export function ThemeToggle({
       </div>
     );
   }
-
-  // Enhanced state management
-  const currentTheme = (theme || 'system') as ThemeOption;
-  const isDarkMode = theme === 'dark' || (theme === 'system' && resolvedTheme === 'dark');
-  
-  // Click handlers for cycling through theme states
-  const handleCycleTheme = () => {
-    const currentIndex = THEME_OPTIONS.indexOf(currentTheme);
-    const nextIndex = (currentIndex + 1) % THEME_OPTIONS.length;
-    const nextTheme = THEME_OPTIONS[nextIndex];
-    setTheme(nextTheme);
-  };
-
-  const handleToggle = (checked: boolean) => {
-    if (showSystemOption && theme === 'system') {
-      // If currently on system, switch to explicit light/dark
-      setTheme(checked ? 'dark' : 'light');
-    } else {
-      // Normal light/dark toggle
-      setTheme(checked ? 'dark' : 'light');
-    }
-  };
-
-  const handleSystemToggle = () => {
-    setTheme('system');
-  };
-
-  // Keyboard navigation support (Enter, Space keys)
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      if (variant === 'cycle' || variant === 'button' || variant === 'compact') {
-        handleCycleTheme();
-      } else {
-        handleToggle(!isDarkMode);
-      }
-    }
-  };
-
-  // Visual feedback for current theme state with appropriate icons
-  const getThemeIcon = (themeType: ThemeOption) => {
-    switch (themeType) {
-      case 'light':
-        return Sun;
-      case 'dark':
-        return Moon;
-      case 'system':
-        return Monitor;
-      default:
-        return Monitor;
-    }
-  };
-
-  const getCurrentThemeLabel = () => {
-    if (currentTheme === 'system') {
-      return `System (${resolvedTheme || 'auto'})`;
-    }
-    return currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
-  };
 
   if (variant === 'switch') {
     return (
@@ -271,7 +330,7 @@ export function ThemeToggle({
             'text-sm font-medium transition-all duration-300 ease-in-out relative z-10',
             'group-hover:text-foreground'
           )}>
-            {variant === 'compact' ? currentTheme.charAt(0).toUpperCase() : getCurrentThemeLabel()}
+            {getCurrentThemeLabel()}
           </span>
         )}
         <span id="cycle-button-description" className="sr-only">

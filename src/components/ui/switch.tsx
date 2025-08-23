@@ -1,28 +1,85 @@
-'use client';
-
-import * as React from 'react';
-import * as SwitchPrimitives from '@radix-ui/react-switch';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input',
-      className
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
-      className={cn(
-        'pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0'
-      )}
-    />
-  </SwitchPrimitives.Root>
-));
-Switch.displayName = SwitchPrimitives.Root.displayName;
+interface SwitchProps {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  className?: string;
+  'aria-label'?: string;
+  'aria-describedby'?: string;
+}
 
-export { Switch };
+export function Switch({ 
+  checked, 
+  onCheckedChange, 
+  disabled = false, 
+  className,
+  'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy
+}: SwitchProps) {
+  return (
+    <label className={cn(
+      "relative inline-flex items-center cursor-pointer group",
+      disabled && "cursor-not-allowed opacity-50",
+      className
+    )}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onCheckedChange(e.target.checked)}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        className="sr-only"
+      />
+      
+      {/* Track del switch con animaciones mejoradas */}
+      <div className={cn(
+        "relative w-11 h-6 rounded-full transition-all duration-300 ease-in-out",
+        "focus-within:ring-4 focus-within:ring-opacity-20",
+        "group-hover:shadow-lg transform group-active:scale-95",
+        checked 
+          ? "bg-gradient-to-r from-blue-500 to-blue-600 focus-within:ring-blue-400 shadow-blue-200 shadow-lg" 
+          : "bg-gradient-to-r from-gray-200 to-gray-300 focus-within:ring-gray-400 shadow-gray-200 shadow-md",
+        disabled && "group-hover:shadow-none group-active:scale-100"
+      )}>
+        
+        {/* Efecto de brillo en el track */}
+        <div className={cn(
+          "absolute inset-0 rounded-full transition-opacity duration-500",
+          "bg-gradient-to-r from-transparent via-white/30 to-transparent",
+          checked ? "opacity-20" : "opacity-0"
+        )} />
+        
+        {/* Botón deslizante con animaciones mejoradas */}
+        <div className={cn(
+          "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-lg",
+          "transition-all duration-300 ease-in-out transform",
+          "flex items-center justify-center",
+          "group-hover:shadow-xl group-hover:scale-110",
+          "group-active:scale-95",
+          checked 
+            ? "translate-x-5 rotate-180" 
+            : "translate-x-0.5 rotate-0",
+          disabled && "group-hover:shadow-lg group-hover:scale-100 group-active:scale-100"
+        )}>
+          
+          {/* Indicador visual dentro del botón */}
+          <div className={cn(
+            "w-2 h-2 rounded-full transition-all duration-300 ease-in-out",
+            checked 
+              ? "bg-blue-500 shadow-sm scale-100" 
+              : "bg-gray-400 scale-75"
+          )} />
+        </div>
+        
+        {/* Efecto de onda al hacer clic */}
+        <div className={cn(
+          "absolute inset-0 rounded-full transition-all duration-700 ease-out",
+          "bg-current opacity-0 group-active:opacity-10 group-active:scale-150"
+        )} />
+      </div>
+    </label>
+  );
+}

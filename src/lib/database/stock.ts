@@ -34,6 +34,11 @@ export interface MovimientoStock {
   carpetaDestino?: string;
   ubicacionFisica?: string;
   itemType: 'stock_item' | 'componente_disponible';
+  
+  // 📦 CAMPOS DE FRACCIONAMIENTO
+  tipoUnidadMovimiento?: string; // 'caja' | 'unidad'
+  cajasAfectadas?: number;
+  unidadesSueltasAfectadas?: number;
 
   createdAt: string;
 }
@@ -81,35 +86,35 @@ class StockModuleImpl implements StockModule {
   async getAllStockItems() {
     try {
       if (this.config?.enableLogging) {
-        console.log('🔄 Obteniendo stock desde tabla stock_items...');
+        console.log('🔄 Obteniendo stock desde vista v_stock_disponible_fraccionado...');
       }
 
-      // Solo obtener datos de stock_items
+      // Usar la vista con información de fraccionamiento
       const { data: stockItems, error: stockError } = await supabase
-        .from('stock_items')
+        .from('v_stock_disponible_fraccionado')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (stockError) {
-        console.error('❌ Error obteniendo stock_items:', stockError);
+        console.error('❌ Error obteniendo stock desde vista:', stockError);
         throw stockError;
       }
 
       if (this.config?.enableLogging) {
-        console.log(`✅ Obtenidos ${stockItems?.length || 0} stock items`);
+        console.log(`✅ Obtenidos ${stockItems?.length || 0} stock items con info de fraccionamiento`);
       }
 
-      // Mapear stock_items al formato esperado
+      // Mapear datos de la vista al formato esperado por el store
       const stockItemsFormateados = (stockItems || []).map((item: any) => ({
         id: item.id,
         nombre: item.nombre,
         marca: item.marca,
         modelo: item.modelo,
-        numeroSerie: item.numero_serie,
-        tipoComponente: item.tipo_componente || 'Producto',
+        numeroSerie: item.numero_serie || null,
+        tipoComponente: 'Producto', // Campo fijo ya que todos los items en stock_items son productos
         cantidadDisponible: item.cantidad_actual,
         cantidadOriginal: item.cantidad_actual,
-        ubicacionFisica: item.ubicacion_fisica || `Almacén ${item.marca}`,
+        ubicacionFisica: `Almacén ${item.marca}`, // Campo calculado
         estado: item.estado,
         observaciones: item.observaciones,
         codigoCargaOrigen: item.codigo_carga_origen,
@@ -121,7 +126,17 @@ class StockModuleImpl implements StockModule {
         imagen: item.imagen_url,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        fuente: 'stock_items'
+        fuente: 'stock_items',
+        
+        // Nuevos campos de fraccionamiento para el stock principal
+        permite_fraccionamiento: item.permite_fraccionamiento,
+        unidades_por_paquete: item.unidades_por_paquete,
+        cajas_completas: item.cajas_completas,
+        unidades_sueltas: item.unidades_sueltas,
+        estado_caja: item.estado_caja,
+        badge_estado_caja: item.badge_estado_caja,
+        stock_formato_legible: item.stock_formato_legible,
+        unidades_totales: item.unidades_totales
       }));
 
       if (this.config?.enableLogging) {
@@ -421,44 +436,57 @@ class StockModuleImpl implements StockModule {
     ubicacionFisica?: string;
   }) {
     try {
-      const valorTotal = movimiento.costoUnitario ? movimiento.costoUnitario * movimiento.cantidad : null;
-
-      // 🔧 SOLUCIÓN: Para componentes_disponibles, no usar stock_item_id
-      // La tabla movimientos_stock tiene una restricción que requiere que stock_item_id exista en stock_items
-      // Para componentes_disponibles, usaremos NULL en stock_item_id y guardaremos el ID en codigo_item
+      // 🔧 SOLUCIÓN TEMPORAL: Primero intentar inserción básica sin metadata
+      // para identificar qué campos exactos espera la tabla
       
+      // Solo campos básicos que REALMENTE existen en la tabla movimientos_stock
       const insertData: any = {
-        item_type: movimiento.itemType || 'stock_item',
-        producto_nombre: movimiento.productoNombre,
-        producto_marca: movimiento.productoMarca,
-        producto_modelo: movimiento.productoModelo,
-        numero_serie: movimiento.numeroSerie,
         tipo_movimiento: movimiento.tipoMovimiento,
-        cantidad: movimiento.cantidad,
-        cantidad_anterior: movimiento.cantidadAnterior,
-        cantidad_nueva: movimiento.cantidadNueva,
+        cantidad: Math.round(movimiento.cantidad), // Redondear a entero
+        cantidad_anterior: Math.round(movimiento.cantidadAnterior), // Redondear a entero
+        cantidad_nueva: Math.round(movimiento.cantidadNueva), // Redondear a entero
         motivo: movimiento.motivo,
-        descripcion: movimiento.observaciones,
-        referencia_externa: movimiento.destinoOrigen,
-        usuario_responsable: movimiento.responsable,
-        codigo_carga_origen: movimiento.codigoCargaOrigen,
-        numero_factura: movimiento.numeroFactura,
-        cliente: movimiento.cliente,
-        costo_unitario: movimiento.costoUnitario,
-        valor_total: valorTotal,
-        carpeta_origen: movimiento.carpetaOrigen,
-        carpeta_destino: movimiento.carpetaDestino,
-        ubicacion_fisica: movimiento.ubicacionFisica,
-        fecha_movimiento: new Date().toISOString()
+        // Guardar información del producto y cliente en descripcion JSON
+        descripcion: JSON.stringify({
+          productoNombre: movimiento.productoNombre,
+          productoMarca: movimiento.productoMarca,
+          productoModelo: movimiento.productoModelo,
+          numeroSerie: movimiento.numeroSerie,
+          cliente: movimiento.cliente,
+          observaciones: movimiento.observaciones,
+          carpetaOrigen: movimiento.carpetaOrigen,
+          carpetaDestino: movimiento.carpetaDestino,
+          responsable: movimiento.responsable
+        })
       };
+
+      // Campos opcionales solo si tienen valor
+      if (movimiento.numeroFactura || movimiento.destinoOrigen) {
+        insertData.referencia_externa = movimiento.numeroFactura || movimiento.destinoOrigen;
+      }
+      if (movimiento.costoUnitario) {
+        insertData.costo_unitario = movimiento.costoUnitario;
+        insertData.costo_total = movimiento.costoUnitario * movimiento.cantidad;
+      }
 
       // Solo agregar stock_item_id si es realmente un stock_item
       if (movimiento.itemType === 'stock_item' && movimiento.itemId) {
         insertData.stock_item_id = movimiento.itemId;
-      } else if (movimiento.itemType === 'componente_disponible' && movimiento.itemId) {
-        // Para componentes_disponibles, guardar el ID en codigo_item para referencia
-        insertData.codigo_item = movimiento.itemId;
-        // stock_item_id se queda como NULL (permitido por la base de datos)
+      } else {
+        // Para componentes_disponibles, necesitamos crear un stock_item temporal o saltarnos esto
+        // Por ahora, saltaremos el registro de movimiento para componentes_disponibles
+        // ya que la tabla requiere un stock_item_id válido
+        if (this.config?.enableLogging) {
+          console.log('⚠️ Saltando registro de movimiento para componente_disponible:', {
+            itemId: movimiento.itemId,
+            producto: movimiento.productoNombre
+          });
+        }
+        return null; // No registrar movimiento para componentes_disponibles
+      }
+
+      if (this.config?.enableLogging) {
+        console.log('🔄 Intentando insertar movimiento con datos:', JSON.stringify(insertData, null, 2));
       }
 
       const { data, error } = await supabase
@@ -467,7 +495,16 @@ class StockModuleImpl implements StockModule {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error específico de Supabase:');
+        console.error('Message:', error.message);
+        console.error('Details:', error.details);
+        console.error('Hint:', error.hint);
+        console.error('Code:', error.code);
+        console.error('Full error object:', error);
+        console.error('Data que se intentó insertar:', JSON.stringify(insertData, null, 2));
+        throw error;
+      }
 
       if (this.config?.enableLogging) {
         console.log('✅ Movimiento de stock registrado:', {
@@ -492,45 +529,97 @@ class StockModuleImpl implements StockModule {
    */
   async getAllMovimientosStock(): Promise<MovimientoStock[]> {
     try {
+      // Obtener movimientos con información del stock_item relacionado
       const { data, error } = await supabase
         .from('movimientos_stock')
-        .select('*')
+        .select(`
+          *,
+          stock_items (
+            id,
+            nombre,
+            marca,
+            modelo,
+            numero_serie
+          )
+        `)
         .order('fecha_movimiento', { ascending: false });
 
       if (error) throw error;
 
-      return data.map((mov: any) => ({
-        id: mov.id,
-        stockItemId: mov.stock_item_id,
-        tipoMovimiento: mov.tipo_movimiento,
-        cantidad: mov.cantidad,
-        cantidadAnterior: mov.cantidad_anterior,
-        cantidadNueva: mov.cantidad_nueva,
-        motivo: mov.motivo,
-        descripcion: mov.descripcion,
-        referenciaExterna: mov.referencia_externa,
-        usuarioResponsable: mov.usuario_responsable,
-        tecnicoResponsable: mov.tecnico_responsable,
-        fechaMovimiento: mov.fecha_movimiento,
+      return data.map((mov: any) => {
+        // 🔧 CORREGIDO: Usar detalles_adicionales para metadatos de fraccionamiento
+        let datosAdicionales: any = {};
+        let metadataJSON: string | null = null;
+        
+        // Priorizar detalles_adicionales (donde se guardan metadatos de fraccionamiento)
+        if (mov.detalles_adicionales) {
+          try {
+            datosAdicionales = JSON.parse(mov.detalles_adicionales);
+            metadataJSON = mov.detalles_adicionales; // Guardar el JSON original
+          } catch (e) {
+            // Si no es JSON válido, probar con descripcion
+            try {
+              if (mov.descripcion) {
+                datosAdicionales = JSON.parse(mov.descripcion);
+                metadataJSON = mov.descripcion;
+              }
+            } catch (e2) {
+              datosAdicionales.observaciones = mov.descripcion;
+            }
+          }
+        } else {
+          // Fallback a descripcion si no hay detalles_adicionales
+          try {
+            if (mov.descripcion) {
+              datosAdicionales = JSON.parse(mov.descripcion);
+              metadataJSON = mov.descripcion;
+            }
+          } catch (e) {
+            datosAdicionales.observaciones = mov.descripcion;
+          }
+        }
+        
+        // Usar datos del stock_item relacionado si existe
+        const stockItem = mov.stock_items;
+        
+        return {
+          id: mov.id,
+          stockItemId: mov.stock_item_id,
+          tipoMovimiento: mov.tipo_movimiento,
+          cantidad: mov.cantidad,
+          cantidadAnterior: mov.cantidad_anterior,
+          cantidadNueva: mov.cantidad_nueva,
+          motivo: mov.motivo,
+          descripcion: metadataJSON || undefined, // 🔧 CORREGIDO: Pasar el JSON original para formateo
+          referenciaExterna: mov.referencia_externa,
+          usuarioResponsable: datosAdicionales.responsable || 'Sistema',
+          tecnicoResponsable: undefined,
+          fechaMovimiento: mov.fecha_movimiento,
 
-        // Nuevos campos
-        productoNombre: mov.producto_nombre,
-        productoMarca: mov.producto_marca,
-        productoModelo: mov.producto_modelo,
-        numeroSerie: mov.numero_serie,
-        codigoItem: mov.codigo_item,
-        codigoCargaOrigen: mov.codigo_carga_origen,
-        numeroFactura: mov.numero_factura,
-        cliente: mov.cliente,
-        costoUnitario: mov.costo_unitario,
-        valorTotal: mov.valor_total,
-        carpetaOrigen: mov.carpeta_origen,
-        carpetaDestino: mov.carpeta_destino,
-        ubicacionFisica: mov.ubicacion_fisica,
-        itemType: mov.item_type || 'stock_item',
+          // Datos del producto desde stock_item o desde JSON
+          productoNombre: stockItem?.nombre || datosAdicionales.productoNombre || 'Producto no especificado',
+          productoMarca: stockItem?.marca || datosAdicionales.productoMarca,
+          productoModelo: stockItem?.modelo || datosAdicionales.productoModelo,
+          numeroSerie: stockItem?.numero_serie || datosAdicionales.numeroSerie,
+          codigoItem: undefined,
+          codigoCargaOrigen: undefined,
+          numeroFactura: mov.referencia_externa,
+          cliente: datosAdicionales.cliente || mov.referencia_externa,
+          costoUnitario: mov.costo_unitario,
+          valorTotal: mov.costo_total,
+          carpetaOrigen: datosAdicionales.carpetaOrigen || stockItem?.marca,
+          carpetaDestino: datosAdicionales.carpetaDestino,
+          ubicacionFisica: undefined,
+          itemType: 'stock_item',
+          
+          // 📦 CAMPOS DE FRACCIONAMIENTO
+          tipoUnidadMovimiento: mov.tipo_unidad_movimiento,
+          cajasAfectadas: mov.cajas_afectadas,
+          unidadesSueltasAfectadas: mov.unidades_sueltas_afectadas,
 
-        createdAt: mov.created_at
-      }));
+          createdAt: mov.created_at
+        };
+      });
 
     } catch (error) {
       console.error('❌ Error obteniendo movimientos de stock:', error);
@@ -543,49 +632,128 @@ class StockModuleImpl implements StockModule {
    */
   async getMovimientosByProducto(productoNombre: string, productoMarca?: string): Promise<MovimientoStock[]> {
     try {
-      let query = supabase
+      // Obtener movimientos con información del stock_item relacionado
+      const { data, error } = await supabase
         .from('movimientos_stock')
-        .select('*')
-        .eq('producto_nombre', productoNombre);
-
-      if (productoMarca) {
-        query = query.eq('producto_marca', productoMarca);
-      }
-
-      const { data, error } = await query.order('fecha_movimiento', { ascending: false });
+        .select(`
+          *,
+          stock_items (
+            id,
+            nombre,
+            marca,
+            modelo,
+            numero_serie
+          )
+        `)
+        .order('fecha_movimiento', { ascending: false });
 
       if (error) throw error;
 
-      return data.map((mov: any) => ({
-        id: mov.id,
-        stockItemId: mov.stock_item_id,
-        tipoMovimiento: mov.tipo_movimiento,
-        cantidad: mov.cantidad,
-        cantidadAnterior: mov.cantidad_anterior,
-        cantidadNueva: mov.cantidad_nueva,
-        motivo: mov.motivo,
-        descripcion: mov.descripcion,
-        referenciaExterna: mov.referencia_externa,
-        usuarioResponsable: mov.usuario_responsable,
-        tecnicoResponsable: mov.tecnico_responsable,
-        fechaMovimiento: mov.fecha_movimiento,
+      // Filtrar por producto
+      const movimientosFiltrados = data.filter((mov: any) => {
+        const stockItem = mov.stock_items;
+        
+        // 🔧 CORREGIDO: Priorizar detalles_adicionales para metadatos de fraccionamiento
+        let datosAdicionales: any = {};
+        if (mov.detalles_adicionales) {
+          try {
+            datosAdicionales = JSON.parse(mov.detalles_adicionales);
+          } catch (e) {
+            try {
+              if (mov.descripcion) {
+                datosAdicionales = JSON.parse(mov.descripcion);
+              }
+            } catch (e2) {
+              // No es JSON
+            }
+          }
+        } else {
+          try {
+            if (mov.descripcion) {
+              datosAdicionales = JSON.parse(mov.descripcion);
+            }
+          } catch (e) {
+            // No es JSON
+          }
+        }
+        
+        const nombre = stockItem?.nombre || datosAdicionales.productoNombre;
+        const marca = stockItem?.marca || datosAdicionales.productoMarca;
+        
+        const nombreCoincide = nombre === productoNombre;
+        const marcaCoincide = !productoMarca || marca === productoMarca;
+        return nombreCoincide && marcaCoincide;
+      });
 
-        productoNombre: mov.producto_nombre,
-        productoMarca: mov.producto_marca,
-        productoModelo: mov.producto_modelo,
-        codigoItem: mov.codigo_item,
-        codigoCargaOrigen: mov.codigo_carga_origen,
-        numeroFactura: mov.numero_factura,
-        cliente: mov.cliente,
-        costoUnitario: mov.costo_unitario,
-        valorTotal: mov.valor_total,
-        carpetaOrigen: mov.carpeta_origen,
-        carpetaDestino: mov.carpeta_destino,
-        ubicacionFisica: mov.ubicacion_fisica,
-        itemType: mov.item_type || 'stock_item',
+      return movimientosFiltrados.map((mov: any) => {
+        // 🔧 CORREGIDO: Usar detalles_adicionales para metadatos de fraccionamiento
+        let datosAdicionales: any = {};
+        let metadataJSON: string | null = null;
+        
+        if (mov.detalles_adicionales) {
+          try {
+            datosAdicionales = JSON.parse(mov.detalles_adicionales);
+            metadataJSON = mov.detalles_adicionales;
+          } catch (e) {
+            try {
+              if (mov.descripcion) {
+                datosAdicionales = JSON.parse(mov.descripcion);
+                metadataJSON = mov.descripcion;
+              }
+            } catch (e2) {
+              datosAdicionales.observaciones = mov.descripcion;
+            }
+          }
+        } else {
+          try {
+            if (mov.descripcion) {
+              datosAdicionales = JSON.parse(mov.descripcion);
+              metadataJSON = mov.descripcion;
+            }
+          } catch (e) {
+            datosAdicionales.observaciones = mov.descripcion;
+          }
+        }
+        
+        const stockItem = mov.stock_items;
+        
+        return {
+          id: mov.id,
+          stockItemId: mov.stock_item_id,
+          tipoMovimiento: mov.tipo_movimiento,
+          cantidad: mov.cantidad,
+          cantidadAnterior: mov.cantidad_anterior,
+          cantidadNueva: mov.cantidad_nueva,
+          motivo: mov.motivo,
+          descripcion: metadataJSON || undefined, // 🔧 CORREGIDO: Pasar JSON original
+          referenciaExterna: mov.referencia_externa,
+          usuarioResponsable: datosAdicionales.responsable || 'Sistema',
+          tecnicoResponsable: undefined,
+          fechaMovimiento: mov.fecha_movimiento,
 
-        createdAt: mov.created_at
-      }));
+          productoNombre: stockItem?.nombre || datosAdicionales.productoNombre || 'Producto no especificado',
+          productoMarca: stockItem?.marca || datosAdicionales.productoMarca,
+          productoModelo: stockItem?.modelo || datosAdicionales.productoModelo,
+          numeroSerie: stockItem?.numero_serie || datosAdicionales.numeroSerie,
+          codigoItem: undefined,
+          codigoCargaOrigen: undefined,
+          numeroFactura: mov.referencia_externa,
+          cliente: datosAdicionales.cliente || mov.referencia_externa,
+          costoUnitario: mov.costo_unitario,
+          valorTotal: mov.costo_total,
+          carpetaOrigen: datosAdicionales.carpetaOrigen || stockItem?.marca,
+          carpetaDestino: datosAdicionales.carpetaDestino,
+          ubicacionFisica: undefined,
+          itemType: 'stock_item',
+          
+          // 📦 CAMPOS DE FRACCIONAMIENTO
+          tipoUnidadMovimiento: mov.tipo_unidad_movimiento,
+          cajasAfectadas: mov.cajas_afectadas,
+          unidadesSueltasAfectadas: mov.unidades_sueltas_afectadas,
+
+          createdAt: mov.created_at
+        };
+      });
 
     } catch (error) {
       console.error('❌ Error obteniendo movimientos por producto:', error);
@@ -598,45 +766,129 @@ class StockModuleImpl implements StockModule {
    */
   async getMovimientosByCarpeta(carpeta: string): Promise<MovimientoStock[]> {
     try {
+      // Obtener movimientos con información del stock_item relacionado
       const { data, error } = await supabase
         .from('movimientos_stock')
-        .select('*')
-        .or(`carpeta_origen.eq.${carpeta},carpeta_destino.eq.${carpeta},producto_marca.eq.${carpeta}`)
+        .select(`
+          *,
+          stock_items (
+            id,
+            nombre,
+            marca,
+            modelo,
+            numero_serie
+          )
+        `)
         .order('fecha_movimiento', { ascending: false });
 
       if (error) throw error;
 
-      return data.map((mov: any) => ({
-        id: mov.id,
-        stockItemId: mov.stock_item_id,
-        tipoMovimiento: mov.tipo_movimiento,
-        cantidad: mov.cantidad,
-        cantidadAnterior: mov.cantidad_anterior,
-        cantidadNueva: mov.cantidad_nueva,
-        motivo: mov.motivo,
-        descripcion: mov.descripcion,
-        referenciaExterna: mov.referencia_externa,
-        usuarioResponsable: mov.usuario_responsable,
-        tecnicoResponsable: mov.tecnico_responsable,
-        fechaMovimiento: mov.fecha_movimiento,
+      // Filtrar por carpeta (marca)
+      const movimientosFiltrados = data.filter((mov: any) => {
+        const stockItem = mov.stock_items;
+        
+        // 🔧 CORREGIDO: Priorizar detalles_adicionales para metadatos de fraccionamiento
+        let datosAdicionales: any = {};
+        if (mov.detalles_adicionales) {
+          try {
+            datosAdicionales = JSON.parse(mov.detalles_adicionales);
+          } catch (e) {
+            try {
+              if (mov.descripcion) {
+                datosAdicionales = JSON.parse(mov.descripcion);
+              }
+            } catch (e2) {
+              // No es JSON
+            }
+          }
+        } else {
+          try {
+            if (mov.descripcion) {
+              datosAdicionales = JSON.parse(mov.descripcion);
+            }
+          } catch (e) {
+            // No es JSON
+          }
+        }
+        
+        const marca = stockItem?.marca || datosAdicionales.productoMarca;
+        const carpetaOrigen = datosAdicionales.carpetaOrigen || marca;
+        const carpetaDestino = datosAdicionales.carpetaDestino;
+        
+        return carpetaOrigen === carpeta || 
+               carpetaDestino === carpeta || 
+               marca === carpeta;
+      });
 
-        productoNombre: mov.producto_nombre,
-        productoMarca: mov.producto_marca,
-        productoModelo: mov.producto_modelo,
-        numeroSerie: mov.numero_serie, // 🆕 AGREGADO: Incluir número de serie
-        codigoItem: mov.codigo_item,
-        codigoCargaOrigen: mov.codigo_carga_origen,
-        numeroFactura: mov.numero_factura,
-        cliente: mov.cliente,
-        costoUnitario: mov.costo_unitario,
-        valorTotal: mov.valor_total,
-        carpetaOrigen: mov.carpeta_origen,
-        carpetaDestino: mov.carpeta_destino,
-        ubicacionFisica: mov.ubicacion_fisica,
-        itemType: mov.item_type || 'stock_item',
+      return movimientosFiltrados.map((mov: any) => {
+        // 🔧 CORREGIDO: Usar detalles_adicionales para metadatos de fraccionamiento
+        let datosAdicionales: any = {};
+        let metadataJSON: string | null = null;
+        
+        if (mov.detalles_adicionales) {
+          try {
+            datosAdicionales = JSON.parse(mov.detalles_adicionales);
+            metadataJSON = mov.detalles_adicionales;
+          } catch (e) {
+            try {
+              if (mov.descripcion) {
+                datosAdicionales = JSON.parse(mov.descripcion);
+                metadataJSON = mov.descripcion;
+              }
+            } catch (e2) {
+              datosAdicionales.observaciones = mov.descripcion;
+            }
+          }
+        } else {
+          try {
+            if (mov.descripcion) {
+              datosAdicionales = JSON.parse(mov.descripcion);
+              metadataJSON = mov.descripcion;
+            }
+          } catch (e) {
+            datosAdicionales.observaciones = mov.descripcion;
+          }
+        }
+        
+        const stockItem = mov.stock_items;
+        
+        return {
+          id: mov.id,
+          stockItemId: mov.stock_item_id,
+          tipoMovimiento: mov.tipo_movimiento,
+          cantidad: mov.cantidad,
+          cantidadAnterior: mov.cantidad_anterior,
+          cantidadNueva: mov.cantidad_nueva,
+          motivo: mov.motivo,
+          descripcion: metadataJSON || undefined, // 🔧 CORREGIDO: Pasar JSON original
+          referenciaExterna: mov.referencia_externa,
+          usuarioResponsable: datosAdicionales.responsable || 'Sistema',
+          tecnicoResponsable: undefined,
+          fechaMovimiento: mov.fecha_movimiento,
 
-        createdAt: mov.created_at
-      }));
+          productoNombre: stockItem?.nombre || datosAdicionales.productoNombre || 'Producto no especificado',
+          productoMarca: stockItem?.marca || datosAdicionales.productoMarca,
+          productoModelo: stockItem?.modelo || datosAdicionales.productoModelo,
+          numeroSerie: stockItem?.numero_serie || datosAdicionales.numeroSerie,
+          codigoItem: undefined,
+          codigoCargaOrigen: undefined,
+          numeroFactura: mov.referencia_externa,
+          cliente: datosAdicionales.cliente || mov.referencia_externa,
+          costoUnitario: mov.costo_unitario,
+          valorTotal: mov.costo_total,
+          carpetaOrigen: datosAdicionales.carpetaOrigen || stockItem?.marca,
+          carpetaDestino: datosAdicionales.carpetaDestino,
+          ubicacionFisica: undefined,
+          itemType: 'stock_item',
+          
+          // 📦 CAMPOS DE FRACCIONAMIENTO
+          tipoUnidadMovimiento: mov.tipo_unidad_movimiento,
+          cajasAfectadas: mov.cajas_afectadas,
+          unidadesSueltasAfectadas: mov.unidades_sueltas_afectadas,
+
+          createdAt: mov.created_at
+        };
+      });
 
     } catch (error) {
       console.error('❌ Error obteniendo movimientos por carpeta:', error);
@@ -937,7 +1189,7 @@ class StockModuleImpl implements StockModule {
   }
 
   /**
-   * Register general stock exit
+   * Register general stock exit (with fractioning support)
    */
   async registrarSalidaStock(salidaData: {
     itemId: string;
@@ -954,6 +1206,10 @@ class StockModuleImpl implements StockModule {
     numeroFactura?: string;
     observaciones?: string;
     carpetaOrigen?: string;
+    // 📦 NUEVO: Soporte para fraccionamiento
+    tipoVenta?: 'unidad' | 'caja';
+    permiteFraccionamiento?: boolean;
+    unidadesPorPaquete?: number;
   }) {
     try {
       if (this.config?.enableLogging) {
@@ -962,14 +1218,17 @@ class StockModuleImpl implements StockModule {
           productoNombre: salidaData.productoNombre,
           numeroSerie: salidaData.numeroSerie,
           cantidad: salidaData.cantidad,
-          cantidadAnterior: salidaData.cantidadAnterior
+          cantidadAnterior: salidaData.cantidadAnterior,
+          tipoVenta: salidaData.tipoVenta,
+          permiteFraccionamiento: salidaData.permiteFraccionamiento,
+          unidadesPorPaquete: salidaData.unidadesPorPaquete
         });
       }
 
       // 🔧 CORRECCIÓN: Detectar automáticamente si el producto está en stock_items o componentes_disponibles
       const { data: stockItem, error: stockError } = await supabase
         .from('stock_items')
-        .select('id, cantidad_actual')
+        .select('id, cantidad_actual, permite_fraccionamiento, unidades_por_paquete')
         .eq('id', salidaData.itemId)
         .single();
 
@@ -997,6 +1256,34 @@ class StockModuleImpl implements StockModule {
         throw new Error(`Item con ID ${salidaData.itemId} no encontrado en stock_items ni componentes_disponibles`);
       }
 
+      // 📦 PREPARAR INFORMACIÓN PARA REGISTRO DE MOVIMIENTO
+      let descripcionFraccionamiento = '';
+
+      // Solo aplicar lógica de fraccionamiento para stock_items que la soporten
+      if (itemType === 'stock_item' && 
+          salidaData.permiteFraccionamiento && 
+          salidaData.unidadesPorPaquete && 
+          salidaData.tipoVenta) {
+        
+        if (salidaData.tipoVenta === 'caja') {
+          descripcionFraccionamiento = `Venta por caja: ${salidaData.cantidad} caja(s) de ${salidaData.unidadesPorPaquete} unidades c/u`;
+        } else if (salidaData.tipoVenta === 'unidad') {
+          descripcionFraccionamiento = `Venta por unidad: ${salidaData.cantidad} unidades (fraccionamiento automático)`;
+        }
+        
+        if (this.config?.enableLogging) {
+          console.log('📦 Producto fraccionable - será procesado por función de base de datos:', {
+            tipoVenta: salidaData.tipoVenta,
+            cantidadSolicitada: salidaData.cantidad,
+            unidadesPorPaquete: salidaData.unidadesPorPaquete,
+            descripcionFraccionamiento
+          });
+        }
+      } else {
+        // Sin fraccionamiento: usar cantidad directamente
+        descripcionFraccionamiento = `Venta normal: ${salidaData.cantidad} unidades`;
+      }
+
       if (this.config?.enableLogging) {
         console.log('✅ Item encontrado:', {
           itemType,
@@ -1006,58 +1293,111 @@ class StockModuleImpl implements StockModule {
         });
       }
 
-      // 1. Registrar el movimiento de salida
-      await this.registrarMovimientoStock({
-        itemId: salidaData.itemId,
-        itemType: itemType,
-        productoNombre: salidaData.productoNombre,
-        productoMarca: salidaData.productoMarca,
-        productoModelo: salidaData.productoModelo,
-        numeroSerie: salidaData.numeroSerie,
-        tipoMovimiento: 'Salida', // ✅ Corregido: usar "Salida" en lugar de "SALIDA"
-        cantidad: salidaData.cantidad,
-        cantidadAnterior: salidaData.cantidadAnterior,
-        cantidadNueva: salidaData.cantidadAnterior - salidaData.cantidad,
-        motivo: salidaData.motivo,
-        destinoOrigen: salidaData.destino,
-        responsable: salidaData.responsable,
-        cliente: salidaData.cliente,
-        numeroFactura: salidaData.numeroFactura,
-        observaciones: salidaData.observaciones,
-        carpetaOrigen: salidaData.carpetaOrigen
-      });
+      // Calcular cantidad nueva solo para productos sin fraccionamiento
+      // Para productos fraccionados, la función de base de datos maneja todo
+      const cantidadNuevaCalculada = (itemType === 'stock_item' && salidaData.permiteFraccionamiento) 
+        ? salidaData.cantidadAnterior // Se mantendrá igual, la función de DB se encarga
+        : salidaData.cantidadAnterior - salidaData.cantidad;
 
-      // 2. Actualizar la cantidad en la tabla correcta
-      if (this.config?.enableLogging) {
-        console.log('🔄 Actualizando cantidad en tabla:', {
-          tabla: tableName,
-          campo: cantidadField,
+      // 1. Registrar el movimiento de salida con la descripción de fraccionamiento
+      const observacionesCompletas = [
+        salidaData.observaciones,
+        descripcionFraccionamiento
+      ].filter(Boolean).join(' | ');
+
+      // Solo registrar movimiento manual para productos SIN fraccionamiento
+      // Los productos fraccionados registran su propio movimiento en la función de DB
+      if (!(itemType === 'stock_item' && salidaData.permiteFraccionamiento && salidaData.tipoVenta)) {
+        await this.registrarMovimientoStock({
           itemId: salidaData.itemId,
+          itemType: itemType,
+          productoNombre: salidaData.productoNombre,
+          productoMarca: salidaData.productoMarca,
+          productoModelo: salidaData.productoModelo,
+          numeroSerie: salidaData.numeroSerie,
+          tipoMovimiento: 'Salida',
+          cantidad: salidaData.cantidad, // Cantidad solicitada por el usuario
           cantidadAnterior: salidaData.cantidadAnterior,
-          cantidadSalida: salidaData.cantidad,
-          cantidadNueva: salidaData.cantidadAnterior - salidaData.cantidad
+          cantidadNueva: cantidadNuevaCalculada,
+          motivo: salidaData.motivo,
+          destinoOrigen: salidaData.destino,
+          responsable: salidaData.responsable,
+          cliente: salidaData.cliente,
+          numeroFactura: salidaData.numeroFactura,
+          observaciones: observacionesCompletas,
+          carpetaOrigen: salidaData.carpetaOrigen
         });
       }
 
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({
-          [cantidadField]: salidaData.cantidadAnterior - salidaData.cantidad,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', salidaData.itemId);
+      // 2. Actualizar la cantidad en la tabla correcta
+      if (itemType === 'stock_item' && salidaData.permiteFraccionamiento && salidaData.tipoVenta) {
+        // 📦 USAR LA FUNCIÓN DE BASE DE DATOS PARA FRACCIONAMIENTO
+        if (this.config?.enableLogging) {
+          console.log('📦 Usando función procesar_venta_fraccionada:', {
+            stockItemId: salidaData.itemId,
+            cantidadSolicitada: salidaData.cantidad,
+            tipoVenta: salidaData.tipoVenta,
+            usuario: salidaData.responsable,
+            referencia: `REMISION-${Date.now()}`
+          });
+        }
 
-      if (updateError) {
-        console.error('❌ Error actualizando cantidad:', updateError);
-        throw updateError;
+        const { data: resultado, error: fraccionError } = await supabase.rpc('procesar_venta_fraccionada', {
+          p_stock_item_id: salidaData.itemId,
+          p_cantidad_solicitada: salidaData.cantidad,
+          p_tipo_venta: salidaData.tipoVenta,
+          p_usuario: salidaData.responsable || 'Sistema',
+          p_referencia: `REMISION-${Date.now()}`
+        });
+
+        if (fraccionError) {
+          console.error('❌ Error en función procesar_venta_fraccionada:', fraccionError);
+          throw fraccionError;
+        }
+
+        if (!resultado?.success) {
+          console.error('❌ Error procesando venta fraccionada:', resultado?.error);
+          throw new Error(resultado?.error || 'Error procesando venta fraccionada');
+        }
+
+        if (this.config?.enableLogging) {
+          console.log('✅ Venta fraccionada procesada exitosamente:', resultado);
+        }
+      } else {
+        // Para productos sin fraccionamiento o componentes_disponibles
+        const updateData: any = { 
+          [cantidadField]: Math.round(cantidadNuevaCalculada),
+          updated_at: new Date().toISOString()
+        };
+        
+        if (this.config?.enableLogging) {
+          console.log('🔄 Actualizando stock simple:', {
+            tabla: tableName,
+            campo: cantidadField,
+            itemId: salidaData.itemId,
+            cantidadNueva: Math.round(cantidadNuevaCalculada)
+          });
+        }
+
+        const { error: updateError } = await supabase
+          .from(tableName)
+          .update(updateData)
+          .eq('id', salidaData.itemId);
+
+        if (updateError) {
+          console.error('❌ Error actualizando cantidad:', updateError);
+          throw updateError;
+        }
       }
 
       if (this.config?.enableLogging) {
-        console.log('✅ Cantidad actualizada exitosamente en', tableName);
-        console.log('✅ Salida de stock registrada exitosamente:', {
+        console.log('✅ Salida de stock procesada exitosamente:', {
           producto: salidaData.productoNombre,
-          cantidad: salidaData.cantidad,
-          destino: salidaData.destino
+          cantidadSolicitada: salidaData.cantidad,
+          tipoVenta: salidaData.tipoVenta,
+          permiteFraccionamiento: salidaData.permiteFraccionamiento,
+          destino: salidaData.destino,
+          descripcion: descripcionFraccionamiento
         });
       }
 
@@ -1096,7 +1436,7 @@ class StockModuleImpl implements StockModule {
           ).length,
           valorTotal: movimientos
             .filter(m => m.tipo_movimiento === 'Entrada')
-            .reduce((sum, m) => sum + (m.valor_total || 0), 0)
+            .reduce((sum, m) => sum + (m.costo_total || 0), 0)
         },
 
         salidas: {
@@ -1107,7 +1447,7 @@ class StockModuleImpl implements StockModule {
           ).length,
           valorTotal: movimientos
             .filter(m => m.tipo_movimiento === 'Salida')
-            .reduce((sum, m) => sum + (m.valor_total || 0), 0)
+            .reduce((sum, m) => sum + (m.costo_total || 0), 0)
         },
 
         ajustes: {
@@ -1118,10 +1458,11 @@ class StockModuleImpl implements StockModule {
           ).length
         },
 
-        // Top productos con más movimientos
+        // Top productos con más movimientos (usando metadata)
         productosConMasMovimientos: Object.entries(
           movimientos.reduce((acc: any, mov) => {
-            const key = `${mov.producto_nombre} - ${mov.producto_marca}`;
+            const metadata = mov.metadata || {};
+            const key = `${metadata.productoNombre || 'Sin nombre'} - ${metadata.productoMarca || 'Sin marca'}`;
             acc[key] = (acc[key] || 0) + 1;
             return acc;
           }, {})
@@ -1130,11 +1471,12 @@ class StockModuleImpl implements StockModule {
           .slice(0, 5)
           .map(([producto, cantidad]) => ({ producto, cantidad })),
 
-        // Carpetas con más actividad
+        // Carpetas con más actividad (usando metadata)
         carpetasConMasActividad: Object.entries(
           movimientos.reduce((acc: any, mov) => {
-            if (mov.carpeta_origen) {
-              acc[mov.carpeta_origen] = (acc[mov.carpeta_origen] || 0) + 1;
+            const metadata = mov.metadata || {};
+            if (metadata.carpetaOrigen) {
+              acc[metadata.carpetaOrigen] = (acc[metadata.carpetaOrigen] || 0) + 1;
             }
             return acc;
           }, {})

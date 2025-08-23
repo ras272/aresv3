@@ -518,70 +518,23 @@ export default function StockPage() {
                                       </div>
                                     </td>
                                     <td className="py-3 px-4 text-center">
-                                      {/* Información del producto agrupado basada en el primer item */}
-                                      {(() => {
-                                        const primerItem = stockItems.find(
-                                          (item) =>
-                                            item.nombre === producto.nombre &&
-                                            item.marca === producto.marca &&
-                                            item.modelo === producto.modelo
-                                        );
-                                        
-                                        return primerItem?.permite_fraccionamiento ? (
-                                          <div className="space-y-2">
-                                            {/* Badge de estado de caja */}
-                                            <div className="mb-1">
-                                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                primerItem.estado_caja === 'cajas_completas' ? 'bg-blue-100 text-blue-800' :
-                                                primerItem.estado_caja === 'caja_abierta' ? 'bg-orange-100 text-orange-800' :
-                                                primerItem.estado_caja === 'solo_unidades' ? 'bg-green-100 text-green-800' :
-                                                primerItem.estado_caja === 'sin_stock' ? 'bg-red-100 text-red-800' :
-                                                'bg-gray-100 text-gray-600'
-                                              }`}>
-                                                {primerItem.badge_estado_caja}
-                                              </span>
-                                            </div>
-                                            
-                                            {/* Información detallada del stock fraccionado */}
-                                            <div className="space-y-1 text-sm">
-                                              <div className="flex items-center justify-center text-sm">
-                                                <Box className="h-3 w-3 text-gray-400 mr-1" />
-                                                <span className="text-gray-700">{primerItem.cajas_completas} cajas</span>
-                                              </div>
-                                              {(primerItem.unidades_sueltas || 0) > 0 && (
-                                                <div className="flex items-center justify-center text-sm">
-                                                  <Package className="h-3 w-3 text-gray-400 mr-1" />
-                                                  <span className="text-gray-700">{primerItem.unidades_sueltas} sueltas</span>
-                                                </div>
-                                              )}
-                                              <div className="text-sm font-semibold text-blue-600">
-                                                Total: {primerItem.unidades_totales} unidades
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          /* Stock normal sin fraccionamiento */
-                                          <>
-                                            <span
-                                              className={`font-bold text-lg ${
-                                                producto.cantidadTotal <= 5 &&
-                                                producto.cantidadTotal > 0
-                                                  ? "text-orange-500"
-                                                  : producto.cantidadTotal === 0
-                                                  ? "text-red-500"
-                                                  : "text-green-500"
-                                              }`}
-                                            >
-                                              {producto.cantidadTotal}
-                                            </span>
-                                            {producto.cantidadTotal <= 5 && (
-                                              <div className="text-xs text-orange-500">
-                                                Stock bajo
-                                              </div>
-                                            )}
-                                          </>
-                                        );
-                                      })()}
+                                      <span
+                                        className={`font-bold text-lg ${
+                                          producto.cantidadTotal <= 5 &&
+                                          producto.cantidadTotal > 0
+                                            ? "text-orange-500"
+                                            : producto.cantidadTotal === 0
+                                            ? "text-red-500"
+                                            : "text-green-500"
+                                        }`}
+                                      >
+                                        {producto.cantidadTotal}
+                                      </span>
+                                      {producto.cantidadTotal <= 5 && (
+                                        <div className="text-xs text-orange-500">
+                                          Stock bajo
+                                        </div>
+                                      )}
                                     </td>
                                     <td className="py-3 px-4">
                                       <div className="text-sm text-gray-700">
@@ -641,6 +594,7 @@ export default function StockPage() {
                 </Card>
               );
             })}
+          </div>
 
             {Object.keys(productosAgrupados).length === 0 && pestañaActiva === 'normal' && (
               <Card className="border border-gray-200 shadow-sm rounded-lg">

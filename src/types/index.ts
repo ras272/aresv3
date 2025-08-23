@@ -241,6 +241,17 @@ export interface ProductoStock {
     codigoCarga: string;
     fechaIngreso: string;
   } | null;
+  
+  // 📦 Nuevos campos para fraccionamiento
+  permite_fraccionamiento?: boolean;
+  unidades_por_paquete?: number;
+  cajas_completas?: number;
+  unidades_sueltas?: number;
+  estado_caja?: string;
+  badge_estado_caja?: string;
+  stock_formato_legible?: string;
+  unidades_totales?: number;
+  
   createdAt: string;
 }
 
@@ -291,6 +302,8 @@ export interface ProductoRemision {
   cantidadSolicitada: number;
   cantidadDisponible: number;
   observaciones?: string;
+  // 📦 NUEVO: Campo para tipo de venta en productos fraccionables
+  tipoVenta?: 'unidad' | 'caja';
 }
 
 export interface Remision {
@@ -346,11 +359,27 @@ export interface CatalogoProducto {
   descripcion?: string;
   categoria?: string;
   codigoProducto?: string;
-  precio: number;
-  moneda: 'USD' | 'GS';
+  
+  // 💰 PRECIOS DUALES PARA FRACCIONAMIENTO
+  precio: number; // Precio original (mantener compatibilidad)
+  moneda: 'USD' | 'GS'; // Moneda original
+  
+  // 📦 PRECIOS ESPECÍFICOS POR TIPO DE VENTA
+  precioPorCaja?: number;
+  precioPorUnidad?: number;
+  monedaCaja?: 'USD' | 'GS';
+  monedaUnidad?: 'USD' | 'GS';
+  
+  // 🔧 CONFIGURACIÓN DE FRACCIONAMIENTO
+  permiteFraccionamiento?: boolean;
+  unidadesPorCaja?: number;
+  
+  // 💸 RANGOS DE PRECIO Y UTILIDAD
   precioMinimo?: number;
   precioMaximo?: number;
   margenUtilidad?: number;
+  
+  // ⚙️ CONFIGURACIÓN
   disponibleParaVenta: boolean;
   activo: boolean;
   createdAt: string;

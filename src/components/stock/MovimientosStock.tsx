@@ -36,10 +36,13 @@ interface Movimiento {
   ubicacion_origen?: string
   ubicacion_destino?: string
   motivo?: string
-  usuario_responsable: string
+  usuario_responsable?: string
   referencia_externa?: string
   descripcion?: string
   cliente?: string
+  codigo_carga_origen?: string
+  carpeta_origen?: string
+  carpeta_destino?: string
 }
 
 export function MovimientosStock() {
@@ -70,9 +73,6 @@ export function MovimientosStock() {
           id,
           fecha_movimiento,
           tipo_movimiento,
-          producto_nombre,
-          codigo_item,
-          numero_serie,
           cantidad,
           cantidad_anterior,
           cantidad_nueva,
@@ -80,14 +80,38 @@ export function MovimientosStock() {
           usuario_responsable,
           referencia_externa,
           descripcion,
-          cliente
+          cliente,
+          numero_serie,
+          codigo_carga_origen,
+          carpeta_origen,
+          carpeta_destino
         `)
         .order('fecha_movimiento', { ascending: false })
         .limit(1000) // Limitar para performance
 
       if (error) throw error
 
-      setMovimientos(data || [])
+      // Procesar los datos para extraer información del JSON en descripcion
+      const movimientosProcesados = (data || []).map(mov => {
+        let datosJSON: any = {};
+        try {
+          if (mov.descripcion) {
+            datosJSON = JSON.parse(mov.descripcion);
+          }
+        } catch (e) {
+          // Si no es JSON válido, continuar con datos vacíos
+        }
+        
+        return {
+          ...mov,
+          producto_nombre: datosJSON.productoNombre || 'Producto no especificado',
+          codigo_item: mov.codigo_carga_origen || datosJSON.codigoItem || 'N/A',
+          ubicacion_origen: mov.carpeta_origen || datosJSON.carpetaOrigen || '',
+          ubicacion_destino: mov.carpeta_destino || datosJSON.carpetaDestino || ''
+        };
+      });
+
+      setMovimientos(movimientosProcesados)
     } catch (error) {
       console.error('Error cargando movimientos:', error)
     } finally {
@@ -102,10 +126,11 @@ export function MovimientosStock() {
     if (busqueda.trim()) {
       const termino = busqueda.toLowerCase()
       filtrados = filtrados.filter(mov => 
-        mov.producto_nombre.toLowerCase().includes(termino) ||
-        mov.codigo_item.toLowerCase().includes(termino) ||
-        mov.usuario_responsable.toLowerCase().includes(termino) ||
-        mov.motivo?.toLowerCase().includes(termino)
+        mov.producto_nombre?.toLowerCase().includes(termino) ||
+        mov.codigo_item?.toLowerCase().includes(termino) ||
+        mov.usuario_responsable?.toLowerCase().includes(termino) ||
+        mov.motivo?.toLowerCase().includes(termino) ||
+        mov.cliente?.toLowerCase().includes(termino)
       )
     }
 
@@ -194,7 +219,7 @@ export function MovimientosStock() {
   const exportarCSV = () => {
     const headers = [
       'Fecha', 'Tipo', 'Item', 'Código', 'Cantidad', 'Stock Anterior', 
-      'Stock Nuevo', 'Origen', 'Destino', 'Usuario', 'Motivo'
+      'Stock Nuevo', 'Origen', 'Destino', 'Usuario', 'Motivo', 'Cliente'
     ]
     
     const csvContent = [
@@ -202,15 +227,16 @@ export function MovimientosStock() {
       ...movimientosFiltrados.map(mov => [
         formatearFecha(mov.fecha_movimiento),
         mov.tipo_movimiento,
-        `"${mov.producto_nombre}"`,
-        mov.codigo_item,
+        `"${mov.producto_nombre || ''}"`,
+        `"${mov.codigo_item || ''}"`,
         mov.cantidad,
         mov.cantidad_anterior,
         mov.cantidad_nueva,
-        `"${mov.ubicacion_origen || ''}"`,
-        `"${mov.ubicacion_destino || ''}"`,
-        mov.usuario_responsable,
-        `"${mov.motivo || ''}"`
+        `"${mov.ubicacion_origen || mov.carpeta_origen || ''}"`,
+        `"${mov.ubicacion_destino || mov.carpeta_destino || ''}"`,
+        `"${mov.usuario_responsable || 'Sistema'}"`,
+        `"${mov.motivo || ''}"`,
+        `"${mov.cliente || ''}"`
       ].join(','))
     ].join('\n')
 
@@ -391,10 +417,10 @@ export function MovimientosStock() {
                               <span>{movimiento.ubicacion_destino}</span>
                             </div>
                           )}
-                          {movimiento.equipo_cliente && (
+                          {movimiento.cliente && (
                             <div className="flex items-center gap-1 text-blue-600">
                               <Package className="h-3 w-3" />
-                              <span className="text-xs">{movimiento.equipo_cliente}</span>
+                              <span className="text-xs">{movimiento.cliente}</span>
                             </div>
                           )}
                         </div>

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import ModalRemision from '@/components/remisiones/ModalRemision';
 import ModalEliminarRemision from '@/components/remisiones/ModalEliminarRemision';
+import { VentaFraccionada } from '@/components/VentaFraccionada';
 import {
   FileText,
   Plus,
@@ -20,7 +21,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  Download
+  Download,
+  ShoppingCart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -42,6 +44,7 @@ export default function RemisionesPage() {
   const [remisionSeleccionada, setRemisionSeleccionada] = useState<Remision | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  const [pestañaActiva, setPestañaActiva] = useState<'remisiones' | 'venta-fraccionada'>('remisiones');
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -198,38 +201,79 @@ export default function RemisionesPage() {
 
         {/* Contenido principal */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          {/* Filtros */}
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Buscar por número, cliente, contacto o productos..."
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <select
-                  value={filtroEstado}
-                  onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="todos">Todos los estados</option>
-                  <option value="Borrador">Borrador</option>
-                  <option value="Confirmada">Confirmada</option>
-                  <option value="En tránsito">En tránsito</option>
-                  <option value="Entregada">Entregada</option>
-                  <option value="Cancelada">Cancelada</option>
-                </select>
+          
+          {/* Pestañas de navegación */}
+          <Card className="mb-6 border-none shadow-md">
+            <CardContent className="p-0">
+              <div className="border-b border-gray-200">
+                <nav className="flex space-x-8 px-6 py-4">
+                  <button
+                    onClick={() => setPestañaActiva('remisiones')}
+                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      pestañaActiva === 'remisiones'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>Remisiones Normales</span>
+                  </button>
+                  <button
+                    onClick={() => setPestañaActiva('venta-fraccionada')}
+                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      pestañaActiva === 'venta-fraccionada'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    <span>Venta Fraccionada</span>
+                  </button>
+                </nav>
               </div>
+
+              {/* Contenido de pestañas */}
+              {pestañaActiva === 'remisiones' && (
+                <div className="p-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        placeholder="Buscar por número, cliente, contacto o productos..."
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <select
+                      value={filtroEstado}
+                      onChange={(e) => setFiltroEstado(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="todos">Todos los estados</option>
+                      <option value="Borrador">Borrador</option>
+                      <option value="Confirmada">Confirmada</option>
+                      <option value="En tránsito">En tránsito</option>
+                      <option value="Entregada">Entregada</option>
+                      <option value="Cancelada">Cancelada</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Lista de remisiones */}
-          {remisionesFiltradas.length === 0 ? (
+          {/* Contenido condicional según pestaña activa */}
+          {pestañaActiva === 'venta-fraccionada' ? (
+            <VentaFraccionada 
+              onVentaRealizada={(venta) => {
+                console.log('Venta fraccionada realizada:', venta);
+                toast.success('Venta fraccionada realizada exitosamente');
+              }}
+            />
+          ) : (
+            /* Lista de remisiones normales */
+            remisionesFiltradas.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
@@ -385,6 +429,7 @@ export default function RemisionesPage() {
                 </motion.div>
               ))}
             </div>
+          )
           )}
         </div>
 

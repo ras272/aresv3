@@ -82,7 +82,7 @@ export function DashboardLayout({
               {/* Mobile menu button - Only visible on mobile */}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors flex-shrink-0"
                 aria-label="Abrir menú"
               >
                 <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -118,14 +118,14 @@ export function DashboardLayout({
 
                 {/* Role badge - Responsive sizing and text */}
                 <div
-                  className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                  className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 transition-all duration-200 ${
                     user.rol === "super_admin"
-                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                      ? "bg-destructive/10 text-destructive border border-destructive/20"
                       : user.rol === "contabilidad"
-                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      ? "bg-primary/10 text-primary border border-primary/20"
                       : user.rol === "admin"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                      : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                      ? "bg-secondary text-secondary-foreground border border-border"
+                      : "bg-accent text-accent-foreground border border-border"
                   }`}
                 >
                   <span className="sm:hidden">
@@ -151,7 +151,7 @@ export function DashboardLayout({
                 {/* Logout button - Responsive sizing */}
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                  className="p-1.5 sm:p-2 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors flex-shrink-0"
                   title="Cerrar sesión"
                 >
                   <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -162,8 +162,8 @@ export function DashboardLayout({
             {/* Loading state */}
             {isLoading && (
               <div className="flex items-center gap-2 flex-shrink-0">
-                <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-24 rounded"></div>
-                <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-16 rounded-full"></div>
+                <div className="animate-pulse bg-muted h-8 w-24 rounded"></div>
+                <div className="animate-pulse bg-muted h-8 w-16 rounded-full"></div>
               </div>
             )}
           </motion.div>

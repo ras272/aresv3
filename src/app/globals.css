@@ -77,56 +77,57 @@
 }
 
 .dark {
-  /* 🌙 DARK MODE SUAVE - Colores más cálidos y menos agresivos */
+  /* 🌙 TEMA OSCURO MODERNO 2024 - Colores sofisticados y elegantes */
 
-  /* 🌙 DARK MODE EQUILIBRADO - Más oscuro pero elegante */
-  --background: oklch(0.15 0.005 240);
-  --foreground: oklch(0.92 0.005 240);
+  /* 🎨 Background principal más profundo y moderno */
+  --background: oklch(0.08 0.008 265);
+  --foreground: oklch(0.95 0.006 265);
 
-  /* Cards con contraste perfecto */
-  --card: oklch(0.19 0.008 240);
-  --card-foreground: oklch(0.92 0.005 240);
-  --popover: oklch(0.19 0.008 240);
-  --popover-foreground: oklch(0.92 0.005 240);
+  /* 📄 Cards con contraste perfecto y bordes sutiles */
+  --card: oklch(0.12 0.012 265);
+  --card-foreground: oklch(0.94 0.006 265);
+  --popover: oklch(0.13 0.012 265);
+  --popover-foreground: oklch(0.94 0.006 265);
 
-  /* Primary más vibrante pero elegante */
-  --primary: oklch(0.6 0.18 220);
-  --primary-foreground: oklch(0.98 0.005 240);
+  /* 🔵 Primary vibrante pero profesional */
+  --primary: oklch(0.62 0.22 255);
+  --primary-foreground: oklch(0.99 0.003 265);
 
-  /* Secondary con mejor definición */
-  --secondary: oklch(0.23 0.008 240);
-  --secondary-foreground: oklch(0.88 0.005 240);
-  --muted: oklch(0.23 0.008 240);
-  --muted-foreground: oklch(0.7 0.008 240);
-  --accent: oklch(0.28 0.01 240);
-  --accent-foreground: oklch(0.92 0.005 240);
+  /* 🔘 Secondary con mejor definición */
+  --secondary: oklch(0.16 0.015 265);
+  --secondary-foreground: oklch(0.88 0.008 265);
+  --muted: oklch(0.18 0.015 265);
+  --muted-foreground: oklch(0.65 0.012 265);
+  --accent: oklch(0.22 0.018 265);
+  --accent-foreground: oklch(0.92 0.006 265);
 
-  /* Destructive más suave */
-  --destructive: oklch(0.65 0.18 25);
+  /* 🚨 Destructive más elegante */
+  --destructive: oklch(0.68 0.20 15);
+  --destructive-foreground: oklch(0.99 0.003 265);
 
-  /* Bordes más visibles pero suaves */
-  --border: oklch(0.35 0.01 240);
-  --input: oklch(0.25 0.01 240);
+  /* 🖌️ Bordes y inputs más visibles pero elegantes */
+  --border: oklch(0.28 0.015 265);
+  --input: oklch(0.20 0.015 265);
 
-  /* Ring con color primario */
-  --ring: oklch(0.65 0.15 240);
+  /* 💍 Ring con color primario brillante */
+  --ring: oklch(0.65 0.20 255);
 
-  /* Charts con colores más vibrantes pero no agresivos */
-  --chart-1: oklch(0.7 0.2 260);
-  --chart-2: oklch(0.72 0.18 160);
-  --chart-3: oklch(0.75 0.16 80);
-  --chart-4: oklch(0.68 0.22 300);
-  --chart-5: oklch(0.74 0.2 20);
+  /* 📊 Charts con paleta moderna y vibrante */
+  --chart-1: oklch(0.72 0.25 260); /* Azul vibrante */
+  --chart-2: oklch(0.74 0.22 150); /* Verde moderno */
+  --chart-3: oklch(0.76 0.20 50);  /* Amarillo dorado */
+  --chart-4: oklch(0.70 0.25 320); /* Magenta elegante */
+  --chart-5: oklch(0.75 0.22 25);  /* Naranja sofisticado */
 
-  /* Sidebar con un tono ligeramente diferente para contraste */
-  --sidebar: oklch(0.2 0.01 240);
-  --sidebar-foreground: oklch(0.92 0.005 240);
-  --sidebar-primary: oklch(0.65 0.15 240);
-  --sidebar-primary-foreground: oklch(0.98 0.005 240);
-  --sidebar-accent: oklch(0.3 0.01 240);
-  --sidebar-accent-foreground: oklch(0.92 0.005 240);
-  --sidebar-border: oklch(0.35 0.01 240);
-  --sidebar-ring: oklch(0.65 0.15 240);
+  /* 📱 Sidebar con diseño más moderno */
+  --sidebar: oklch(0.10 0.010 265);
+  --sidebar-foreground: oklch(0.94 0.006 265);
+  --sidebar-primary: oklch(0.65 0.20 255);
+  --sidebar-primary-foreground: oklch(0.99 0.003 265);
+  --sidebar-accent: oklch(0.18 0.015 265);
+  --sidebar-accent-foreground: oklch(0.92 0.006 265);
+  --sidebar-border: oklch(0.26 0.015 265);
+  --sidebar-ring: oklch(0.65 0.20 255);
 }
 
 @layer base {
@@ -143,10 +144,115 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Suavizar las transiciones de tema */
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   /* Asegurar que el contenedor principal ocupe toda la altura */
   #__next {
     height: 100%;
+  }
+  
+  /* 🌙 MEJORAS ESPECÍFICAS PARA TEMA OSCURO */
+  
+  /* Scrollbars personalizadas para tema oscuro */
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .dark ::-webkit-scrollbar-track {
+    background: oklch(0.15 0.008 265);
+    border-radius: 4px;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background: oklch(0.35 0.015 265);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.45 0.018 265);
+  }
+  
+  /* Selección de texto mejorada */
+  .dark ::selection {
+    background: oklch(0.62 0.22 255 / 0.3);
+    color: oklch(0.95 0.006 265);
+  }
+  
+  /* Focus outline mejorado */
+  .dark *:focus-visible {
+    outline: 2px solid oklch(0.65 0.20 255);
+    outline-offset: 2px;
+  }
+  
+  /* Inputs y formularios mejorados */
+  .dark input[type="text"],
+  .dark input[type="email"],
+  .dark input[type="password"],
+  .dark input[type="number"],
+  .dark textarea,
+  .dark select {
+    background: oklch(0.18 0.015 265);
+    border: 1px solid oklch(0.28 0.015 265);
+    color: oklch(0.94 0.006 265);
+  }
+  
+  .dark input[type="text"]:focus,
+  .dark input[type="email"]:focus,
+  .dark input[type="password"]:focus,
+  .dark input[type="number"]:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    border-color: oklch(0.65 0.20 255);
+    box-shadow: 0 0 0 2px oklch(0.65 0.20 255 / 0.2);
+  }
+  
+  /* Botones mejorados */
+  .dark button {
+    transition: all 0.2s ease;
+  }
+  
+  /* Cards con sombras sutiles */
+  .dark .card,
+  .dark [data-card] {
+    box-shadow: 0 2px 8px oklch(0.05 0.005 265 / 0.3);
+    border: 1px solid oklch(0.28 0.015 265);
+  }
+  
+  /* Tooltips mejorados */
+  .dark [data-tooltip] {
+    background: oklch(0.20 0.015 265);
+    border: 1px solid oklch(0.35 0.015 265);
+    color: oklch(0.94 0.006 265);
+    box-shadow: 0 4px 12px oklch(0.05 0.005 265 / 0.4);
+  }
+  
+  /* Modales y overlays */
+  .dark .modal-backdrop {
+    background: oklch(0.05 0.005 265 / 0.8);
+  }
+  
+  /* Status badges mejorados */
+  .dark .badge-success {
+    background: oklch(0.45 0.15 140);
+    color: oklch(0.95 0.005 140);
+  }
+  
+  .dark .badge-warning {
+    background: oklch(0.55 0.18 60);
+    color: oklch(0.95 0.005 60);
+  }
+  
+  .dark .badge-error {
+    background: oklch(0.55 0.18 15);
+    color: oklch(0.95 0.005 15);
+  }
+  
+  .dark .badge-info {
+    background: oklch(0.55 0.18 230);
+    color: oklch(0.95 0.005 230);
   }
 }

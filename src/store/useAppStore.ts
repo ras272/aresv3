@@ -1130,7 +1130,8 @@ export const useAppStore = create<AppState>()(
           motivo: string,
           numeroRemision?: string,
           numeroFactura?: string,
-          cliente?: string
+          cliente?: string,
+          tipoVenta?: 'unidad' | 'caja' // 🆕 NUEVO: Tipo de venta para productos fraccionables
         ) => {
           try {
             console.log("🔄 INICIO - Procesando salida de stock...", {
@@ -1202,6 +1203,37 @@ export const useAppStore = create<AppState>()(
 
               if (stockItem) {
                 console.log("🔍 Procesando salida para stock item:", stockItem);
+                console.log("📦 Tipo de venta:", tipoVenta);
+
+                // 📦 NUEVO: Procesar fraccionamiento si aplica
+                let cantidadFinalDescontar = cantidad;
+                let observacionesExtras = `Remisión: ${numeroRemision || "N/A"}`;
+
+                if (tipoVenta && stockItem.permite_fraccionamiento) {
+                  console.log("📦 Procesando producto fraccionable:", {
+                    tipoVenta,
+                    cantidadOriginal: cantidad,
+                    unidadesPorPaquete: stockItem.unidades_por_paquete,
+                    cajasCompletas: stockItem.cajas_completas,
+                    unidadesSueltas: stockItem.unidades_sueltas
+                  });
+
+                  if (tipoVenta === 'caja') {
+                    // Venta por caja: descontar de cajas_completas
+                    console.log("📦 Venta por caja - descontando de cajas completas");
+                    observacionesExtras += ` - Venta por CAJA (${stockItem.unidades_por_paquete} unidades)`;
+                    
+                    // La cantidad ya viene en cajas, no necesitamos conversión
+                    cantidadFinalDescontar = cantidad;
+                  } else if (tipoVenta === 'unidad') {
+                    // Venta por unidad: descontar de unidades_sueltas
+                    console.log("📦 Venta por unidad - descontando de unidades sueltas");
+                    observacionesExtras += ` - Venta por UNIDAD`;
+                    
+                    // La cantidad ya viene en unidades, no necesitamos conversión
+                    cantidadFinalDescontar = cantidad;
+                  }
+                }
 
                 // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
                 await registrarSalidaStock({
@@ -1210,20 +1242,25 @@ export const useAppStore = create<AppState>()(
                   productoMarca: stockItem.marca,
                   productoModelo: stockItem.modelo,
                   numeroSerie: stockItem.numeroSerie, // 🆕 AGREGADO: Incluir número de serie
-                  cantidad: cantidad,
+                  cantidad: cantidadFinalDescontar,
                   cantidadAnterior: stockItem.cantidadDisponible,
                   motivo: motivo,
                   destino: cliente || "Cliente",
                   responsable: "Sistema - Remisión",
                   cliente: cliente,
                   numeroFactura: numeroFactura,
-                  observaciones: `Remisión: ${numeroRemision || "N/A"}`,
+                  observaciones: observacionesExtras,
                   carpetaOrigen: stockItem.marca,
+                  // 📦 NUEVO: Información del fraccionamiento
+                  tipoVenta: tipoVenta,
+                  permiteFraccionamiento: stockItem.permite_fraccionamiento,
+                  unidadesPorPaquete: stockItem.unidades_por_paquete
                 });
 
                 console.log(
                   "✅ Movimiento de stock registrado para:",
-                  stockItem.nombre
+                  stockItem.nombre,
+                  "Tipo:", tipoVenta || "normal"
                 );
               } else {
                 console.error(
@@ -1618,6 +1655,18 @@ export const useAppStore = create<AppState>()(
               codigoProducto: producto.codigo_producto,
               precio: producto.precio,
               moneda: producto.moneda as 'USD' | 'GS',
+              
+              // 💰 NUEVOS CAMPOS DE PRECIOS DUALES
+              precioPorCaja: producto.precio_por_caja,
+              precioPorUnidad: producto.precio_por_unidad,
+              monedaCaja: producto.moneda_caja as 'USD' | 'GS' | undefined,
+              monedaUnidad: producto.moneda_unidad as 'USD' | 'GS' | undefined,
+              
+              // 📦 CAMPOS DE FRACCIONAMIENTO
+              permiteFraccionamiento: producto.permite_fraccionamiento || false,
+              unidadesPorCaja: producto.unidades_por_caja || 1,
+              
+              // 💸 CAMPOS EXISTENTES
               precioMinimo: producto.precio_minimo,
               precioMaximo: producto.precio_maximo,
               margenUtilidad: producto.margen_utilidad,
@@ -1647,6 +1696,18 @@ export const useAppStore = create<AppState>()(
                 codigo_producto: productoData.codigoProducto,
                 precio: productoData.precio,
                 moneda: productoData.moneda,
+                
+                // 💰 NUEVOS CAMPOS DE PRECIOS DUALES
+                precio_por_caja: productoData.precioPorCaja,
+                precio_por_unidad: productoData.precioPorUnidad,
+                moneda_caja: productoData.monedaCaja,
+                moneda_unidad: productoData.monedaUnidad,
+                
+                // 📦 CAMPOS DE FRACCIONAMIENTO
+                permite_fraccionamiento: productoData.permiteFraccionamiento || false,
+                unidades_por_caja: productoData.unidadesPorCaja || 1,
+                
+                // 💸 CAMPOS EXISTENTES
                 precio_minimo: productoData.precioMinimo,
                 precio_maximo: productoData.precioMaximo,
                 margen_utilidad: productoData.margenUtilidad,
@@ -1667,6 +1728,18 @@ export const useAppStore = create<AppState>()(
               codigoProducto: data.codigo_producto,
               precio: data.precio,
               moneda: data.moneda as 'USD' | 'GS',
+              
+              // 💰 PRECIOS DUALES
+              precioPorCaja: data.precio_por_caja,
+              precioPorUnidad: data.precio_por_unidad,
+              monedaCaja: data.moneda_caja as 'USD' | 'GS' | undefined,
+              monedaUnidad: data.moneda_unidad as 'USD' | 'GS' | undefined,
+              
+              // 📦 FRACCIONAMIENTO
+              permiteFraccionamiento: data.permite_fraccionamiento,
+              unidadesPorCaja: data.unidades_por_caja,
+              
+              // 💸 EXISTENTES
               precioMinimo: data.precio_minimo,
               precioMaximo: data.precio_maximo,
               margenUtilidad: data.margen_utilidad,
@@ -1691,27 +1764,49 @@ export const useAppStore = create<AppState>()(
             console.log("🔄 Actualizando producto del catálogo...", { id, updates });
             const updateData: any = {};
             
+            // Campos básicos
             if (updates.marca) updateData.marca = updates.marca;
             if (updates.nombre) updateData.nombre = updates.nombre;
             if (updates.descripcion !== undefined) updateData.descripcion = updates.descripcion;
             if (updates.categoria !== undefined) updateData.categoria = updates.categoria;
             if (updates.codigoProducto !== undefined) updateData.codigo_producto = updates.codigoProducto;
+            
+            // Precios originales
             if (updates.precio !== undefined) updateData.precio = updates.precio;
             if (updates.moneda) updateData.moneda = updates.moneda;
+            
+            // 💰 NUEVOS CAMPOS DE PRECIOS DUALES
+            if (updates.precioPorCaja !== undefined) updateData.precio_por_caja = updates.precioPorCaja;
+            if (updates.precioPorUnidad !== undefined) updateData.precio_por_unidad = updates.precioPorUnidad;
+            if (updates.monedaCaja !== undefined) updateData.moneda_caja = updates.monedaCaja;
+            if (updates.monedaUnidad !== undefined) updateData.moneda_unidad = updates.monedaUnidad;
+            
+            // 📦 CAMPOS DE FRACCIONAMIENTO
+            if (updates.permiteFraccionamiento !== undefined) updateData.permite_fraccionamiento = updates.permiteFraccionamiento;
+            if (updates.unidadesPorCaja !== undefined) updateData.unidades_por_caja = updates.unidadesPorCaja;
+            
+            // Campos de rango de precios
             if (updates.precioMinimo !== undefined) updateData.precio_minimo = updates.precioMinimo;
             if (updates.precioMaximo !== undefined) updateData.precio_maximo = updates.precioMaximo;
             if (updates.margenUtilidad !== undefined) updateData.margen_utilidad = updates.margenUtilidad;
+            
+            // Campos de estado
             if (updates.disponibleParaVenta !== undefined) updateData.disponible_para_venta = updates.disponibleParaVenta;
             if (updates.activo !== undefined) updateData.activo = updates.activo;
             
             updateData.updated_at = new Date().toISOString();
+
+            console.log("📄 Datos a actualizar en Supabase:", updateData);
 
             const { error } = await supabase
               .from("catalogo_productos")
               .update(updateData)
               .eq("id", id);
 
-            if (error) throw error;
+            if (error) {
+              console.error("❌ Error de Supabase al actualizar:", error);
+              throw error;
+            }
 
             // Recargar catálogo para mantener consistencia
             await get().loadCatalogoProductos();

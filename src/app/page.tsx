@@ -116,7 +116,7 @@ export default function Dashboard() {
     cargarDatos();
   }, []);
 
-  // 💰 CALCULAR VENTAS REALES BASADAS EN MOVIMIENTOS DE STOCK
+  // 💰 CALCULAR VENTAS REALES BASADAS EN MOVIMIENTOS DE STOCK CON PRECIOS DUALES
   const calcularVentasReales = () => {
     const hoy = new Date();
     const ultimosSeisMeses = Array.from({ length: 6 }, (_, i) => {
@@ -144,18 +144,63 @@ export default function Dashboard() {
       let ventasUSD = 0;
       let ventasGS = 0;
 
-      // Calcular ventas por movimiento usando precios del catálogo
+      // Calcular ventas por movimiento usando precios duales del catálogo
       movimientosMes.forEach(movimiento => {
-        // Buscar el producto en el catálogo por nombre y marca
-        const productoEnCatalogo = catalogoProductos.find(prod => 
+        // Buscar el producto en el catálogo
+        // Primero intentar por nombre y marca del movimiento directo
+        let productoEnCatalogo = catalogoProductos.find(prod => 
           prod.nombre === movimiento.productoNombre && 
           prod.marca === movimiento.productoMarca
         );
 
         if (productoEnCatalogo) {
-          const valorVenta = productoEnCatalogo.precio * movimiento.cantidad;
+          let valorVenta = 0;
+          let monedaVenta = 'USD';
           
-          if (productoEnCatalogo.moneda === 'USD') {
+          // 🎯 LÓGICA DE PRECIOS DUALES SEGÚN TIPO DE MOVIMIENTO
+          if (movimiento.tipoUnidadMovimiento === 'caja' && movimiento.cajasAfectadas > 0) {
+            // Venta por caja completa
+            if (productoEnCatalogo.precioPorCaja && productoEnCatalogo.precioPorCaja > 0) {
+              valorVenta = productoEnCatalogo.precioPorCaja * movimiento.cajasAfectadas;
+              monedaVenta = productoEnCatalogo.monedaCaja || 'USD';
+            } else {
+              // Fallback al precio legacy
+              valorVenta = (productoEnCatalogo.precio || 0) * movimiento.cantidad;
+              monedaVenta = productoEnCatalogo.moneda || 'USD';
+            }
+          } else if (movimiento.tipoUnidadMovimiento === 'unidad') {
+            // Venta por unidad individual
+            const unidadesVendidas = movimiento.unidadesSueltasAfectadas || movimiento.cantidad;
+            
+            if (productoEnCatalogo.precioPorUnidad && productoEnCatalogo.precioPorUnidad > 0) {
+              valorVenta = productoEnCatalogo.precioPorUnidad * unidadesVendidas;
+              monedaVenta = productoEnCatalogo.monedaUnidad || 'USD';
+            } else if (productoEnCatalogo.precioPorCaja && productoEnCatalogo.unidadesPorCaja && productoEnCatalogo.unidadesPorCaja > 1) {
+              // Calcular precio por unidad desde precio por caja
+              const precioPorUnidadCalculado = productoEnCatalogo.precioPorCaja / productoEnCatalogo.unidadesPorCaja;
+              valorVenta = precioPorUnidadCalculado * unidadesVendidas;
+              monedaVenta = productoEnCatalogo.monedaCaja || 'USD';
+            } else {
+              // Fallback al precio legacy
+              valorVenta = (productoEnCatalogo.precio || 0) * unidadesVendidas;
+              monedaVenta = productoEnCatalogo.moneda || 'USD';
+            }
+          } else {
+            // Venta sin tipo específico - usar mejor precio disponible
+            if (productoEnCatalogo.precioPorCaja && productoEnCatalogo.precioPorCaja > 0) {
+              valorVenta = productoEnCatalogo.precioPorCaja * movimiento.cantidad;
+              monedaVenta = productoEnCatalogo.monedaCaja || 'USD';
+            } else if (productoEnCatalogo.precioPorUnidad && productoEnCatalogo.precioPorUnidad > 0) {
+              valorVenta = productoEnCatalogo.precioPorUnidad * movimiento.cantidad;
+              monedaVenta = productoEnCatalogo.monedaUnidad || 'USD';
+            } else {
+              valorVenta = (productoEnCatalogo.precio || 0) * movimiento.cantidad;
+              monedaVenta = productoEnCatalogo.moneda || 'USD';
+            }
+          }
+          
+          // Sumar a la moneda correspondiente
+          if (monedaVenta === 'USD') {
             ventasUSD += valorVenta;
           } else {
             ventasGS += valorVenta;

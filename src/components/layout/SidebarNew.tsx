@@ -24,7 +24,8 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { SimpleThemeToggle } from "@/components/ui/simple-theme-toggle";
+import { ModernThemeToggle } from "@/components/ui/modern-theme-toggle";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -314,7 +315,11 @@ export function SidebarNew() {
             isCollapsed ? "justify-center" : "justify-start"
           )}
         >
-          <ThemeToggle variant="switch" showLabel={!isCollapsed} />
+          <ModernThemeToggle 
+            showLabel={!isCollapsed} 
+            variant={isCollapsed ? "minimal" : "switch"}
+            className="transition-all duration-300"
+          />
         </div>
       </div>
 

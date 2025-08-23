@@ -26,12 +26,16 @@ export class HydrationErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: Error): HydrationErrorBoundaryState {
-    // Check if it's a hydration error
+    // Check if it's a hydration error or theme-related error
+    const errorMessage = error?.message || '';
     const isHydrationError = 
-      error.message.includes('Hydration') ||
-      error.message.includes('hydration') ||
-      error.message.includes('server HTML') ||
-      error.message.includes('client-side');
+      errorMessage.includes('Hydration') ||
+      errorMessage.includes('hydration') ||
+      errorMessage.includes('server HTML') ||
+      errorMessage.includes('client-side') ||
+      errorMessage.includes('displayName') ||
+      errorMessage.includes('useTheme') ||
+      errorMessage.includes('ThemeToggle');
 
     return {
       hasError: isHydrationError,
@@ -40,11 +44,25 @@ export class HydrationErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log hydration errors in development
+    // Log hydration errors in development with safe error handling
     if (process.env.NODE_ENV === 'development') {
       console.group('🚨 Hydration Error Detected');
-      console.error('Error:', error);
-      console.error('Error Info:', errorInfo);
+      
+      // Safely log error details
+      try {
+        console.error('Error:', {
+          message: error?.message || 'Unknown error',
+          name: error?.name || 'Unknown',
+          stack: error?.stack || 'No stack trace'
+        });
+        
+        console.error('Error Info:', {
+          componentStack: errorInfo?.componentStack || 'No component stack'
+        });
+      } catch (logError) {
+        console.error('Failed to log error details:', logError);
+      }
+      
       console.groupEnd();
     }
   }
