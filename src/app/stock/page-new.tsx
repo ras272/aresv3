@@ -470,7 +470,6 @@ export default function StockPage() {
                                   <tr>
                                     <th className="text-left py-3 px-4 font-semibold">Producto</th>
                                     <th className="text-center py-3 px-4 font-semibold">Stock</th>
-                                    <th className="text-left py-3 px-4 font-semibold">Ubicación</th>
                                     <th className="text-right py-3 px-4 font-semibold">Acciones</th>
                                   </tr>
                                 </thead>
@@ -517,16 +516,6 @@ export default function StockPage() {
                                             Stock bajo
                                           </div>
                                         )}
-                                      </td>
-                                      <td className="py-3 px-4">
-                                        <div className="text-sm text-gray-700">
-                                          {producto.ubicaciones[0]?.ubicacion || "Sin ubicación"}
-                                          {producto.ubicaciones.length > 1 && (
-                                            <span className="text-xs text-gray-500 ml-1">
-                                              (+{producto.ubicaciones.length - 1})
-                                            </span>
-                                          )}
-                                        </div>
                                       </td>
                                       <td className="py-3 px-4">
                                         <div className="flex items-center justify-end space-x-2">

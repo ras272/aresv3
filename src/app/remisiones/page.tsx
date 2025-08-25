@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import ModalRemision from '@/components/remisiones/ModalRemision';
 import ModalEliminarRemision from '@/components/remisiones/ModalEliminarRemision';
-import { VentaFraccionada } from '@/components/VentaFraccionada';
+
 import {
   FileText,
   Plus,
@@ -21,8 +21,7 @@ import {
   Eye,
   Edit,
   Trash2,
-  Download,
-  ShoppingCart
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -44,7 +43,7 @@ export default function RemisionesPage() {
   const [remisionSeleccionada, setRemisionSeleccionada] = useState<Remision | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
-  const [pestañaActiva, setPestañaActiva] = useState<'remisiones' | 'venta-fraccionada'>('remisiones');
+  const [pestañaActiva, setPestañaActiva] = useState<'remisiones'>('remisiones');
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -218,17 +217,7 @@ export default function RemisionesPage() {
                     <FileText className="h-4 w-4" />
                     <span>Remisiones Normales</span>
                   </button>
-                  <button
-                    onClick={() => setPestañaActiva('venta-fraccionada')}
-                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      pestañaActiva === 'venta-fraccionada'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>Venta Fraccionada</span>
-                  </button>
+
                 </nav>
               </div>
 
@@ -263,17 +252,8 @@ export default function RemisionesPage() {
             </CardContent>
           </Card>
 
-          {/* Contenido condicional según pestaña activa */}
-          {pestañaActiva === 'venta-fraccionada' ? (
-            <VentaFraccionada 
-              onVentaRealizada={(venta) => {
-                console.log('Venta fraccionada realizada:', venta);
-                toast.success('Venta fraccionada realizada exitosamente');
-              }}
-            />
-          ) : (
-            /* Lista de remisiones normales */
-            remisionesFiltradas.length === 0 ? (
+          {/* Lista de remisiones */}
+          {remisionesFiltradas.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
@@ -429,7 +409,6 @@ export default function RemisionesPage() {
                 </motion.div>
               ))}
             </div>
-          )
           )}
         </div>
 

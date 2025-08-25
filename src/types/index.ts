@@ -562,7 +562,8 @@ export interface AppState {
   loadRemisiones: () => Promise<void>;
   addRemision: (remision: Omit<Remision, 'id' | 'numeroRemision' | 'createdAt' | 'updatedAt'>) => Promise<Remision>;
   updateRemision: (id: string, updates: Partial<Remision>) => Promise<void>;
-  deleteRemision: (id: string) => Promise<void>;
+  deleteRemision: (id: string, motivo?: string) => Promise<any>;
+  deleteRemisionConMotivo: (id: string, motivo: string) => Promise<any>;
   getRemisiones: () => Remision[];
   getRemisionesByCliente: (cliente: string) => Remision[];
   generateNumeroRemision: () => Promise<string>;

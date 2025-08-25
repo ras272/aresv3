@@ -43,23 +43,25 @@ export const formatearMetadatosFraccionamiento = (descripcion: string | undefine
       );
     }
     
-    // Si es otro tipo de metadata JSON, mostrar de forma legible
+    // Si es otro tipo de metadata JSON, mostrar solo observaciones relevantes
     const entries = Object.entries(metadata);
     if (entries.length > 0) {
-      return (
-        <div className="mt-2 text-sm text-gray-700">
-          <div className="font-medium text-gray-800 mb-1">📋 Detalles:</div>
-          <div className="text-xs text-gray-600 space-y-1">
-            {entries.map(([key, value]) => (
-              <div key={key}>
-                • <span className="capitalize">
-                  {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
-                </span> {String(value)}
-              </div>
-            ))}
+      // Solo mostrar observaciones importantes, no cliente ni factura (ya están en columnas dedicadas)
+      const camposImportantes = ['observaciones'];
+      const infoRelevante = entries.filter(([key]) => camposImportantes.includes(key));
+      
+      if (infoRelevante.length > 0) {
+        return (
+          <div className="mt-1 text-sm text-gray-700">
+            {infoRelevante.map(([key, value]) => {
+              if (key === 'observaciones') {
+                return <div key={key} className="text-xs text-gray-500 mt-1">{String(value)}</div>;
+              }
+              return null;
+            })}
           </div>
-        </div>
-      );
+        );
+      }
     }
     
     return null;
@@ -93,12 +95,19 @@ export const formatearMetadatosTextoPlano = (descripcion: string | undefined): s
       return resultado;
     }
     
-    // Si es otro tipo de metadata JSON
+    // Si es otro tipo de metadata JSON, mostrar solo observaciones relevantes
     const entries = Object.entries(metadata);
     if (entries.length > 0) {
-      return entries
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(', ');
+      const camposImportantes = ['observaciones'];
+      const infoRelevante = entries
+        .filter(([key]) => camposImportantes.includes(key))
+        .map(([key, value]) => {
+          if (key === 'observaciones') return `${value}`;
+          return `${key}: ${value}`;
+        })
+        .filter(Boolean);
+      
+      return infoRelevante.join(' | ');
     }
     
     return '';

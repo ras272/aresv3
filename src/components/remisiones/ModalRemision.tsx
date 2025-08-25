@@ -29,7 +29,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { ComponenteDisponible, ProductoRemision, Remision } from "@/types";
+import { ProductoRemision, Remision } from "@/types";
+import { ComponenteDisponible } from "@/lib/database/equipos";
+import { procesarSalidaStock } from "@/lib/database/stock";
 
 // 🆕 NUEVO: Componente para mostrar productos agrupados con selector de números de serie
 interface ProductoAgrupadoItemProps {
@@ -51,10 +53,59 @@ function ProductoAgrupadoItem({ grupo, tieneNumerosSerie, stockTotal, onAgregarP
   const [numeroSerieSeleccionado, setNumeroSerieSeleccionado] = useState("");
   const [mostrarSelectorFraccionamiento, setMostrarSelectorFraccionamiento] = useState(false);
   const [tipoVentaSeleccionado, setTipoVentaSeleccionado] = useState<'unidad' | 'caja'>('unidad');
+  const [cantidadCajas, setCantidadCajas] = useState(1);
+  const [cantidadUnidades, setCantidadUnidades] = useState(1);
   
   // Detectar si el producto permite fraccionamiento
   const permiteFraccionamiento = grupo.items.some(item => item.permite_fraccionamiento);
   const itemFraccionamiento = grupo.items.find(item => item.permite_fraccionamiento);
+
+  // Calcular totales y validaciones
+  const maxCajas = itemFraccionamiento?.cajas_completas || 0;
+  const maxUnidades = itemFraccionamiento?.unidades_sueltas || 0;
+  const unidadesPorCaja = itemFraccionamiento?.unidades_por_paquete || 1;
+  
+  // 🔧 CORRECCIÓN: Calcular unidades disponibles totales (sueltas + las que están en cajas)
+  const unidadesDisponiblesTotales = maxUnidades + (maxCajas * unidadesPorCaja);
+  
+  // Debug: Log para ayudar con el diagnóstico
+  if (permiteFraccionamiento) {
+    console.log('📦 Stock fraccionado debug:', {
+      producto: grupo.nombre,
+      maxCajas,
+      maxUnidades,
+      unidadesPorCaja,
+      unidadesDisponiblesTotales,
+      tipoVentaSeleccionado,
+      cantidadUnidades,
+      cantidadCajas,
+      puedeVenderUnidades: unidadesDisponiblesTotales > 0 && cantidadUnidades <= unidadesDisponiblesTotales
+    });
+  }
+  
+  // Calcular unidades totales que se venderán
+  const unidadesTotales = tipoVentaSeleccionado === 'caja' 
+    ? cantidadCajas * unidadesPorCaja 
+    : cantidadUnidades;
+
+  // 🔧 CORRECCIÓN: Validar disponibilidad - para unidades, usar el total disponible
+  const puedeVenderCajas = maxCajas > 0 && cantidadCajas <= maxCajas;
+  const puedeVenderUnidades = unidadesDisponiblesTotales > 0 && cantidadUnidades <= unidadesDisponiblesTotales;
+  const esSeleccionValida = tipoVentaSeleccionado === 'caja' ? puedeVenderCajas : puedeVenderUnidades;
+
+  // Generar recomendación inteligente
+  const generarRecomendacion = () => {
+    if (maxCajas > 0 && maxUnidades === 0) {
+      return `💡 Recomendación: Puedes vender unidades individuales de las cajas completas disponibles`;
+    }
+    if (maxCajas > 0 && maxUnidades < unidadesPorCaja) {
+      return `💡 Recomendación: Vender por caja es más eficiente (tienes ${maxCajas} cajas completas)`;
+    }
+    if (unidadesDisponiblesTotales >= unidadesPorCaja && maxCajas === 0) {
+      return `💡 Sugerencia: Tienes ${maxUnidades} unidades sueltas disponibles`;
+    }
+    return null;
+  };
 
   const handleAgregarProducto = (tipoVentaParam?: 'unidad' | 'caja') => {
     if (tieneNumerosSerie) {
@@ -76,9 +127,30 @@ function ProductoAgrupadoItem({ grupo, tieneNumerosSerie, stockTotal, onAgregarP
         setMostrarSelectorFraccionamiento(true);
         return;
       }
-      // Agregar producto con tipo de venta
-      onAgregarProducto(grupo.items[0], tipoVentaParam);
+      
+      // Validar antes de agregar
+      if (!esSeleccionValida) {
+        const mensaje = tipoVentaParam === 'caja' 
+          ? `Solo tienes ${maxCajas} cajas disponibles`
+          : `Solo tienes ${unidadesDisponiblesTotales} unidades disponibles (${maxUnidades} sueltas + ${maxCajas * unidadesPorCaja} en cajas)`;
+        toast.error(mensaje);
+        return;
+      }
+      
+      // Crear producto con cantidad personalizada
+      const productoConCantidad = {
+        ...grupo.items[0],
+        cantidadSolicitada: tipoVentaParam === 'caja' ? cantidadCajas : cantidadUnidades,
+        tipoVenta: tipoVentaParam,
+        unidadesTotales: unidadesTotales
+      };
+      
+      onAgregarProducto(productoConCantidad, tipoVentaParam);
       setMostrarSelectorFraccionamiento(false);
+      
+      // Resetear cantidades
+      setCantidadCajas(1);
+      setCantidadUnidades(1);
     } else {
       // Si no tiene números de serie ni fraccionamiento, agregar el primer item disponible
       onAgregarProducto(grupo.items[0]);
@@ -179,7 +251,7 @@ function ProductoAgrupadoItem({ grupo, tieneNumerosSerie, stockTotal, onAgregarP
                 </Button>
                 <Button
                   size="default"
-                  onClick={handleAgregarProducto}
+                  onClick={() => handleAgregarProducto()}
                   disabled={!numeroSerieSeleccionado}
                   className="bg-blue-600 hover:bg-blue-700 px-6 py-2"
                 >
@@ -226,76 +298,273 @@ function ProductoAgrupadoItem({ grupo, tieneNumerosSerie, stockTotal, onAgregarP
         <Plus className="w-4 h-4 text-blue-600" />
       </div>
 
-      {/* 📦 SELECTOR DE FRACCIONAMIENTO */}
+      {/* 📦 SELECTOR DE FRACCIONAMIENTO MEJORADO */}
       <AnimatePresence>
         {mostrarSelectorFraccionamiento && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-green-50 border border-green-200 rounded-lg p-4"
+            className="bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 shadow-lg"
           >
-            <div className="flex items-center space-x-3 mb-4">
-              <Package className="w-5 h-5 text-green-600" />
-              <span className="text-base font-medium text-green-800">
-                ¿Cómo deseas vender este producto?
-              </span>
+            {/* Header mejorado */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-100 rounded-full">
+                  <Package className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900">
+                    Configurar Venta Fraccionada
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Selecciona la cantidad y tipo de venta
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMostrarSelectorFraccionamiento(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
 
+            {/* Información de stock mejorada */}
             {itemFraccionamiento && (
-              <div className="bg-white p-3 rounded-lg mb-4 border border-green-100">
-                <div className="text-sm text-gray-600 mb-2">
-                  <strong>Stock disponible:</strong>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span>📦 {itemFraccionamiento.cajas_completas} cajas completas</span>
-                  <span>🔗 {itemFraccionamiento.unidades_sueltas} unidades sueltas</span>
+              <div className="bg-white p-4 rounded-lg mb-6 border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-700">Stock Disponible</span>
                   <span className="text-xs text-gray-500">
-                    ({itemFraccionamiento.unidades_por_paquete} unidades por caja)
+                    {itemFraccionamiento.unidades_por_paquete} unidades por caja
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-gray-700">
+                      <strong>{itemFraccionamiento.cajas_completas}</strong> cajas completas
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-gray-700">
+                      <strong>{itemFraccionamiento.unidades_sueltas}</strong> unidades sueltas
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-blue-50 p-2 rounded text-center">
+                  <span className="text-sm font-medium text-blue-800">
+                    Total disponible: <strong>{unidadesDisponiblesTotales} unidades</strong>
                   </span>
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant={tipoVentaSeleccionado === 'unidad' ? 'default' : 'outline'}
-                onClick={() => {
-                  setTipoVentaSeleccionado('unidad');
-                  handleAgregarProducto('unidad');
-                }}
-                className="h-16 flex flex-col items-center justify-center space-y-1"
-              >
-                <div className="text-2xl">🔗</div>
-                <span className="text-sm font-medium">Por Unidad</span>
-                <span className="text-xs text-gray-500">Vender unidades sueltas</span>
-              </Button>
+            {/* Recomendación inteligente */}
+            {generarRecomendacion() && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-amber-800">{generarRecomendacion()}</p>
+              </div>
+            )}
 
-              <Button
-                variant={tipoVentaSeleccionado === 'caja' ? 'default' : 'outline'}
-                onClick={() => {
-                  setTipoVentaSeleccionado('caja');
-                  handleAgregarProducto('caja');
-                }}
-                className="h-16 flex flex-col items-center justify-center space-y-1"
-                disabled={(itemFraccionamiento?.cajas_completas || 0) === 0}
-              >
-                <div className="text-2xl">📦</div>
-                <span className="text-sm font-medium">Por Caja</span>
-                <span className="text-xs text-gray-500">
-                  Caja de {itemFraccionamiento?.unidades_por_paquete} unidades
-                </span>
-              </Button>
+            {/* Selector de tipo de venta */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Tipo de Venta
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div 
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                    tipoVentaSeleccionado === 'unidad'
+                      ? 'border-green-500 bg-green-50 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  } ${unidadesDisponiblesTotales === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => {
+                    if (unidadesDisponiblesTotales > 0) {
+                      setTipoVentaSeleccionado('unidad');
+                      setCantidadUnidades(Math.min(cantidadUnidades, unidadesDisponiblesTotales));
+                    }
+                  }}
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">🔗</div>
+                    <div className="font-medium text-gray-900">Por Unidad</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Vender unidades sueltas
+                    </div>
+                    {tipoVentaSeleccionado === 'unidad' && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCantidadUnidades(Math.max(1, cantidadUnidades - 1));
+                            }}
+                            disabled={cantidadUnidades <= 1}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            value={cantidadUnidades}
+                            onChange={(e) => {
+                              const value = Math.max(1, Math.min(unidadesDisponiblesTotales, parseInt(e.target.value) || 1));
+                              setCantidadUnidades(value);
+                            }}
+                            className="w-16 text-center h-8 text-sm"
+                            min={1}
+                            max={unidadesDisponiblesTotales}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCantidadUnidades(Math.min(unidadesDisponiblesTotales, cantidadUnidades + 1));
+                            }}
+                            disabled={cantidadUnidades >= unidadesDisponiblesTotales}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Máximo: {unidadesDisponiblesTotales} unidades
+                        </div>
+                      </div>
+                    )}
+                    {unidadesDisponiblesTotales === 0 && (
+                      <div className="text-xs text-red-500 mt-2">
+                        Sin unidades disponibles
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div 
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                    tipoVentaSeleccionado === 'caja'
+                      ? 'border-blue-500 bg-blue-50 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  } ${maxCajas === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => {
+                    if (maxCajas > 0) {
+                      setTipoVentaSeleccionado('caja');
+                      setCantidadCajas(Math.min(cantidadCajas, maxCajas));
+                    }
+                  }}
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-2">📦</div>
+                    <div className="font-medium text-gray-900">Por Caja</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Caja de {unidadesPorCaja} unidades
+                    </div>
+                    {tipoVentaSeleccionado === 'caja' && maxCajas > 0 && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCantidadCajas(Math.max(1, cantidadCajas - 1));
+                            }}
+                            disabled={cantidadCajas <= 1}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            value={cantidadCajas}
+                            onChange={(e) => {
+                              const value = Math.max(1, Math.min(maxCajas, parseInt(e.target.value) || 1));
+                              setCantidadCajas(value);
+                            }}
+                            className="w-16 text-center h-8 text-sm"
+                            min={1}
+                            max={maxCajas}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCantidadCajas(Math.min(maxCajas, cantidadCajas + 1));
+                            }}
+                            disabled={cantidadCajas >= maxCajas}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Máximo: {maxCajas} cajas
+                        </div>
+                      </div>
+                    )}
+                    {maxCajas === 0 && (
+                      <div className="text-xs text-red-500 mt-2">
+                        Sin cajas completas disponibles
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end mt-4">
+            {/* Resumen de la venta */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Total a vender:</span>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-gray-900">
+                    {unidadesTotales} unidades
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {tipoVentaSeleccionado === 'caja' 
+                      ? `${cantidadCajas} caja${cantidadCajas > 1 ? 's' : ''} × ${unidadesPorCaja} unidades`
+                      : `${cantidadUnidades} unidad${cantidadUnidades > 1 ? 'es' : ''} suelta${cantidadUnidades > 1 ? 's' : ''}`
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-between items-center">
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={() => setMostrarSelectorFraccionamiento(false)}
-                className="text-gray-600"
+                onClick={() => {
+                  setMostrarSelectorFraccionamiento(false);
+                  setCantidadCajas(1);
+                  setCantidadUnidades(1);
+                  setTipoVentaSeleccionado('unidad');
+                }}
+                className="text-gray-600 hover:text-gray-800"
               >
                 Cancelar
+              </Button>
+              <Button
+                onClick={() => handleAgregarProducto(tipoVentaSeleccionado)}
+                disabled={!esSeleccionValida}
+                className={`${
+                  tipoVentaSeleccionado === 'caja'
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                } text-white font-medium px-6`}
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Agregar {unidadesTotales} unidad{unidadesTotales > 1 ? 'es' : ''}
               </Button>
             </div>
           </motion.div>
@@ -628,20 +897,103 @@ export default function ModalRemision({
         let erroresStock = 0;
         for (const producto of productosSeleccionados) {
           try {
-            // 🔧 CORRECCIÓN: Usar el ID correcto según el origen
-            const itemId = producto.componenteId; // Para componentes_disponibles
-            const stockItemId = producto.stockItemId; // Para stock_items
-
-            await procesarSalidaStock(
-              itemId, // ID del componente_disponibles (null si es stock_items)
-              stockItemId, // ID del stock_items (null si es componentes_disponibles)
-              producto.cantidadSolicitada,
-              `REMISIÓN - ${clienteSeleccionado}`,
-              numeroRemisionGenerado,
-              numeroFactura || undefined,
-              clienteSeleccionado,
-              producto.tipoVenta // 📦 NUEVO: Pasar tipo de venta para productos fraccionables
-            );
+            // 🔧 DETERMINAR EL MÉTODO DE PROCESAMIENTO SEGÚN EL TIPO DE PRODUCTO
+            const esProductoFraccionable = producto.stockItemId && producto.tipoVenta;
+            
+            if (esProductoFraccionable) {
+              // 📦 PRODUCTOS FRACCIONABLES: Usar función específica de base de datos
+              console.log('📦 Procesando producto fraccionable:', {
+                stockItemId: producto.stockItemId,
+                cantidad: producto.cantidadSolicitada,
+                tipoVenta: producto.tipoVenta,
+                nombre: producto.nombre
+              });
+              
+              // Importar supabase desde la ubicación correcta
+              const { supabase } = await import('@/lib/database/shared/supabase');
+              
+              const { data: resultado, error: fraccionError } = await supabase.rpc('procesar_venta_fraccionada', {
+                p_stock_item_id: producto.stockItemId,
+                p_cantidad_solicitada: producto.cantidadSolicitada,
+                p_tipo_venta: producto.tipoVenta,
+                p_usuario: tecnicoResponsable || 'Sistema',
+                p_referencia: `REMISION-${numeroRemisionGenerado}`
+              });
+              
+              if (fraccionError) {
+                console.error('❌ Error en función procesar_venta_fraccionada:', fraccionError);
+                throw new Error(`Error procesando venta fraccionada: ${fraccionError.message}`);
+              }
+              
+              if (!resultado?.success) {
+                console.error('❌ Error procesando venta fraccionada:', resultado?.error);
+                throw new Error(`Error en venta fraccionada: ${resultado?.error || 'Error desconocido'}`);
+              }
+              
+              console.log('✅ Venta fraccionada procesada exitosamente:', resultado);
+              
+            } else {
+              // 🔧 PRODUCTOS NORMALES: Usar función del store que maneja stock_items
+              const itemId = producto.componenteId || producto.stockItemId;
+              
+              console.log('🔍 DEBUG: Datos del producto normal:', {
+                nombre: producto.nombre,
+                componenteId: producto.componenteId,
+                stockItemId: producto.stockItemId,
+                itemId: itemId,
+                permite_fraccionamiento: false,
+                origen: producto.origen
+              });
+              
+              if (!itemId) {
+                console.error('❌ ERROR: No se encontró ID válido:', {
+                  producto: producto.nombre,
+                  componenteId: producto.componenteId,
+                  stockItemId: producto.stockItemId
+                });
+                throw new Error(`No se encontró ID válido para el producto ${producto.nombre}`);
+              }
+              
+              console.log('🔧 Procesando producto normal con función del store:', {
+                itemId,
+                cantidad: producto.cantidadSolicitada,
+                nombre: producto.nombre,
+                cliente: clienteSeleccionado,
+                numeroFactura: numeroFactura
+              });
+              
+              // 🔧 CORREGIR PARÁMETROS PARA STOCK_ITEMS
+              // Para productos de stock_items: (componenteId=null, stockItemId=itemId)
+              // Para productos de componentes: (componenteId=itemId, stockItemId=null)
+              const esDeStockItems = producto.stockItemId && !producto.componenteId;
+              
+              if (esDeStockItems) {
+                // Es de stock_items
+                await procesarSalidaStock(
+                  null,                      // componenteId = null
+                  producto.stockItemId,      // stockItemId
+                  producto.cantidadSolicitada,
+                  `REMISIÓN - ${clienteSeleccionado}`,
+                  numeroRemisionGenerado,
+                  numeroFactura,
+                  clienteSeleccionado
+                );
+              } else {
+                // Es de componentes_disponibles
+                await procesarSalidaStock(
+                  producto.componenteId,     // componenteId
+                  null,                      // stockItemId = null  
+                  producto.cantidadSolicitada,
+                  `REMISIÓN - ${clienteSeleccionado}`,
+                  numeroRemisionGenerado,
+                  numeroFactura,
+                  clienteSeleccionado
+                );
+              }
+              
+              console.log('✅ Producto normal procesado exitosamente:', producto.nombre);
+            }
+            
           } catch (error) {
             erroresStock++;
             console.error(

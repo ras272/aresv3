@@ -453,6 +453,7 @@ class StockModuleImpl implements StockModule {
           productoModelo: movimiento.productoModelo,
           numeroSerie: movimiento.numeroSerie,
           cliente: movimiento.cliente,
+          numeroFactura: movimiento.numeroFactura,  // 🆕 NUEVO: Incluir explícitamente el número de factura
           observaciones: movimiento.observaciones,
           carpetaOrigen: movimiento.carpetaOrigen,
           carpetaDestino: movimiento.carpetaDestino,
@@ -603,8 +604,10 @@ class StockModuleImpl implements StockModule {
           numeroSerie: stockItem?.numero_serie || datosAdicionales.numeroSerie,
           codigoItem: undefined,
           codigoCargaOrigen: undefined,
-          numeroFactura: mov.referencia_externa,
-          cliente: datosAdicionales.cliente || mov.referencia_externa,
+          numeroFactura: datosAdicionales.numeroFactura || mov.referencia_externa,  // 🆕 PRIORIZAR numeroFactura del JSON
+          cliente: (datosAdicionales.cliente && !datosAdicionales.cliente.includes('REMISION-') && !datosAdicionales.cliente.includes('REM-')) 
+                  ? datosAdicionales.cliente 
+                  : null,  // 🔧 EVITAR mostrar números de remisión como cliente
           costoUnitario: mov.costo_unitario,
           valorTotal: mov.costo_total,
           carpetaOrigen: datosAdicionales.carpetaOrigen || stockItem?.marca,
@@ -737,7 +740,7 @@ class StockModuleImpl implements StockModule {
           numeroSerie: stockItem?.numero_serie || datosAdicionales.numeroSerie,
           codigoItem: undefined,
           codigoCargaOrigen: undefined,
-          numeroFactura: mov.referencia_externa,
+          numeroFactura: datosAdicionales.numeroFactura || mov.referencia_externa,  // 🆕 PRIORIZAR numeroFactura del JSON
           cliente: datosAdicionales.cliente || mov.referencia_externa,
           costoUnitario: mov.costo_unitario,
           valorTotal: mov.costo_total,
@@ -872,7 +875,7 @@ class StockModuleImpl implements StockModule {
           numeroSerie: stockItem?.numero_serie || datosAdicionales.numeroSerie,
           codigoItem: undefined,
           codigoCargaOrigen: undefined,
-          numeroFactura: mov.referencia_externa,
+          numeroFactura: datosAdicionales.numeroFactura || mov.referencia_externa,  // 🆕 PRIORIZAR numeroFactura del JSON
           cliente: datosAdicionales.cliente || mov.referencia_externa,
           costoUnitario: mov.costo_unitario,
           valorTotal: mov.costo_total,

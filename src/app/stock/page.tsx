@@ -13,7 +13,7 @@ import { TrazabilidadStats } from "@/components/stock/TrazabilidadStats";
 import { MovimientosCarpetaModal } from "@/components/stock/MovimientosCarpetaModal";
 import { MovimientosStock } from "@/components/stock/MovimientosStock";
 import { RegistrarSalidaModal } from "@/components/stock/RegistrarSalidaModal";
-import { StockFraccionadoView } from "@/components/StockFraccionadoView";
+
 import {
   Package,
   Search,
@@ -24,8 +24,9 @@ import {
   Image as ImageIcon,
   BarChart3,
   ArrowDownCircle,
-  X,
   Box,
+  X,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -91,8 +92,7 @@ export default function StockPage() {
   // Estado para carpetas vacías creadas manualmente
   const [carpetasVacias, setCarpetasVacias] = useState<Set<string>>(new Set());
   
-  // Estado para pestañas
-  const [pestañaActiva, setPestañaActiva] = useState<'normal' | 'fraccionado'>('normal');
+
 
   useEffect(() => {
     loadStock();
@@ -105,7 +105,7 @@ export default function StockPage() {
 
     stockItems.forEach((componente) => {
       const carpeta =
-        componente.carpetaPrincipal || componente.marca || "Sin Clasificar";
+        componente.marca || "Sin Clasificar";
 
       if (!grupos[carpeta]) {
         grupos[carpeta] = [];
@@ -135,7 +135,7 @@ export default function StockPage() {
           nombre: componente.nombre,
           marca: componente.marca,
           modelo: componente.modelo,
-          tipoComponente: componente.tipoComponente,
+          tipoComponente: componente.tipoProducto,
           cantidadTotal: 0,
           ubicaciones: [],
           detallesNumerosSerie: {
@@ -275,86 +275,50 @@ export default function StockPage() {
           {/* Estadísticas de Trazabilidad */}
           <TrazabilidadStats />
 
-          {/* Pestañas de navegación */}
+          {/* Barra de herramientas */}
           <Card className="border-none shadow-md">
-            <CardContent className="p-0">
-              <div className="border-b border-gray-200">
-                <nav className="flex space-x-8 px-6 py-4">
-                  <button
-                    onClick={() => setPestañaActiva('normal')}
-                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      pestañaActiva === 'normal'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Package className="h-4 w-4" />
-                    <span>Stock Normal</span>
-                  </button>
-                  <button
-                    onClick={() => setPestañaActiva('fraccionado')}
-                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      pestañaActiva === 'fraccionado'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Box className="h-4 w-4" />
-                    <span>Stock Fraccionado</span>
-                  </button>
-                </nav>
-              </div>
-
-              {/* Contenido de pestañas */}
-              {pestañaActiva === 'normal' && (
-                <div className="p-4">
-                  <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
-                    <div className="relative flex-1 w-full">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Buscar productos..."
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        className="pl-10 border-gray-300 focus:border-blue-500 rounded-lg"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2 w-full md:w-auto">
-                      <Button
-                        onClick={() => setModalMovimientosGeneralOpen(true)}
-                        variant="outline"
-                        className="flex items-center space-x-2 text-blue-600 border-blue-300 hover:bg-blue-100 transition-colors"
-                      >
-                        <BarChart3 className="h-4 w-4" />
-                        <span>Movimientos Recientes</span>
-                      </Button>
-                      <Button
-                        onClick={() => (window.location.href = "/stock/nuevo")}
-                        className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Nuevo Item</span>
-                      </Button>
-                      <Button
-                        onClick={() => setModalCrearCarpeta(true)}
-                        variant="outline"
-                        className="flex items-center space-x-2 border-gray-300 hover:bg-gray-100"
-                      >
-                        <Folder className="h-4 w-4" />
-                        <span>Nueva Carpeta</span>
-                      </Button>
-                    </div>
-                  </div>
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar productos..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="pl-10 border-gray-300 focus:border-blue-500 rounded-lg"
+                  />
                 </div>
-              )}
+                <div className="flex items-center space-x-2 w-full md:w-auto">
+                  <Button
+                    onClick={() => setModalMovimientosGeneralOpen(true)}
+                    variant="outline"
+                    className="flex items-center space-x-2 text-blue-600 border-blue-300 hover:bg-blue-100 transition-colors"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Movimientos Recientes</span>
+                  </Button>
+                  <Button
+                    onClick={() => (window.location.href = "/stock/nuevo")}
+                    className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Nuevo Item</span>
+                  </Button>
+                  <Button
+                    onClick={() => setModalCrearCarpeta(true)}
+                    variant="outline"
+                    className="flex items-center space-x-2 border-gray-300 hover:bg-gray-100"
+                  >
+                    <Folder className="h-4 w-4" />
+                    <span>Nueva Carpeta</span>
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Contenido condicional según pestaña activa */}
-          {pestañaActiva === 'fraccionado' ? (
-            <StockFraccionadoView />
-          ) : (
-            /* Productos organizados por carpetas - Stock Normal */
-            <div className="space-y-4">
+          {/* Productos organizados por carpetas */}
+          <div className="space-y-4">
             {/* Mostrar carpetas vacías creadas manualmente */}
             {Array.from(carpetasVacias).map((carpeta) => {
               const carpetaId = carpeta.toLowerCase().replace(/\s+/g, "-");
@@ -488,7 +452,6 @@ export default function StockPage() {
                                 <tr>
                                   <th className="text-left py-3 px-4 font-semibold">Producto</th>
                                   <th className="text-center py-3 px-4 font-semibold">Stock</th>
-                                  <th className="text-left py-3 px-4 font-semibold">Ubicación</th>
                                   <th className="text-right py-3 px-4 font-semibold">Acciones</th>
                                 </tr>
                               </thead>
@@ -584,16 +547,6 @@ export default function StockPage() {
                                       })()}
                                     </td>
                                     <td className="py-3 px-4">
-                                      <div className="text-sm text-gray-700">
-                                        {producto.ubicaciones[0]?.ubicacion || "Sin ubicación"}
-                                        {producto.ubicaciones.length > 1 && (
-                                          <span className="text-xs text-gray-500 ml-1">
-                                            (+{producto.ubicaciones.length - 1})
-                                          </span>
-                                        )}
-                                      </div>
-                                    </td>
-                                    <td className="py-3 px-4">
                                       <div className="flex items-center justify-end space-x-2">
                                         <Button
                                           variant="ghost"
@@ -642,7 +595,7 @@ export default function StockPage() {
               );
             })}
 
-            {Object.keys(productosAgrupados).length === 0 && pestañaActiva === 'normal' && (
+            {Object.keys(productosAgrupados).length === 0 && (
               <Card className="border border-gray-200 shadow-sm rounded-lg">
                 <CardContent className="p-12 text-center">
                   <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
@@ -654,10 +607,9 @@ export default function StockPage() {
                     organizados por carpetas.
                   </p>
                 </CardContent>
-                </Card>
+              </Card>
             )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -779,7 +731,7 @@ export default function StockPage() {
       {/* Modal de Movimientos Generales */}
       <Dialog open={modalMovimientosGeneralOpen} onOpenChange={setModalMovimientosGeneralOpen}>
         <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden rounded-xl">
-          <DialogHeader className="border-b border-gray-200 pb-4">
+          <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-800">
               <BarChart3 className="w-5 h-5 text-blue-500" />
               Movimientos Recientes del Stock

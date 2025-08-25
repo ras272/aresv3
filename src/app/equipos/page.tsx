@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MobileTable, MobileEquipoCard } from '@/components/ui/mobile-table';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -32,14 +33,33 @@ export default function EquiposPage() {
   const { equipos, mantenimientos, searchEquipos, deleteEquipo } = useAppStore();
   const { getCurrentUser } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
+  const [filtroCliente, setFiltroCliente] = useState('todos');
   const [equipoAEliminar, setEquipoAEliminar] = useState<{ id: string; nombre: string } | null>(null);
   const [eliminando, setEliminando] = useState(false);
   
-  const equiposFiltrados = searchTerm ? searchEquipos(searchTerm) : equipos;
+  // 🔍 FILTRADO COMBINADO: Búsqueda + Cliente
+  const equiposFiltrados = (() => {
+    let equiposFiltrados = searchTerm ? searchEquipos(searchTerm) : equipos;
+    
+    // Aplicar filtro por cliente
+    if (filtroCliente !== 'todos') {
+      equiposFiltrados = equiposFiltrados.filter(equipo => 
+        equipo.cliente === filtroCliente
+      );
+    }
+    
+    return equiposFiltrados;
+  })();
   
   // 🎯 Verificar si el usuario actual es técnico
   const currentUser = getCurrentUser();
   const esTecnico = currentUser?.rol === 'tecnico';
+
+  // 📊 OBTENER LISTA DE CLIENTES ÚNICOS
+  const clientesUnicos = () => {
+    const clientes = [...new Set(equipos.map(e => e.cliente))].filter(Boolean).sort();
+    return clientes;
+  };
 
   const getMantenimientosCount = (equipoId: string) => {
     return mantenimientos.filter(m => m.equipoId === equipoId).length;
@@ -126,6 +146,7 @@ export default function EquiposPage() {
         <div className="h-full flex flex-col space-y-3 sm:space-y-4 lg:space-y-6 px-2 sm:px-4 lg:px-6">
         {/* Header Actions - Mobile Optimized */}
         <div className="flex flex-col gap-3 sm:gap-4 px-1 sm:px-0">
+          {/* Fila 1: Búsqueda y Botones */}
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 flex-shrink-0" />
@@ -158,6 +179,53 @@ export default function EquiposPage() {
                 </Link>
               </div>
             )}
+          </div>
+
+          {/* Fila 2: Filtros */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            {/* Filtro por Cliente */}
+            <div className="flex-1 min-w-0 sm:max-w-xs">
+              <Select value={filtroCliente} onValueChange={setFiltroCliente}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filtrar por cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los clientes</SelectItem>
+                  {clientesUnicos().map((cliente) => (
+                    <SelectItem key={cliente} value={cliente}>
+                      {cliente}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Información de filtros activos */}
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              {filtroCliente !== 'todos' && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Building className="h-3 w-3" />
+                  {filtroCliente}
+                  <button
+                    onClick={() => setFiltroCliente('todos')}
+                    className="ml-1 text-gray-500 hover:text-gray-700"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {(searchTerm || filtroCliente !== 'todos') && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFiltroCliente('todos');
+                  }}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

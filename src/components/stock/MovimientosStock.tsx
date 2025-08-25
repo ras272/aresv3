@@ -20,7 +20,7 @@ import {
   Package,
   MapPin,
   Download,
-  Eye
+  FileText  // 🆕 NUEVO: Icono para facturas
 } from 'lucide-react'
 
 interface Movimiento {
@@ -43,6 +43,7 @@ interface Movimiento {
   codigo_carga_origen?: string
   carpeta_origen?: string
   carpeta_destino?: string
+  numero_factura?: string  // 🆕 NUEVO: Campo para número de factura
 }
 
 export function MovimientosStock() {
@@ -102,12 +103,119 @@ export function MovimientosStock() {
           // Si no es JSON válido, continuar con datos vacíos
         }
         
+        // 💰 EXTRAER NÚMERO DE FACTURA: Buscar en múltiples fuentes, evitar números de remisión
+        let numeroFactura = null;
+        
+        // 1. Priorizar numeroFactura del JSON si no es un número de remisión
+        if (datosJSON.numeroFactura && !datosJSON.numeroFactura.includes('REMISION-') && !datosJSON.numeroFactura.includes('REM-')) {
+          numeroFactura = datosJSON.numeroFactura;
+        }
+        // 2. Buscar en referencia_externa si contiene FACT- pero no REMISION-
+        else if (mov.referencia_externa && mov.referencia_externa.includes('FACT-') && !mov.referencia_externa.includes('REMISION-')) {
+          numeroFactura = mov.referencia_externa;
+        }
+        // 3. Buscar en motivo si menciona Factura: pero no es remisión
+        else if (mov.motivo && mov.motivo.includes('Factura:') && !mov.motivo.includes('REMISION-')) {
+          const facturaMatch = mov.motivo.split('Factura:')[1]?.trim();
+          if (facturaMatch && !facturaMatch.includes('REMISION-') && !facturaMatch.includes('REM-')) {
+            numeroFactura = facturaMatch;
+          }
+        }
+        
+        // 👤 EXTRAER CLIENTE/DESTINO: Para salidas mostrar cliente, para entradas mostrar destino
+        let cliente = null;
+        
+        // 🚛 CASO ESPECIAL: Si es ENTRADA, buscar destino de la carga
+        if (mov.tipo_movimiento === 'Entrada') {
+          // Buscar destino en el motivo (formato: "Entrada desde carga: XXX - Destino: Hospital")
+          if (mov.motivo && mov.motivo.includes('Destino:')) {
+            const destinoMatch = mov.motivo.split('Destino:')[1]?.trim();
+            if (destinoMatch) {
+              cliente = destinoMatch;
+            }
+          }
+          // También buscar en observaciones del JSON
+          else if (datosJSON.observaciones && datosJSON.observaciones.includes('destinada a:')) {
+            const destinoMatch = datosJSON.observaciones.split('destinada a:')[1]?.trim();
+            if (destinoMatch) {
+              cliente = destinoMatch;
+            }
+          }
+        }
+        // 📤 CASO NORMAL: Para SALIDAS, buscar cliente real
+        else {
+          // 1. Priorizar cliente del JSON si no es un número de remisión
+          if (datosJSON.cliente && !datosJSON.cliente.includes('REMISION-') && !datosJSON.cliente.includes('REM-')) {
+            cliente = datosJSON.cliente;
+          }
+          // 2. Verificar campo cliente de la BD si no es remisión
+          else if (mov.cliente && !mov.cliente.includes('REMISION-') && !mov.cliente.includes('REM-')) {
+            cliente = mov.cliente;
+          }
+          // 3. Buscar en motivo si menciona cliente
+          else if (mov.motivo && mov.motivo.includes('Cliente:') && !mov.motivo.includes('REMISION-')) {
+            const clienteMatch = mov.motivo.split('Cliente:')[1]?.split(',')[0]?.trim();
+            if (clienteMatch && !clienteMatch.includes('REMISION-') && !clienteMatch.includes('REM-')) {
+              cliente = clienteMatch;
+            }
+          }
+        }
+        
+        // 🔍 DEBUG: Log para identificar problemas de datos
+        if (datosJSON.cliente && (datosJSON.cliente.includes('REMISION-') || datosJSON.cliente.includes('REM-'))) {
+          console.warn('⚠️ Cliente contiene número de remisión:', {
+            movimientoId: mov.id,
+            clienteEnJSON: datosJSON.cliente,
+            referenciaExterna: mov.referencia_externa,
+            motivo: mov.motivo,
+            descripcionCompleta: mov.descripcion
+          });
+        }
+        
+        // 🔍 DEBUG ADICIONAL: Log todos los datos para diagnóstico
+        if (mov.descripcion && (mov.descripcion.includes('REMISION-') || mov.descripcion.includes('REM-'))) {
+          console.log('🔍 Movimiento con referencia a remisión:', {
+            movimientoId: mov.id,
+            descripcionJSON: mov.descripcion,
+            clienteExtraido: cliente,
+            facturaExtraida: numeroFactura,
+            referenciaExterna: mov.referencia_externa,
+            motivo: mov.motivo
+          });
+        }
+        
+        // 👨‍💼 EXTRAER USUARIO RESPONSABLE: Determinar quién realizó el movimiento
+        let usuarioResponsable = mov.usuario_responsable;
+        
+        // Si no hay usuario responsable o está vacío, usar valores por defecto según el tipo
+        if (!usuarioResponsable || usuarioResponsable.trim() === '') {
+          if (mov.tipo_movimiento === 'Entrada') {
+            usuarioResponsable = 'Sistema';
+          } else {
+            // Buscar en el JSON si hay información de responsable
+            usuarioResponsable = datosJSON.responsable || datosJSON.usuarioResponsable || 'Sistema';
+          }
+        }
+        
+        // 📝 LIMPIAR MOTIVO: Hacer el motivo más legible para la UI
+        let motivoLimpio = mov.motivo;
+        if (motivoLimpio && mov.tipo_movimiento === 'Entrada') {
+          // Para entradas, mostrar solo "Ingreso de mercadería" en lugar del texto completo
+          if (motivoLimpio.includes('Entrada desde carga:')) {
+            motivoLimpio = 'Ingreso de mercadería';
+          }
+        }
+        
         return {
           ...mov,
           producto_nombre: datosJSON.productoNombre || 'Producto no especificado',
           codigo_item: mov.codigo_carga_origen || datosJSON.codigoItem || 'N/A',
           ubicacion_origen: mov.carpeta_origen || datosJSON.carpetaOrigen || '',
-          ubicacion_destino: mov.carpeta_destino || datosJSON.carpetaDestino || ''
+          ubicacion_destino: mov.carpeta_destino || datosJSON.carpetaDestino || '',
+          cliente: cliente,  // 🆕 USAR cliente mejorado (sin mostrar números de remisión)
+          numero_factura: numeroFactura,  // 🆕 USAR número de factura extraído
+          usuario_responsable: usuarioResponsable,  // 🆕 USAR usuario responsable limpio
+          motivo: motivoLimpio  // 🆕 USAR motivo limpio y legible
         };
       });
 
@@ -130,7 +238,8 @@ export function MovimientosStock() {
         mov.codigo_item?.toLowerCase().includes(termino) ||
         mov.usuario_responsable?.toLowerCase().includes(termino) ||
         mov.motivo?.toLowerCase().includes(termino) ||
-        mov.cliente?.toLowerCase().includes(termino)
+        mov.cliente?.toLowerCase().includes(termino) ||
+        mov.numero_factura?.toLowerCase().includes(termino)  // 🆕 NUEVO: Búsqueda por número de factura
       )
     }
 
@@ -219,7 +328,7 @@ export function MovimientosStock() {
   const exportarCSV = () => {
     const headers = [
       'Fecha', 'Tipo', 'Item', 'Código', 'Cantidad', 'Stock Anterior', 
-      'Stock Nuevo', 'Origen', 'Destino', 'Usuario', 'Motivo', 'Cliente'
+      'Stock Nuevo', 'Cliente/Destino', 'Factura', 'Usuario', 'Motivo'  // 🆕 NUEVO: Reorganizado sin ubicaciones
     ]
     
     const csvContent = [
@@ -232,11 +341,10 @@ export function MovimientosStock() {
         mov.cantidad,
         mov.cantidad_anterior,
         mov.cantidad_nueva,
-        `"${mov.ubicacion_origen || mov.carpeta_origen || ''}"`,
-        `"${mov.ubicacion_destino || mov.carpeta_destino || ''}"`,
+        `"${mov.cliente || ''}"`,  // 🆕 NUEVO: Incluir cliente en CSV
+        `"${mov.numero_factura || ''}"`,
         `"${mov.usuario_responsable || 'Sistema'}"`,
-        `"${mov.motivo || ''}"`,
-        `"${mov.cliente || ''}"`
+        `"${mov.motivo || ''}"`
       ].join(','))
     ].join('\n')
 
@@ -345,9 +453,9 @@ export function MovimientosStock() {
                     <TableHead>Item</TableHead>
                     <TableHead>Cantidad</TableHead>
                     <TableHead>Stock</TableHead>
-                    <TableHead>Ubicaciones</TableHead>
+                    <TableHead>Cliente/Destino</TableHead> {/* 🆕 Columna de Cliente o Destino según tipo */}
+                    <TableHead>Factura</TableHead>
                     <TableHead>Usuario</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -401,27 +509,48 @@ export function MovimientosStock() {
                         </div>
                       </TableCell>
                       
+                      {/* 🆕 Celda de Cliente/Destino */}
                       <TableCell>
-                        <div className="text-sm space-y-1">
-                          {movimiento.ubicacion_origen && (
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <span className="text-xs">De:</span>
-                              <MapPin className="h-3 w-3" />
-                              <span>{movimiento.ubicacion_origen}</span>
+                        <div className="text-sm">
+                          {movimiento.cliente ? (
+                            <div className={`flex items-center gap-1 ${
+                              movimiento.tipo_movimiento === 'Entrada' 
+                                ? 'text-green-600' 
+                                : 'text-blue-600'
+                            }`}>
+                              {movimiento.tipo_movimiento === 'Entrada' ? (
+                                <MapPin className="h-3 w-3" />
+                              ) : (
+                                <User className="h-3 w-3" />
+                              )}
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                movimiento.tipo_movimiento === 'Entrada'
+                                  ? 'bg-green-50'
+                                  : 'bg-blue-50'
+                              }`}>
+                                {movimiento.cliente}
+                              </span>
                             </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">
+                              {movimiento.tipo_movimiento === 'Entrada' ? 'Sin destino' : 'Sin cliente'}
+                            </span>
                           )}
-                          {movimiento.ubicacion_destino && (
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <span className="text-xs">A:</span>
-                              <MapPin className="h-3 w-3" />
-                              <span>{movimiento.ubicacion_destino}</span>
+                        </div>
+                      </TableCell>
+                      
+                      {/* 🆕 NUEVO: Celda de Factura */}
+                      <TableCell>
+                        <div className="text-sm">
+                          {movimiento.numero_factura ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <FileText className="h-3 w-3" />
+                              <span className="font-mono text-xs bg-green-50 px-2 py-1 rounded">
+                                {movimiento.numero_factura}
+                              </span>
                             </div>
-                          )}
-                          {movimiento.cliente && (
-                            <div className="flex items-center gap-1 text-blue-600">
-                              <Package className="h-3 w-3" />
-                              <span className="text-xs">{movimiento.cliente}</span>
-                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">Sin factura</span>
                           )}
                         </div>
                       </TableCell>
@@ -429,19 +558,17 @@ export function MovimientosStock() {
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">
                           <User className="h-3 w-3 text-gray-400" />
-                          <span>{movimiento.usuario_responsable}</span>
+                          <span>{movimiento.usuario_responsable || 'Sistema'}</span>
                         </div>
-                        {movimiento.motivo && (
-                          <div className="text-xs text-gray-500 mt-1 truncate" title={movimiento.motivo}>
+                        {movimiento.motivo && movimiento.motivo.length > 30 ? (
+                          <div className="text-xs text-gray-500 mt-1 truncate max-w-[200px]" title={movimiento.motivo}>
+                            {movimiento.motivo.substring(0, 30)}...
+                          </div>
+                        ) : movimiento.motivo ? (
+                          <div className="text-xs text-gray-500 mt-1" title={movimiento.motivo}>
                             {movimiento.motivo}
                           </div>
-                        )}
-                      </TableCell>
-                      
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}
