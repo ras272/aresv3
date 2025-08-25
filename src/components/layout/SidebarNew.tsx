@@ -218,7 +218,7 @@ export function SidebarNew() {
       ...section,
       items: section.items.filter((item) => {
         const hasAccess = canAccess(item.permission);
-        console.log(`🔍 SidebarNew: Checking access for ${item.name} (${item.permission}):`, hasAccess);
+        // console.log(`🔍 SidebarNew: Checking access for ${item.name} (${item.permission}):`, hasAccess);
         return hasAccess;
       }),
     }))

@@ -19,6 +19,7 @@ import { mantenimientoSchema, MantenimientoFormData } from '@/lib/schemas';
 import { aiReporteService } from '@/lib/ai-service';
 import { WordReporteService } from '@/lib/word-service';
 import { RepuestosSimpleSelector } from '@/components/reportes/RepuestosSimpleSelector';
+import { EquipoRecommendations } from '@/components/equipos/EquipoRecommendations';
 import { 
   ArrowLeft, 
   Heart,
@@ -37,7 +38,17 @@ import {
   Download,
   Sparkles,
   Send,
-  Eye
+  Eye,
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  History,
+  Zap,
+  Shield,
+  DollarSign,
+  Timer,
+  Target
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -90,15 +101,15 @@ export default function EquipoDetailPage() {
           mantenimientoId: mantenimiento.id,
           equipoId: equipoId,
           tecnicoResponsable: 'Sistema',
-          observaciones: `${motivo} - ${equipo.cliente} - ${selectedMantenimiento?.descripcion || 'Reporte eliminado'}`
+          observaciones: `${motivo} - ${equipo?.cliente || 'Cliente N/A'} - ${selectedMantenimiento?.descripcion || 'Reporte eliminado'}`
         });
         
-        console.log(`✅ Repuesto devuelto al stock con trazabilidad completa: ${repuesto.nombre} (+${repuesto.cantidad})`);
+        // console.log(`✅ Repuesto devuelto al stock con trazabilidad completa: ${repuesto.nombre} (+${repuesto.cantidad})`);
         toast.success(`Repuesto devuelto: ${repuesto.nombre} (+${repuesto.cantidad})`, {
           description: 'Stock actualizado con trazabilidad completa'
         });
       } catch (error) {
-        console.error(`❌ Error devolviendo repuesto ${repuesto.nombre}:`, error);
+        // console.error(`❌ Error devolviendo repuesto ${repuesto.nombre}:`, error);
         toast.error(`Error devolviendo ${repuesto.nombre} al stock`);
       }
     }
@@ -110,12 +121,12 @@ export default function EquipoDetailPage() {
   const mantenimientos = todosLosMantenimientos.filter(m => m.equipoId === equipoId);
   
   // 🔍 DEBUG: Log para ver el estado actual
-  console.log('🔍 DEBUG - Mantenimientos del equipo:', {
-    equipoId,
-    totalMantenimientos: todosLosMantenimientos.length,
-    mantenimientosDelEquipo: mantenimientos.length,
-    mantenimientos: mantenimientos.map(m => ({ id: m.id, descripcion: m.descripcion, fecha: m.fecha }))
-  });
+  // console.log('🔍 DEBUG - Mantenimientos del equipo:', {
+  //   equipoId,
+  //   totalMantenimientos: todosLosMantenimientos.length,
+  //   mantenimientosDelEquipo: mantenimientos.length,
+  //   mantenimientos: mantenimientos.map(m => ({ id: m.id, descripcion: m.descripcion, fecha: m.fecha }))
+  // });
   
   // 🎯 Verificar si el usuario actual es técnico
   const currentUser = getCurrentUser();
@@ -168,6 +179,8 @@ export default function EquipoDetailPage() {
         equipoId,
         fecha: new Date().toISOString().split('T')[0],
         componenteId: selectedComponenteId || undefined,
+        tipo: 'Correctivo' as const,
+        prioridad: 'Media' as const,
         archivo: selectedFile ? {
           nombre: selectedFile.name,
           tamaño: selectedFile.size,
@@ -175,9 +188,9 @@ export default function EquipoDetailPage() {
         } : undefined,
       };
       
-      console.log('🔄 Creando mantenimiento...', mantenimientoData);
+      // console.log('🔄 Creando mantenimiento...', mantenimientoData);
       const nuevoMantenimiento = await addMantenimiento(mantenimientoData);
-      console.log('✅ Mantenimiento creado:', nuevoMantenimiento);
+      // console.log('✅ Mantenimiento creado:', nuevoMantenimiento);
       
       toast.success('Mantenimiento registrado correctamente');
       setShowNewMantenimiento(false);
@@ -391,7 +404,7 @@ export default function EquipoDetailPage() {
               cantidadAnterior: repuesto.stockAntes,
               mantenimientoId: selectedMantenimiento.id,
               equipoId: equipoId,
-              tecnicoResponsable: currentUser?.name || 'Sistema',
+              tecnicoResponsable: currentUser?.nombre || currentUser?.email || 'Sistema',
               observaciones: `Utilizado en servicio técnico - ${equipo.cliente} - ${selectedMantenimiento.descripcion}`
             });
             
@@ -632,26 +645,71 @@ export default function EquipoDetailPage() {
       subtitle={`${equipo.marca} ${equipo.modelo} - ${equipo.cliente}`}
     >
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Volver</span>
-          </Button>
-          
-          <div className="flex items-center space-x-2">
-            <Badge variant="outline" className="text-green-700 border-green-200">
-              {equipo.componentes.filter(c => c.estado === 'Operativo').length}/{equipo.componentes.length} Operativo
-            </Badge>
-            <Badge variant="secondary">
-              {mantenimientos.length} mantenimiento{mantenimientos.length !== 1 ? 's' : ''}
-            </Badge>
-          </div>
-        </div>
+            {/* Mejorar Header con Alerts */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => router.back()}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Volver</span>
+                </Button>
+                
+                {/* Alerts de estado crítico */}
+                {equipo.componentes.filter(c => c.estado === 'Fuera de servicio').length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center space-x-2 bg-red-50 text-red-700 px-3 py-1 rounded-full border border-red-200"
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Equipo requiere atención urgente</span>
+                  </motion.div>
+                )}
+                
+                {mantenimientos.filter(m => m.estado === 'Pendiente').length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center space-x-2 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full border border-yellow-200"
+                  >
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm font-medium">{mantenimientos.filter(m => m.estado === 'Pendiente').length} servicios pendientes</span>
+                  </motion.div>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className={`${
+                  equipo.componentes.filter(c => c.estado === 'Operativo').length === equipo.componentes.length
+                    ? 'text-green-700 border-green-200 bg-green-50'
+                    : 'text-yellow-700 border-yellow-200 bg-yellow-50'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    equipo.componentes.filter(c => c.estado === 'Operativo').length === equipo.componentes.length
+                      ? 'bg-green-500'
+                      : 'bg-yellow-500'
+                  }`}></div>
+                  {equipo.componentes.filter(c => c.estado === 'Operativo').length}/{equipo.componentes.length} Operativo
+                </Badge>
+                <Badge variant="secondary">
+                  {mantenimientos.length} mantenimiento{mantenimientos.length !== 1 ? 's' : ''}
+                </Badge>
+                
+                {/* Quick actions */}
+                <Button
+                  size="sm"
+                  onClick={() => setShowNewMantenimiento(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Nuevo Reclamo</span>
+                  <span className="sm:hidden">Nuevo</span>
+                </Button>
+              </div>
+            </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Información del Equipo */}
@@ -780,6 +838,7 @@ export default function EquipoDetailPage() {
 
             {/* Historial de Mantenimientos */}
             <motion.div
+              id="historial-mantenimientos"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -789,6 +848,11 @@ export default function EquipoDetailPage() {
                   <div className="flex items-center space-x-2">
                     <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900">Historial de Mantenimientos</h3>
+                    {mantenimientos.length > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {mantenimientos.length} registros
+                      </Badge>
+                    )}
                   </div>
                   <Button
                     onClick={() => setShowNewMantenimiento(true)}
@@ -807,186 +871,497 @@ export default function EquipoDetailPage() {
                       <p className="text-gray-500">Este equipo no tiene mantenimientos previos</p>
                     </div>
                   ) : (
-                    mantenimientos
-                      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-                      .map((mantenimiento, index) => {
-                        const componente = mantenimiento.componenteId 
-                          ? equipo.componentes.find(c => c.id === mantenimiento.componenteId)
-                          : null;
-                        
-                        return (
-                          <motion.div
-                            key={mantenimiento.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
-                          >
-                                                            <div className="flex flex-col space-y-3">
-                              {/* Header con estado y fecha */}
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant={getEstadoColor(mantenimiento.estado) as any}>
-                                  {getEstadoIcon(mantenimiento.estado)}
-                                  <span className="ml-1">{mantenimiento.estado}</span>
-                                </Badge>
-                                {mantenimiento.numeroReporte && (
-                                  <Badge className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
-                                    {mantenimiento.numeroReporte}
-                                  </Badge>
-                                )}
-                                <span className="text-xs text-gray-500">
-                                  {new Date(mantenimiento.fecha).toLocaleDateString('es-ES')}
-                                </span>
-                                {componente && (
-                                  <Badge variant="outline" className="text-blue-700 text-xs">
-                                    {componente.nombre}
-                                  </Badge>
-                                )}
+                    <div className="relative">
+                      {/* Timeline vertical */}
+                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                      
+                      {mantenimientos
+                        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+                        .map((mantenimiento, index) => {
+                          const componente = mantenimiento.componenteId 
+                            ? equipo.componentes.find(c => c.id === mantenimiento.componenteId)
+                            : null;
+                          
+                          const diasDesdeCreacion = Math.floor(
+                            (new Date().getTime() - new Date(mantenimiento.fecha).getTime()) / (1000 * 60 * 60 * 24)
+                          );
+                          
+                          return (
+                            <motion.div
+                              key={mantenimiento.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className="relative ml-8 pl-6 pb-4"
+                            >
+                              {/* Icono en el timeline */}
+                              <div className={`absolute -left-10 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                mantenimiento.estado === 'Finalizado' 
+                                  ? 'bg-green-100 border-green-500 text-green-600'
+                                  : mantenimiento.estado === 'En proceso'
+                                  ? 'bg-blue-100 border-blue-500 text-blue-600'
+                                  : 'bg-red-100 border-red-500 text-red-600'
+                              }`}>
+                                {getEstadoIcon(mantenimiento.estado)}
                               </div>
                               
-                              {/* Descripción */}
-                              <p className="text-sm text-gray-900">{mantenimiento.descripcion}</p>
-                              
-                              {/* Comentarios */}
-                              {mantenimiento.comentarios && (
-                                <div className="bg-gray-50 p-2 rounded-lg">
-                                  <Label className="text-xs font-medium text-gray-500">Comentarios del Ingeniero</Label>
-                                  <p className="text-xs text-gray-700 mt-1">{mantenimiento.comentarios}</p>
-                                </div>
-                              )}
-                              
-                              {/* Archivo adjunto */}
-                              {mantenimiento.archivo && (
-                                <div className="flex items-center space-x-2 text-xs text-blue-600">
-                                  <FileText className="h-3 w-3" />
-                                  <span className="truncate">{mantenimiento.archivo.nombre}</span>
-                                  <span className="text-gray-500">
-                                    ({(mantenimiento.archivo.tamaño / 1024).toFixed(1)} KB)
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {/* Acciones */}
-                              <div className="flex flex-wrap items-center gap-2 pt-2">
-                                {mantenimiento.estado !== 'Finalizado' && (
-                                  <Select
-                                    value={mantenimiento.estado}
-                                    onValueChange={(value) => updateEstadoMantenimiento(mantenimiento.id, value as any)}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                      <SelectItem value="En proceso">En proceso</SelectItem>
-                                      <SelectItem value="Finalizado">Finalizado</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                )}
-                                
-                                {/* Botón para generar/ver reporte */}
-                                {mantenimiento.estado === 'Finalizado' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => abrirReporteModal(mantenimiento)}
-                                    className="h-8 text-xs text-gray-700 border-gray-300 hover:bg-gray-50"
-                                  >
-                                    <Brain className="h-3 w-3 mr-1" />
-                                    <span>{mantenimiento.reporteGenerado ? 'Ver' : 'Generar'}</span>
-                                  </Button>
-                                )}
+                              {/* Contenido del mantenimiento */}
+                              <div className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow bg-white">
+                                <div className="flex flex-col space-y-3">
+                                  {/* Header con estado, fecha y badges */}
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant={getEstadoColor(mantenimiento.estado) as any} className="text-xs">
+                                      <span className="ml-1">{mantenimiento.estado}</span>
+                                    </Badge>
+                                    {mantenimiento.numeroReporte && (
+                                      <Badge className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+                                        {mantenimiento.numeroReporte}
+                                      </Badge>
+                                    )}
+                                    <span className="text-xs text-gray-500 flex items-center">
+                                      <Calendar className="h-3 w-3 mr-1" />
+                                      {new Date(mantenimiento.fecha).toLocaleDateString('es-ES')}
+                                    </span>
+                                    {componente && (
+                                      <Badge variant="outline" className="text-blue-700 text-xs">
+                                        <Package className="h-3 w-3 mr-1" />
+                                        {componente.nombre}
+                                      </Badge>
+                                    )}
+                                    
+                                    {/* Indicador de antigüedad */}
+                                    {diasDesdeCreacion <= 7 && (
+                                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                        {diasDesdeCreacion === 0 ? 'Hoy' 
+                                         : diasDesdeCreacion === 1 ? 'Ayer'
+                                         : `${diasDesdeCreacion}d`}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Descripción del problema */}
+                                  <div>
+                                    <h4 className="text-sm font-medium text-gray-900 mb-1">Problema Reportado</h4>
+                                    <p className="text-sm text-gray-700">{mantenimiento.descripcion}</p>
+                                  </div>
+                                  
+                                  {/* Información adicional */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                    {mantenimiento.tecnicoAsignado && (
+                                      <div className="flex items-center space-x-1 text-gray-600">
+                                        <Settings className="h-3 w-3" />
+                                        <span>Técnico: {mantenimiento.tecnicoAsignado}</span>
+                                      </div>
+                                    )}
+                                    
+                                    {mantenimiento.precioServicio && (
+                                      <div className="flex items-center space-x-1 text-green-600">
+                                        <DollarSign className="h-3 w-3" />
+                                        <span>₲{mantenimiento.precioServicio.toLocaleString('es-PY')}</span>
+                                      </div>
+                                    )}
+                                    
+                                    {mantenimiento.repuestosUtilizados && mantenimiento.repuestosUtilizados.length > 0 && (
+                                      <div className="flex items-center space-x-1 text-purple-600">
+                                        <Package className="h-3 w-3" />
+                                        <span>{mantenimiento.repuestosUtilizados.length} repuestos utilizados</span>
+                                      </div>
+                                    )}
+                                    
+                                    {diasDesdeCreacion > 0 && (
+                                      <div className="flex items-center space-x-1 text-gray-500">
+                                        <Clock className="h-3 w-3" />
+                                        <span>Hace {diasDesdeCreacion} días</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Comentarios del ingeniero */}
+                                  {mantenimiento.comentarios && (
+                                    <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-blue-200">
+                                      <div className="flex items-center space-x-1 mb-1">
+                                        <Settings className="h-3 w-3 text-blue-600" />
+                                        <span className="text-xs font-medium text-blue-800">Comentarios del Ingeniero</span>
+                                      </div>
+                                      <p className="text-xs text-gray-700">{mantenimiento.comentarios}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Archivo adjunto */}
+                                  {mantenimiento.archivo && (
+                                    <div className="flex items-center space-x-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                                      <FileText className="h-3 w-3" />
+                                      <span className="truncate font-medium">{mantenimiento.archivo.nombre}</span>
+                                      <span className="text-gray-500">
+                                        ({(mantenimiento.archivo.tamaño / 1024).toFixed(1)} KB)
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Acciones */}
+                                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
+                                    {mantenimiento.estado !== 'Finalizado' && (
+                                      <Select
+                                        value={mantenimiento.estado}
+                                        onValueChange={(value) => updateEstadoMantenimiento(mantenimiento.id, value as any)}
+                                      >
+                                        <SelectTrigger className="h-7 text-xs w-32">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                          <SelectItem value="En proceso">En proceso</SelectItem>
+                                          <SelectItem value="Finalizado">Finalizado</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    )}
+                                    
+                                    {/* Botón para generar/ver reporte */}
+                                    {mantenimiento.estado === 'Finalizado' && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => abrirReporteModal(mantenimiento)}
+                                        className="h-7 text-xs text-gray-700 border-gray-300 hover:bg-gray-50"
+                                      >
+                                        <Brain className="h-3 w-3 mr-1" />
+                                        <span>{mantenimiento.reporteGenerado ? 'Ver Reporte' : 'Generar Reporte'}</span>
+                                      </Button>
+                                    )}
 
-                                {/* Botón para eliminar mantenimiento */}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => abrirModalEliminarMantenimiento(mantenimiento)}
-                                  className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                                >
-                                  <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                  <span>Eliminar</span>
-                                </Button>
+                                    {/* Botón para eliminar mantenimiento */}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => abrirModalEliminarMantenimiento(mantenimiento)}
+                                      className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                    >
+                                      <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                      <span>Eliminar</span>
+                                    </Button>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })
+                            </motion.div>
+                          );
+                        })
+                      }
+                    </div>
                   )}
                 </div>
               </Card>
             </motion.div>
           </div>
 
-          {/* Sidebar con Estadísticas */}
-          <div className="space-y-6">
+          {/* Sidebar con Métricas Avanzadas */}
+          <div className="space-y-4">
+            {/* Métricas de Rendimiento */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Card className="p-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Estadísticas</h4>
-                <div className="space-y-4">
+              <Card className="p-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <BarChart3 className="h-4 w-4 text-blue-500" />
+                  <h4 className="text-sm font-semibold text-gray-900">Métricas de Rendimiento</h4>
+                </div>
+                <div className="space-y-3">
+                  {/* Tiempo promedio de resolución */}
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Total Componentes</span>
-                    <Badge variant="outline">{equipo.componentes.length}</Badge>
+                    <div className="flex items-center space-x-1">
+                      <Timer className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-600">Tiempo Promedio</span>
+                    </div>
+                    <span className="text-xs font-medium text-green-600">
+                      {(() => {
+                        const finalizados = mantenimientos.filter(m => m.estado === 'Finalizado');
+                        if (finalizados.length === 0) return 'N/A';
+                        const promedio = finalizados.reduce((acc, m) => {
+                          const inicio = new Date(m.createdAt || m.fecha);
+                          const fin = new Date(m.fecha);
+                          const horas = (fin.getTime() - inicio.getTime()) / (1000 * 60 * 60);
+                          return acc + Math.max(horas, 2); // Mínimo 2 horas
+                        }, 0) / finalizados.length;
+                        return `${promedio.toFixed(1)}h`;
+                      })()} 
+                    </span>
                   </div>
+                  
+                  {/* Tasa de éxito */}
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Operativos</span>
-                    <Badge variant="default">
-                      {equipo.componentes.filter(c => c.estado === 'Operativo').length}
-                    </Badge>
+                    <div className="flex items-center space-x-1">
+                      <Target className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-600">Tasa de Éxito</span>
+                    </div>
+                    <span className="text-xs font-medium text-green-600">
+                      {mantenimientos.length > 0 
+                        ? `${Math.round((mantenimientos.filter(m => m.estado === 'Finalizado').length / mantenimientos.length) * 100)}%`
+                        : '100%'
+                      }
+                    </span>
                   </div>
+                  
+                  {/* Actividad reciente */}
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">En Reparación</span>
-                    <Badge variant="secondary">
-                      {equipo.componentes.filter(c => c.estado === 'En reparacion').length}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Fuera de Servicio</span>
-                    <Badge variant="destructive">
-                      {equipo.componentes.filter(c => c.estado === 'Fuera de servicio').length}
-                    </Badge>
-                  </div>
-                  <hr />
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Total Mantenimientos</span>
-                    <Badge variant="outline">{mantenimientos.length}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Pendientes</span>
-                    <Badge variant="destructive">
-                      {mantenimientos.filter(m => m.estado === 'Pendiente').length}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">En Proceso</span>
-                    <Badge variant="secondary">
-                      {mantenimientos.filter(m => m.estado === 'En proceso').length}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Finalizados</span>
-                    <Badge variant="default">
-                      {mantenimientos.filter(m => m.estado === 'Finalizado').length}
-                    </Badge>
+                    <div className="flex items-center space-x-1">
+                      <Activity className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-600">Último Servicio</span>
+                    </div>
+                    <span className="text-xs font-medium text-gray-700">
+                      {(() => {
+                        if (mantenimientos.length === 0) return 'Nunca';
+                        const ultimo = mantenimientos.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
+                        const dias = Math.floor((new Date().getTime() - new Date(ultimo.fecha).getTime()) / (1000 * 60 * 60 * 24));
+                        return dias === 0 ? 'Hoy' : dias === 1 ? 'Ayer' : `${dias}d`;
+                      })()} 
+                    </span>
                   </div>
                 </div>
               </Card>
             </motion.div>
 
+            {/* Estadísticas de Componentes */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Card className="p-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Información Adicional</h4>
-                <div className="space-y-3 text-sm">
+              <Card className="p-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Package className="h-4 w-4 text-orange-500" />
+                  <h4 className="text-sm font-semibold text-gray-900">Estado de Componentes</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-1">
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <span className="text-xs text-gray-600">Operativos</span>
+                    </div>
+                    <Badge variant="default" className="text-xs h-5">
+                      {equipo.componentes.filter(c => c.estado === 'Operativo').length}/{equipo.componentes.length}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-1">
+                      <Wrench className="h-3 w-3 text-yellow-500" />
+                      <span className="text-xs text-gray-600">En Reparación</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs h-5">
+                      {equipo.componentes.filter(c => c.estado === 'En reparacion').length}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-1">
+                      <AlertTriangle className="h-3 w-3 text-red-500" />
+                      <span className="text-xs text-gray-600">Fuera de Servicio</span>
+                    </div>
+                    <Badge variant="destructive" className="text-xs h-5">
+                      {equipo.componentes.filter(c => c.estado === 'Fuera de servicio').length}
+                    </Badge>
+                  </div>
+                  {/* Porcentaje de salud */}
+                  <div className="pt-2 border-t">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-gray-600">Salud del Equipo</span>
+                      <span className="text-xs font-medium text-green-600">
+                        {Math.round((equipo.componentes.filter(c => c.estado === 'Operativo').length / equipo.componentes.length) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                        style={{
+                          width: `${(equipo.componentes.filter(c => c.estado === 'Operativo').length / equipo.componentes.length) * 100}%`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Historial de Servicios */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <Card className="p-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <History className="h-4 w-4 text-purple-500" />
+                  <h4 className="text-sm font-semibold text-gray-900">Historial de Servicios</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-600">Total Servicios</span>
+                    <Badge variant="outline" className="text-xs h-5">{mantenimientos.length}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-3 w-3 text-red-500" />
+                      <span className="text-xs text-gray-600">Pendientes</span>
+                    </div>
+                    <Badge variant="destructive" className="text-xs h-5">
+                      {mantenimientos.filter(m => m.estado === 'Pendiente').length}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-1">
+                      <Zap className="h-3 w-3 text-blue-500" />
+                      <span className="text-xs text-gray-600">En Proceso</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs h-5">
+                      {mantenimientos.filter(m => m.estado === 'En proceso').length}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-1">
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <span className="text-xs text-gray-600">Completados</span>
+                    </div>
+                    <Badge variant="default" className="text-xs h-5">
+                      {mantenimientos.filter(m => m.estado === 'Finalizado').length}
+                    </Badge>
+                  </div>
+                  
+                  {/* Gráfico simple de tendencia */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-gray-600">Actividad (últimos 30 días)</span>
+                      <TrendingUp className="h-3 w-3 text-green-500" />
+                    </div>
+                    <div className="flex space-x-1">
+                      {Array.from({ length: 7 }, (_, i) => {
+                        const fecha = new Date();
+                        fecha.setDate(fecha.getDate() - (6 - i));
+                        const serviciosDelDia = mantenimientos.filter(m => {
+                          const fechaMantenimiento = new Date(m.fecha);
+                          return fechaMantenimiento.toDateString() === fecha.toDateString();
+                        }).length;
+                        const altura = serviciosDelDia > 0 ? Math.max(serviciosDelDia * 4, 4) : 2;
+                        return (
+                          <div 
+                            key={i} 
+                            className={`flex-1 rounded-sm ${
+                              serviciosDelDia > 0 ? 'bg-blue-500' : 'bg-gray-200'
+                            } transition-all duration-300`}
+                            style={{ height: `${altura}px` }}
+                            title={`${serviciosDelDia} servicios el ${fecha.toLocaleDateString('es-ES')}`}
+                          ></div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Análisis Financiero */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <Card className="p-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <DollarSign className="h-4 w-4 text-green-500" />
+                  <h4 className="text-sm font-semibold text-gray-900">Análisis Financiero</h4>
+                </div>
+                <div className="space-y-3">
+                  {/* Costo total en mantenimientos */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-600">Inversión Total</span>
+                    <span className="text-xs font-medium text-green-600">
+                      {(() => {
+                        const total = mantenimientos
+                          .filter(m => m.precioServicio && m.estado === 'Finalizado')
+                          .reduce((sum, m) => sum + (m.precioServicio || 0), 0);
+                        return total > 0 ? `₲${total.toLocaleString('es-PY')}` : '₲0';
+                      })()} 
+                    </span>
+                  </div>
+                  
+                  {/* Costo promedio por servicio */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-600">Costo Promedio</span>
+                    <span className="text-xs font-medium text-blue-600">
+                      {(() => {
+                        const serviciosConPrecio = mantenimientos.filter(m => m.precioServicio && m.estado === 'Finalizado');
+                        if (serviciosConPrecio.length === 0) return '₲0';
+                        const promedio = serviciosConPrecio.reduce((sum, m) => sum + (m.precioServicio || 0), 0) / serviciosConPrecio.length;
+                        return `₲${Math.round(promedio).toLocaleString('es-PY')}`;
+                      })()} 
+                    </span>
+                  </div>
+                  
+                  {/* Último servicio */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-600">Último Servicio</span>
+                    <span className="text-xs font-medium text-purple-600">
+                      {(() => {
+                        const ultimo = mantenimientos
+                          .filter(m => m.estado === 'Finalizado' && m.precioServicio)
+                          .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
+                        return ultimo?.precioServicio ? `₲${ultimo.precioServicio.toLocaleString('es-PY')}` : '₲0';
+                      })()} 
+                    </span>
+                  </div>
+                  
+                  {/* Indicador de rentabilidad */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-600">Estado Financiero</span>
+                      {(() => {
+                        const totalInvertido = mantenimientos
+                          .filter(m => m.precioServicio && m.estado === 'Finalizado')
+                          .reduce((sum, m) => sum + (m.precioServicio || 0), 0);
+                        const promedioAnual = totalInvertido > 0 ? totalInvertido / Math.max(1, new Date().getFullYear() - new Date(equipo.fechaEntrega).getFullYear()) : 0;
+                        
+                        if (promedioAnual < 500000) {
+                          return <span className="text-xs font-medium text-green-600 flex items-center"><TrendingUp className="h-3 w-3 mr-1" />Eficiente</span>;
+                        } else if (promedioAnual < 1000000) {
+                          return <span className="text-xs font-medium text-yellow-600 flex items-center"><Activity className="h-3 w-3 mr-1" />Moderado</span>;
+                        } else {
+                          return <span className="text-xs font-medium text-red-600 flex items-center"><TrendingDown className="h-3 w-3 mr-1" />Alto</span>;
+                        }
+                      })()} 
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {(() => {
+                        const totalInvertido = mantenimientos
+                          .filter(m => m.precioServicio && m.estado === 'Finalizado')
+                          .reduce((sum, m) => sum + (m.precioServicio || 0), 0);
+                        const añosOperacion = Math.max(1, new Date().getFullYear() - new Date(equipo.fechaEntrega).getFullYear());
+                        const promedioAnual = totalInvertido / añosOperacion;
+                        return `₲${Math.round(promedioAnual).toLocaleString('es-PY')}/año`;
+                      })()} 
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Recomendaciones Inteligentes */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <EquipoRecommendations equipo={equipo} mantenimientos={mantenimientos} />
+            </motion.div>
+
+            {/* Información del Equipo */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <Card className="p-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Información Adicional</h4>
+                <div className="space-y-2 text-xs">
                   <div>
                     <span className="text-gray-600">Registrado:</span>
                     <p className="font-medium">{new Date(equipo.createdAt).toLocaleDateString('es-ES')}</p>
@@ -999,6 +1374,33 @@ export default function EquipoDetailPage() {
                         : 'Sin mantenimientos'
                       }
                     </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Antigüedad:</span>
+                    <p className="font-medium">
+                      {(() => {
+                        const años = Math.floor((new Date().getTime() - new Date(equipo.fechaEntrega).getTime()) / (1000 * 60 * 60 * 24 * 365));
+                        const meses = Math.floor(((new Date().getTime() - new Date(equipo.fechaEntrega).getTime()) % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+                        return años > 0 ? `${años}a ${meses}m` : `${meses} meses`;
+                      })()} 
+                    </p>
+                  </div>
+                  
+                  {/* Certificación de calidad */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center space-x-1 mb-1">
+                      <Shield className="h-3 w-3 text-blue-500" />
+                      <span className="text-gray-600">Certificación</span>
+                    </div>
+                    <Badge 
+                      variant={equipo.componentes.filter(c => c.estado === 'Operativo').length === equipo.componentes.length ? 'default' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {equipo.componentes.filter(c => c.estado === 'Operativo').length === equipo.componentes.length 
+                        ? 'Certificado ✓' 
+                        : 'Mantenimiento Req.'
+                      }
+                    </Badge>
                   </div>
                 </div>
               </Card>
@@ -1013,347 +1415,334 @@ export default function EquipoDetailPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+              className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50"
               onClick={cerrarReporteModal}
             >
               <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.98, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className={`bg-white rounded-lg p-6 max-h-[90vh] overflow-y-auto ${
-                  selectedMantenimiento.reporteGenerado && !reporteListo ? 'w-full max-w-2xl' : 'w-full max-w-4xl'
-                }`}
+                exit={{ scale: 0.98, opacity: 0 }}
+                className="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-4xl max-h-[90vh] overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-2">
-                    <Brain className="h-6 w-6 text-gray-700" />
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {selectedMantenimiento.reporteGenerado ? 'Ver Reporte Técnico' : 'Generar Reporte Técnico'}
-                    </h3>
+                {/* Header del Modal */}
+                <div className="border-b border-gray-200 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <Brain className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {selectedMantenimiento.reporteGenerado ? 'Reporte Técnico' : 'Nuevo Reporte Técnico'}
+                        </h3>
+                        <p className="text-sm text-gray-500">Mantenimiento del {new Date(selectedMantenimiento.fecha).toLocaleDateString('es-ES')}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={cerrarReporteModal} className="h-8 w-8 p-0">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </Button>
                   </div>
-                  <Button variant="outline" onClick={cerrarReporteModal}>
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </Button>
                 </div>
 
-                {selectedMantenimiento.reporteGenerado ? (
-                  // Modal simplificado para ver reporte existente
-                  <div className="space-y-6">
-                    {/* Información del mantenimiento */}
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <h4 className="font-medium text-gray-900 mb-3">Información del Mantenimiento</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                {/* Contenido del Modal */}
+                <div className="flex-1 overflow-y-auto">
+                  {selectedMantenimiento.reporteGenerado ? (
+                    // Vista para reporte existente
+                    <div className="p-6 space-y-6">
+                      {/* Información básica */}
+                      <div className="grid grid-cols-3 gap-6 text-sm">
                         <div>
-                          <span className="text-gray-600">Cliente:</span>
-                          <p className="font-medium">{equipo.cliente}</p>
+                          <label className="block text-gray-500 mb-1">Cliente</label>
+                          <p className="font-medium text-gray-900">{equipo.cliente}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Equipo:</span>
-                          <p className="font-medium">{equipo.marca} {equipo.modelo}</p>
+                          <label className="block text-gray-500 mb-1">Equipo</label>
+                          <p className="font-medium text-gray-900">{equipo.marca} {equipo.modelo}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Fecha:</span>
-                          <p className="font-medium">{new Date(selectedMantenimiento.fecha).toLocaleDateString('es-ES')}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Estado:</span>
-                          <Badge variant={getEstadoColor(selectedMantenimiento.estado) as any}>
+                          <label className="block text-gray-500 mb-1">Estado</label>
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
                             {selectedMantenimiento.estado}
-                          </Badge>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-gray-600">Problema:</span>
-                          <p className="font-medium">{selectedMantenimiento.descripcion}</p>
+                          </span>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Estado del reporte */}
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <span className="text-sm font-medium text-green-800">Reporte técnico generado</span>
+                      <div>
+                        <label className="block text-gray-500 mb-1 text-sm">Problema reportado</label>
+                        <p className="text-gray-900">{selectedMantenimiento.descripcion}</p>
                       </div>
-                      <p className="text-sm text-green-700">
-                        El reporte profesional está disponible para descarga. Fue generado automáticamente con IA 
-                        siguiendo el formato estándar de Ares Paraguay.
-                      </p>
-                    </div>
 
-                    {/* Vista previa del reporte */}
-                    <div className="bg-gray-50 border rounded-lg p-8 text-center">
-                      <FileText className="h-16 w-16 text-gray-400 mx-auto mb-3" />
-                      <h4 className="font-medium text-gray-900 mb-1">Reporte Técnico Profesional</h4>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Documento generado con formato corporativo de Ares Paraguay
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Incluye información del cliente, trabajo realizado, costos y firma del ingeniero
-                      </p>
-                    </div>
+                      {/* Estado del reporte */}
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <CheckCircle className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-900">Reporte generado</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Documento técnico disponible en formato profesional
+                        </p>
+                      </div>
 
-                    {/* Acciones principales */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <Button
-                        onClick={async () => {
-                          try {
-                            toast.info('Cargando contenido del reporte...');
-                            
-                            const componente = selectedMantenimiento.componenteId 
-                              ? equipo.componentes.find(c => c.id === selectedMantenimiento.componenteId)
-                              : undefined;
-
-                            const contenidoReporte = await aiReporteService.generarReporte({
-                              equipo: {
-                                cliente: equipo.cliente,
-                                ubicacion: equipo.ubicacion,
-                                marca: equipo.marca,
-                                modelo: equipo.modelo,
-                                nombreEquipo: equipo.nombreEquipo,
-                                numeroSerieBase: equipo.numeroSerieBase,
-                                tipoEquipo: equipo.tipoEquipo,
-                                fechaEntrega: equipo.fechaEntrega,
-                              },
-                              mantenimiento: {
-                                fecha: selectedMantenimiento.fecha,
-                                descripcion: selectedMantenimiento.descripcion,
-                                estado: selectedMantenimiento.estado,
-                                comentarios: selectedMantenimiento.comentarios,
-                              },
-                              componente: componente ? {
-                                nombre: componente.nombre,
-                                numeroSerie: componente.numeroSerie,
-                                estado: componente.estado,
-                              } : undefined,
-                              textoInformal: selectedMantenimiento.comentarios || 'Servicio técnico realizado según procedimientos estándar de Ares Paraguay.',
-                              precioServicio: '350000'
-                            });
-                            
-                            setReporteGenerado(contenidoReporte);
-                            setReporteListo(true);
-                            
-                            toast.success('Reporte cargado para visualización', {
-                              description: 'Ahora puedes ver el contenido completo del reporte'
-                            });
-                          } catch (error) {
-                            toast.error('Error al cargar el reporte');
-                          }
-                        }}
-                        variant="outline"
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        <span>Ver Contenido</span>
-                      </Button>
-                      <Button
-                        onClick={eliminarReporte}
-                        variant="outline"
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        <span>Eliminar</span>
-                      </Button>
-                      <Button
-                        onClick={descargarReporteWord}
-                        className="bg-gray-900 hover:bg-gray-800"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        <span>Descargar Word</span>
-                      </Button>
-                    </div>
-
-                    {/* Vista del reporte cuando se presiona "Ver Contenido" */}
-                    {reporteListo && reporteGenerado !== 'Reporte técnico disponible para descarga' && (
-                      <div className="pt-4 border-t border-gray-200">
-                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <h4 className="font-medium text-gray-900 mb-3">Contenido del Reporte</h4>
-                          <div className="bg-white border rounded-lg p-4 max-h-96 overflow-y-auto">
-                            <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono leading-relaxed">
-                              {reporteGenerado}
-                            </pre>
+                      {/* Vista del contenido si está cargado */}
+                      {reporteListo && reporteGenerado !== 'Reporte técnico disponible para descarga' && (
+                        <div className="border border-gray-200 rounded-lg">
+                          <div className="px-4 py-3 border-b border-gray-200">
+                            <h4 className="font-medium text-gray-900">Contenido del reporte</h4>
                           </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Opción para regenerar */}
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-600 mb-3">
-                        ¿Necesitas generar un nuevo reporte con información diferente?
-                      </p>
-                      <Button
-                        onClick={() => {
-                          setReporteGenerado('');
-                          setReporteListo(false);
-                          cerrarReporteModal();
-                          // Reabrir en modo creación
-                          setTimeout(() => abrirReporteModal({...selectedMantenimiento, reporteGenerado: false}), 100);
-                        }}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span>Generar Nuevo Reporte</span>
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  // Modal completo para crear nuevo reporte
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Panel izquierdo - Input del ingeniero */}
-                    <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <h4 className="font-medium text-gray-900 mb-2">Información del Mantenimiento</h4>
-                        <div className="text-sm text-gray-700 space-y-1">
-                          <p><span className="font-medium">Fecha:</span> {selectedMantenimiento?.fecha}</p>
-                          <p><span className="font-medium">Estado:</span> {selectedMantenimiento?.estado}</p>
-                          <p><span className="font-medium">Problema:</span> {selectedMantenimiento?.descripcion}</p>
-                          <p><span className="font-medium">Equipo:</span> {equipo.marca} {equipo.modelo}</p>
-                          <p><span className="font-medium">Cliente:</span> {equipo.cliente}</p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label className="text-base font-medium text-gray-900 mb-2 block">
-                          Descripción del Trabajo Realizado
-                        </Label>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Describe informalmente lo que hiciste. El sistema generará un reporte técnico profesional.
-                        </p>
-                        <Textarea
-                          value={textoInformal}
-                          onChange={(e) => setTextoInformal(e.target.value)}
-                          placeholder={`Ej: Llegue a ${equipo.cliente} y revise el ${equipo.marca} ${equipo.modelo}. El problema era que ${selectedMantenimiento?.descripcion?.toLowerCase()}. Revise todo y estaba medio dañado el cable principal. Lo cambie por uno nuevo y despues probe que todo funcione bien. Calibre los parametros y quedo operativo. El cliente quedo conforme con el trabajo.`}
-                          rows={8}
-                          className="w-full text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <Label className="text-base font-medium text-gray-900 mb-2 block">
-                          Precio del Servicio (Guaraníes)
-                        </Label>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Ingresa el costo del servicio realizado (solo números).
-                        </p>
-                        <input
-                          type="text"
-                          value={precioServicio}
-                          onChange={(e) => {
-                            // Solo permitir números
-                            const valor = e.target.value.replace(/[^\d]/g, '');
-                            setPrecioServicio(valor);
-                          }}
-                          placeholder="Ej: 350000"
-                          className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        />
-                        {precioServicio && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Precio formateado: {parseInt(precioServicio).toLocaleString('es-PY')} Gs.
-                          </p>
-                        )}
-                      </div>
-
-                      {/* 🔧 Selector de Repuestos Utilizados (NUEVO) */}
-                      <div className="border-t pt-4">
-                        <RepuestosSimpleSelector
-                          repuestos={repuestosUtilizados}
-                          onRepuestosChange={setRepuestosUtilizados}
-                          disabled={generandoReporte}
-                        />
-                      </div>
-
-                      <div className="flex space-x-3">
-                        <Button
-                          onClick={generarReporteConIA}
-                          disabled={generandoReporte || !textoInformal.trim() || !precioServicio.trim()}
-                          className="flex-1 bg-gray-900 hover:bg-gray-800"
-                        >
-                          {generandoReporte ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                              <span>Generando reporte...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Send className="h-4 w-4 mr-2" />
-                              <span>Generar Reporte</span>
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Panel derecho - Reporte generado */}
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-base font-medium text-gray-900 mb-2 block">
-                          Reporte Técnico Generado
-                        </Label>
-                        
-                        {reporteListo ? (
-                          // Estado: Reporte recién generado
-                          <div className="space-y-3">
-                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                              <div className="flex items-center space-x-2">
-                                <CheckCircle className="h-4 w-4 text-gray-600" />
-                                <span className="text-sm font-medium text-gray-800">Reporte generado exitosamente</span>
-                              </div>
-                            </div>
-                            
-                            <div className="bg-gray-50 border rounded-lg p-4 max-h-96 overflow-y-auto">
+                          <div className="p-4">
+                            <div className="bg-gray-50 rounded border p-4 max-h-80 overflow-y-auto">
                               <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono leading-relaxed">
                                 {reporteGenerado}
                               </pre>
                             </div>
+                          </div>
+                        </div>
+                      )}
 
-                            <div className="flex space-x-3">
-                              <Button
-                                onClick={eliminarReporte}
-                                variant="outline"
-                                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                              >
-                                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                <span>Eliminar</span>
-                              </Button>
-                              <Button
-                                onClick={descargarReporteWord}
-                                className="flex-1 bg-gray-900 hover:bg-gray-800"
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                <span>Descargar Word</span>
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          // Estado: Sin reporte, esperando generación
-                          <div className="bg-gray-50 border rounded-lg p-8 text-center text-gray-500">
-                            {generandoReporte ? (
-                              <div className="space-y-3">
-                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-400 border-t-transparent mx-auto" />
-                                <p className="text-sm">Procesando texto...</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                <Brain className="h-12 w-12 text-gray-400 mx-auto" />
-                                <p className="text-sm">Completa los campos y genera el reporte</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                      {/* Acciones principales */}
+                      <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                        <Button
+                          onClick={async () => {
+                            try {
+                              toast.info('Cargando contenido del reporte...');
+                              const componente = selectedMantenimiento.componenteId 
+                                ? equipo.componentes.find(c => c.id === selectedMantenimiento.componenteId)
+                                : undefined;
+                              const contenidoReporte = await aiReporteService.generarReporte({
+                                equipo: {
+                                  cliente: equipo.cliente,
+                                  ubicacion: equipo.ubicacion,
+                                  marca: equipo.marca,
+                                  modelo: equipo.modelo,
+                                  nombreEquipo: equipo.nombreEquipo,
+                                  numeroSerieBase: equipo.numeroSerieBase,
+                                  tipoEquipo: equipo.tipoEquipo,
+                                  fechaEntrega: equipo.fechaEntrega,
+                                },
+                                mantenimiento: {
+                                  fecha: selectedMantenimiento.fecha,
+                                  descripcion: selectedMantenimiento.descripcion,
+                                  estado: selectedMantenimiento.estado,
+                                  comentarios: selectedMantenimiento.comentarios,
+                                },
+                                componente: componente ? {
+                                  nombre: componente.nombre,
+                                  numeroSerie: componente.numeroSerie,
+                                  estado: componente.estado,
+                                } : undefined,
+                                textoInformal: selectedMantenimiento.comentarios || 'Servicio técnico realizado según procedimientos estándar de Ares Paraguay.',
+                                precioServicio: '350000'
+                              });
+                              setReporteGenerado(contenidoReporte);
+                              setReporteListo(true);
+                              toast.success('Reporte cargado para visualización');
+                            } catch (error) {
+                              toast.error('Error al cargar el reporte');
+                            }
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Contenido
+                        </Button>
+                        <Button
+                          onClick={eliminarReporte}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Eliminar
+                        </Button>
+                        <Button
+                          onClick={descargarReporteWord}
+                          className="flex-1 bg-gray-900 hover:bg-gray-800"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Descargar
+                        </Button>
+                      </div>
+
+                      {/* Opción para regenerar */}
+                      <div className="pt-4 border-t border-gray-200">
+                        <Button
+                          onClick={() => {
+                            setReporteGenerado('');
+                            setReporteListo(false);
+                            cerrarReporteModal();
+                            setTimeout(() => abrirReporteModal({...selectedMantenimiento, reporteGenerado: false}), 100);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="text-gray-600"
+                        >
+                          <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Generar nuevo reporte
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    // Vista para crear nuevo reporte
+                    <div className="grid grid-cols-2 gap-8">
+                      {/* Panel izquierdo - Formulario */}
+                      <div className="p-6 space-y-6">
+                        {/* Información del mantenimiento */}
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <label className="block text-gray-500 mb-1">Cliente</label>
+                            <p className="font-medium text-gray-900">{equipo.cliente}</p>
+                          </div>
+                          <div>
+                            <label className="block text-gray-500 mb-1">Equipo</label>
+                            <p className="font-medium text-gray-900">{equipo.marca} {equipo.modelo}</p>
+                          </div>
+                        </div>
+
+                        {/* Descripción del trabajo */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Descripción del trabajo realizado
+                          </label>
+                          <p className="text-xs text-gray-600 mb-3">
+                            Describe informalmente lo que hiciste. El sistema generará un reporte técnico profesional.
+                          </p>
+                          <Textarea
+                            value={textoInformal}
+                            onChange={(e) => setTextoInformal(e.target.value)}
+                            placeholder={`Llegué a ${equipo.cliente} y revisé el ${equipo.marca} ${equipo.modelo}. El problema era que ${selectedMantenimiento?.descripcion?.toLowerCase()}. Revisé todo y estaba dañado el cable principal. Lo cambié por uno nuevo y después probé que todo funcione bien. Calibré los parámetros y quedó operativo.`}
+                            rows={6}
+                            className="w-full text-sm resize-none"
+                          />
+                        </div>
+
+                        {/* Precio del servicio */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Precio del servicio
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={precioServicio}
+                              onChange={(e) => {
+                                const valor = e.target.value.replace(/[^\d]/g, '');
+                                setPrecioServicio(valor);
+                              }}
+                              placeholder="350000"
+                              className="w-full p-3 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                            />
+                            <span className="absolute right-3 top-3 text-xs text-gray-500">Gs.</span>
+                          </div>
+                          {precioServicio && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {parseInt(precioServicio).toLocaleString('es-PY')} Guaraníes
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Selector de repuestos */}
+                        <div className="border-t border-gray-200 pt-4">
+                          <RepuestosSimpleSelector
+                            repuestos={repuestosUtilizados}
+                            onRepuestosChange={setRepuestosUtilizados}
+                            disabled={generandoReporte}
+                          />
+                        </div>
+
+                        {/* Botón de generar */}
+                        <div className="pt-4">
+                          <Button
+                            onClick={generarReporteConIA}
+                            disabled={generandoReporte || !textoInformal.trim() || !precioServicio.trim()}
+                            className="w-full bg-gray-900 hover:bg-gray-800"
+                          >
+                            {generandoReporte ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                                Generando reporte...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Generar Reporte
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Panel derecho - Resultado */}
+                      <div className="border-l border-gray-200 p-6">
+                        <div className="h-full flex flex-col">
+                          <label className="block text-sm font-medium text-gray-900 mb-4">
+                            Reporte técnico generado
+                          </label>
+                          
+                          {reporteListo ? (
+                            <div className="flex-1 space-y-4">
+                              <div className="border border-gray-200 rounded">
+                                <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                                  <div className="flex items-center space-x-2">
+                                    <CheckCircle className="h-4 w-4 text-gray-600" />
+                                    <span className="text-sm font-medium text-gray-900">Completado</span>
+                                  </div>
+                                </div>
+                                <div className="p-4">
+                                  <div className="bg-gray-50 rounded border p-4 max-h-80 overflow-y-auto">
+                                    <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono leading-relaxed">
+                                      {reporteGenerado}
+                                    </pre>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex space-x-3">
+                                <Button
+                                  onClick={eliminarReporte}
+                                  variant="outline"
+                                  className="flex-1"
+                                >
+                                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                  Eliminar
+                                </Button>
+                                <Button
+                                  onClick={descargarReporteWord}
+                                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Descargar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex-1 flex items-center justify-center">
+                              {generandoReporte ? (
+                                <div className="text-center space-y-3">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-400 border-t-transparent mx-auto" />
+                                  <p className="text-sm text-gray-600">Procesando...</p>
+                                </div>
+                              ) : (
+                                <div className="text-center space-y-3 text-gray-500">
+                                  <Brain className="h-12 w-12 mx-auto" />
+                                  <p className="text-sm">Completa los campos para generar el reporte</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             </motion.div>
           )}

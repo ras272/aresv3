@@ -87,33 +87,33 @@ export default function ArchivosPage() {
 
   const cargarDatos = async () => {
     try {
-      console.log('🔄 Cargando datos para carpeta:', carpetaActual?.nombre || 'Inicio');
+      // console.log('🔄 Cargando datos para carpeta:', carpetaActual?.nombre || 'Inicio');
       
       // Cargar carpetas (siempre actualizar)
       const carpetasData = await cargarCarpetas(carpetaActual?.id);
-      console.log('📁 Carpetas cargadas:', carpetasData.length);
+      // console.log('📁 Carpetas cargadas:', carpetasData.length);
       setCarpetasVisibles(carpetasData);
       
       // Cargar archivos si estamos en una carpeta específica
       if (carpetaActual) {
         const archivosData = await cargarArchivos(carpetaActual.id);
-        console.log('📄 Archivos cargados:', archivosData.length);
+        // console.log('📄 Archivos cargados:', archivosData.length);
         setArchivosVisibles(archivosData);
       } else {
         // En el inicio, limpiar archivos locales Y del hook
         setArchivosVisibles([]);
         // Forzar limpieza de archivos en el hook para estadísticas correctas
         await cargarArchivos('__CLEAR__'); // Usamos un ID especial para limpiar
-        console.log('🏠 En inicio - archivos limpiados');
+        // console.log('🏠 En inicio - archivos limpiados');
       }
       
       // Calcular estadísticas globales desde la base de datos
-      console.log('📊 Calculando estadísticas globales...');
+      // console.log('📊 Calculando estadísticas globales...');
       await calcularEstadisticasGlobales();
-      console.log('📊 Estadísticas actualizadas');
+      // console.log('📊 Estadísticas actualizadas');
       
     } catch (error) {
-      console.error('❌ Error cargando datos:', error);
+      // console.error('❌ Error cargando datos:', error);
     }
   };
 
@@ -180,10 +180,10 @@ export default function ArchivosPage() {
 
   // Abrir editor de Excel
   const abrirEditor = (archivo: Archivo) => {
-    console.log('Intentando abrir editor para:', archivo.nombre, 'Es editable:', archivo.es_editable);
+    // console.log('Intentando abrir editor para:', archivo.nombre, 'Es editable:', archivo.es_editable);
     if (archivo.es_editable) {
       setArchivoEditando(archivo);
-      console.log('Archivo establecido para edición:', archivo);
+      // console.log('Archivo establecido para edición:', archivo);
       toast.success(`Abriendo ${archivo.nombre} en el editor`);
     } else {
       toast.error('Este archivo no es editable');
@@ -199,7 +199,7 @@ export default function ArchivosPage() {
   const guardarCambiosEditor = async (data: any) => {
     try {
       // Aquí se guardarían los cambios en Supabase
-      console.log('Guardando cambios:', data);
+      // console.log('Guardando cambios:', data);
       
       // Actualizar versión del archivo
       if (archivoEditando) {
@@ -285,7 +285,7 @@ export default function ArchivosPage() {
         filtros.es_editable = filtrosAvanzados.es_editable === 'true';
       }
 
-      console.log('🔍 Aplicando filtros avanzados:', filtros);
+      // console.log('🔍 Aplicando filtros avanzados:', filtros);
       const resultados = await buscarArchivos(filtros);
       setArchivosVisibles(resultados);
       setMostrarBusquedaAvanzada(false);

@@ -141,7 +141,7 @@ export default function DocumentosPage() {
       // Limpiar input
       event.target.value = '';
     } catch (error) {
-      console.error('❌ Error subiendo archivos:', error);
+      // console.error('❌ Error subiendo archivos:', error);
       alert('Error subiendo archivos. Verifica tu configuración de Cloudinary.');
     } finally {
       setUploading(false);
@@ -153,9 +153,9 @@ export default function DocumentosPage() {
     try {
       await deleteDocumentoCarga(documentId);
       await loadAllData(); // Recargar datos después de eliminar
-      console.log('✅ Documento eliminado exitosamente');
+      // console.log('✅ Documento eliminado exitosamente');
     } catch (error) {
-      console.error('❌ Error eliminando documento:', error);
+      // console.error('❌ Error eliminando documento:', error);
       alert('Error eliminando documento');
     }
   };
@@ -497,12 +497,12 @@ export default function DocumentosPage() {
                           className="w-full"
                           onClick={() => {
                             // Debug completo del documento
-                            console.log('🔍 DEBUG COMPLETO PDF:', {
-                              documento: previewDocument,
-                              url: previewDocument.archivo.url,
-                              tipo: previewDocument.archivo.tipo,
-                              observaciones: previewDocument.observaciones
-                            });
+                            // console.log('🔍 DEBUG COMPLETO PDF:', {
+                            //   documento: previewDocument,
+                            //   url: previewDocument.archivo.url,
+                            //   tipo: previewDocument.archivo.tipo,
+                            //   observaciones: previewDocument.observaciones
+                            // });
                             
                             // Generar múltiples URLs basadas en lo que sabemos
                             const originalUrl = previewDocument.archivo.url;
@@ -513,17 +513,17 @@ export default function DocumentosPage() {
                             if (originalUrl.includes('/image/upload/') && previewDocument.archivo.tipo === 'application/pdf') {
                               // Para PDFs clasificados como imagen, usar parámetros para forzar descarga/vista
                               finalUrl = originalUrl.replace('/image/upload/', '/image/upload/fl_attachment:false,f_auto/');
-                              console.log('🔄 Usando parámetros de imagen para PDF');
+                              // console.log('🔄 Usando parámetros de imagen para PDF');
                             }
                             
-                            console.log('🔗 URLs generadas:', {
-                              original: originalUrl,
-                              final: finalUrl,
-                              tipo: previewDocument.archivo.tipo
-                            });
+                            // console.log('🔗 URLs generadas:', {
+                            //   original: originalUrl,
+                            //   final: finalUrl,
+                            //   tipo: previewDocument.archivo.tipo
+                            // });
                             
                             // Estrategia múltiple para abrir PDFs
-                            console.log('🚀 Intentando abrir PDF con URL:', finalUrl);
+                            // console.log('🚀 Intentando abrir PDF con URL:', finalUrl);
                             
                             // Crear múltiples opciones para el usuario
                             const options = [
@@ -547,10 +547,10 @@ export default function DocumentosPage() {
                             // Forzar descarga usando la URL directa
                             const downloadUrl = previewDocument.archivo.url;
                             
-                            console.log('📥 Descargando PDF:', {
-                              nombre: previewDocument.nombre,
-                              url: downloadUrl
-                            });
+                            // console.log('📥 Descargando PDF:', {
+                            //   nombre: previewDocument.nombre,
+                            //   url: downloadUrl
+                            // });
 
                             // Forzar descarga
                             const link = document.createElement('a');

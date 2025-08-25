@@ -87,7 +87,7 @@ export default function OptimizacionPage() {
       const usage = await DatabaseOptimizer.getSpaceUsage();
       setSpaceUsage(usage);
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      // console.error('Error cargando estadísticas:', error);
     }
   };
 

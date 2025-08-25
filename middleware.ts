@@ -169,7 +169,7 @@ async function handleTokenRefresh(
       return response;
     }
   } catch (error) {
-    console.error("Error checking token expiration:", error);
+    // console.error("Error checking token expiration:", error);
   }
 
   return null;
@@ -202,23 +202,23 @@ export async function middleware(request: NextRequest) {
       const user = await getCurrentUser(request);
 
       if (!user) {
-        console.log(`🔒 Unauthorized access attempt to ${pathname}`);
+        // console.log(`🔒 Unauthorized access attempt to ${pathname}`);
         return createLoginRedirect(request);
       }
 
       // Check if user is active
       if (!user.activo) {
-        console.log(
-          `🚫 Inactive user ${user.email} attempted to access ${pathname}`
-        );
+        // console.log(
+        //   `🚫 Inactive user ${user.email} attempted to access ${pathname}`
+        // );
         return createLoginRedirect(request);
       }
 
       // Check role-based permissions
       if (!hasRoutePermission(user.rol, pathname)) {
-        console.log(
-          `🚫 User ${user.email} (${user.rol}) denied access to ${pathname}`
-        );
+        // console.log(
+        //   `🚫 User ${user.email} (${user.rol}) denied access to ${pathname}`
+        // );
 
         // For API routes, return JSON error
         if (pathname.startsWith("/api/")) {
@@ -234,14 +234,14 @@ export async function middleware(request: NextRequest) {
       // Check if token needs refresh
       const refreshResponse = await handleTokenRefresh(request);
       if (refreshResponse) {
-        console.log(`🔄 Token refresh required for user ${user.email}`);
+        // console.log(`🔄 Token refresh required for user ${user.email}`);
         return refreshResponse;
       }
 
       // User is authenticated and authorized
-      console.log(
-        `✅ Access granted to ${user.email} (${user.rol}) for ${pathname}`
-      );
+      // console.log(
+      //   `✅ Access granted to ${user.email} (${user.rol}) for ${pathname}`
+      // );
 
       // Add user info to headers for downstream use
       const response = NextResponse.next();
@@ -251,7 +251,7 @@ export async function middleware(request: NextRequest) {
 
       return response;
     } catch (error) {
-      console.error("Middleware authentication error:", error);
+      // console.error("Middleware authentication error:", error);
       return createLoginRedirect(request);
     }
   }
@@ -285,7 +285,7 @@ export async function middleware(request: NextRequest) {
 
       return response;
     } catch (error) {
-      console.error("API middleware authentication error:", error);
+      // console.error("API middleware authentication error:", error);
       return new NextResponse(
         JSON.stringify({
           error: "Unauthorized",
