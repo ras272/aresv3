@@ -108,47 +108,16 @@ export default function EquipoIngresadoModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.clienteOrigen.trim() || !formData.equipoNombre.trim() || !formData.problemaReportado.trim()) {
-      toast.error('Por favor complete todos los campos obligatorios');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      if (equipoEdit) {
-        // Actualizar equipo existente
-        await updateEquipoIngresado(equipoEdit.id, {
-          ...formData,
-          updatedAt: new Date().toISOString(),
-        });
-        toast.success('Equipo actualizado exitosamente');
-      } else {
-        // Crear nuevo equipo
-        const equipoData = {
-          ...formData,
-          fechaIngreso: new Date().toISOString().split('T')[0],
-          horaIngreso: new Date().toTimeString().split(' ')[0].substring(0, 5),
-        };
-
-        await addEquipoIngresado(equipoData);
-        toast.success('Equipo registrado exitosamente');
-      }
-
+    // 👨‍💻 Mensaje de Jack - funcionalidad en desarrollo
+    toast.info('Jack está terminando acá...', {
+      duration: 3000,
+      description: 'Esta funcionalidad estará disponible pronto'
+    });
+    
+    // Cerrar el modal después de mostrar el mensaje
+    setTimeout(() => {
       onOpenChange(false);
-      if (onSave) {
-        await onSave(formData);
-      }
-    } catch (error) {
-      console.error('Error saving equipment:', error);
-      toast.error(
-        equipoEdit 
-          ? 'Error al actualizar el equipo'
-          : 'Error al registrar el equipo'
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    }, 1500);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -182,262 +151,36 @@ export default function EquipoIngresadoModal({
             {equipoEdit ? 'Editar Equipo Ingresado' : 'Registrar Equipo Ingresado'}
           </DialogTitle>
           <DialogDescription>
-            {equipoEdit 
-              ? 'Modifique la información del equipo en servicio técnico'
-              : 'Complete la información del equipo que ingresa para diagnóstico y reparación'
-            }
+            👨‍💻 Jack está terminando esta funcionalidad. Estará disponible pronto.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Información del Cliente */}
-          <Card>
+          {/* Mensaje de Jack - Funcionalidad en desarrollo */}
+          <Card className="border-2 border-orange-200 bg-orange-50">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <User className="h-4 w-4 text-blue-500" />
-                <h3 className="font-semibold">Información del Cliente</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clienteOrigen">
-                    Cliente/Clínica <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.clienteOrigen}
-                    onValueChange={(value) => handleInputChange('clienteOrigen', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clinicas.map((clinica) => (
-                        <SelectItem key={clinica.id} value={clinica.nombre}>
-                          {clinica.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Wrench className="w-8 h-8 text-orange-600" />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="contactoCliente">
-                    Contacto <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="contactoCliente"
-                    value={formData.contactoCliente}
-                    onChange={(e) => handleInputChange('contactoCliente', e.target.value)}
-                    placeholder="Nombre del contacto"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="telefonoContacto">Teléfono</Label>
-                  <Input
-                    id="telefonoContacto"
-                    value={formData.telefonoContacto}
-                    onChange={(e) => handleInputChange('telefonoContacto', e.target.value)}
-                    placeholder="Teléfono de contacto"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Información del Equipo */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Package className="h-4 w-4 text-green-500" />
-                <h3 className="font-semibold">Información del Equipo</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="equipoNombre">
-                    Nombre del Equipo <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="equipoNombre"
-                    value={formData.equipoNombre}
-                    onChange={(e) => handleInputChange('equipoNombre', e.target.value)}
-                    placeholder="Ej: Monitor Multiparámetro"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="equipoMarca">
-                    Marca <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="equipoMarca"
-                    value={formData.equipoMarca}
-                    onChange={(e) => handleInputChange('equipoMarca', e.target.value)}
-                    placeholder="Ej: Philips, GE, Siemens"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="equipoModelo">Modelo</Label>
-                  <Input
-                    id="equipoModelo"
-                    value={formData.equipoModelo}
-                    onChange={(e) => handleInputChange('equipoModelo', e.target.value)}
-                    placeholder="Modelo del equipo"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="equipoSerie">Número de Serie</Label>
-                  <Input
-                    id="equipoSerie"
-                    value={formData.equipoSerie}
-                    onChange={(e) => handleInputChange('equipoSerie', e.target.value)}
-                    placeholder="Número de serie"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Detalles del Problema y Estado */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <AlertCircle className="h-4 w-4 text-orange-500" />
-                <h3 className="font-semibold">Problema Reportado y Estado</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="problemaReportado">
-                    Problema Reportado <span className="text-red-500">*</span>
-                  </Label>
-                  <Textarea
-                    id="problemaReportado"
-                    value={formData.problemaReportado}
-                    onChange={(e) => handleInputChange('problemaReportado', e.target.value)}
-                    placeholder="Descripción detallada del problema reportado por el cliente"
-                    rows={3}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="estadoIngreso">Estado del Ingreso</Label>
-                    <Select
-                      value={formData.estadoIngreso}
-                      onValueChange={(value: EquipoIngresado['estadoIngreso']) => 
-                        handleInputChange('estadoIngreso', value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Recién llegado">Recién llegado</SelectItem>
-                        <SelectItem value="En diagnóstico">En diagnóstico</SelectItem>
-                        <SelectItem value="En reparación">En reparación</SelectItem>
-                        <SelectItem value="Esperando repuestos">Esperando repuestos</SelectItem>
-                        <SelectItem value="Listo para entrega">Listo para entrega</SelectItem>
-                        <SelectItem value="Entregado">Entregado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="prioridadReparacion">Prioridad de Reparación</Label>
-                    <Select
-                      value={formData.prioridadReparacion}
-                      onValueChange={(value: EquipoIngresado['prioridadReparacion']) => 
-                        handleInputChange('prioridadReparacion', value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Baja">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={getPrioridadColor('Baja')}>
-                              Baja
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Media">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={getPrioridadColor('Media')}>
-                              Media
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Alta">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={getPrioridadColor('Alta')}>
-                              Alta
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Crítica">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={getPrioridadColor('Crítica')}>
-                              Crítica
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estadoVisualEquipo">Estado Visual del Equipo</Label>
-                  <Textarea
-                    id="estadoVisualEquipo"
-                    value={formData.estadoVisualEquipo}
-                    onChange={(e) => handleInputChange('estadoVisualEquipo', e.target.value)}
-                    placeholder="Descripción del estado físico y visual del equipo"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="accesoriosIncluidos">Accesorios Incluidos</Label>
-                  <Textarea
-                    id="accesoriosIncluidos"
-                    value={formData.accesoriosIncluidos}
-                    onChange={(e) => handleInputChange('accesoriosIncluidos', e.target.value)}
-                    placeholder="Lista de cables, sensores, manuales y otros accesorios incluidos"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="observacionesIngreso">Observaciones Adicionales</Label>
-                  <Textarea
-                    id="observacionesIngreso"
-                    value={formData.observacionesIngreso}
-                    onChange={(e) => handleInputChange('observacionesIngreso', e.target.value)}
-                    placeholder="Cualquier información adicional relevante"
-                    rows={3}
-                  />
-                </div>
+                <h3 className="text-lg font-semibold text-orange-800 mb-2">
+                  👨‍💻 Jack está terminando acá...
+                </h3>
+                <p className="text-orange-700">
+                  Esta funcionalidad estará disponible muy pronto.
+                  <br />
+                  ¡Gracias por tu paciencia!
+                </p>
               </div>
             </CardContent>
           </Card>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
+              Entendido
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                equipoEdit ? 'Actualizando...' : 'Registrando...'
-              ) : (
-                equipoEdit ? 'Actualizar Equipo' : 'Registrar Equipo'
-              )}
+            <Button type="submit" className="bg-orange-600 hover:bg-orange-700">
+              👍 Está bien, esperaré
             </Button>
           </DialogFooter>
         </form>

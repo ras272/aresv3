@@ -371,7 +371,7 @@ const generateCodigoCarga = async () => {
 
 export default function NuevaCargaPage() {
   const router = useRouter();
-  const { addCargaMercaderia, user, getClinicasActivas } = useAppStore();
+  const { addCargaMercaderia, getClinicasActivas } = useAppStore();
   const [mostrarFraccionamiento, setMostrarFraccionamiento] = useState<{visible: boolean; producto: any}>({visible: false, producto: null});
   const [codigoCarga, setCodigoCarga] = useState<string>('Generando...');
   const [isLoading, setIsLoading] = useState(false);
@@ -388,7 +388,6 @@ export default function NuevaCargaPage() {
     numeroSerie?: string; // 🆕 NUEVO: Número de serie opcional
     cantidad: number;
     observaciones: string;
-    paraServicioTecnico?: boolean; // 🎯 NUEVO: Control manual para servicio técnico
     imagen?: string; // 🖼️ NUEVO: Imagen del producto
   }>>([]);
 
@@ -502,7 +501,6 @@ export default function NuevaCargaPage() {
         numeroSerie: producto.numeroSerie || '', // 🆕 NUEVO: Usar número de serie real
         cantidad: producto.cantidad,
         observaciones: producto.observaciones,
-        paraServicioTecnico: producto.paraServicioTecnico || false, // 🎯 NUEVO: Control manual
         imagen: '',
         voltaje: '',
         frecuencia: '',
@@ -516,13 +514,18 @@ export default function NuevaCargaPage() {
     }
   }, [marcaSeleccionada, tipoProductoComun, productosRapidos, modoFormulario, setValue]);
 
-  // 🔧 NUEVO: Abrir modal automáticamente cuando se selecciona reparación
+  // 🔧 NUEVO: Mostrar mensaje de Jack cuando se selecciona reparación
   useEffect(() => {
     if (tipoCargaWatched === 'reparacion') {
-      console.log('🔧 Tipo de carga "reparación" seleccionado, abriendo modal de equipos ingresados...');
-      setEquipoIngresadoModalOpen(true);
+      console.log('🔧 Tipo de carga "reparación" seleccionado, mostrando mensaje de Jack...');
+      toast.info('Jack está trabajando acá...', {
+        duration: 3000,
+        description: 'Esta funcionalidad estará disponible pronto'
+      });
+      // Resetear el valor a stock para evitar problemas
+      setValue('tipoCarga', 'stock');
     }
-  }, [tipoCargaWatched]);
+  }, [tipoCargaWatched, setValue]);
 
   const agregarProductoManual = () => {
     if (!nombreProducto.trim()) {
@@ -536,8 +539,7 @@ export default function NuevaCargaPage() {
       nombre: nombreProducto.trim(),
       numeroSerie: numeroSerieProducto.trim(), // 🆕 NUEVO: Usar número de serie del formulario
       cantidad: cantidadProducto,
-      observaciones: '',
-      paraServicioTecnico: false // 🎯 NUEVO: Por defecto NO marcado
+      observaciones: ''
     }];
 
     setProductosRapidos(nuevosProductos);
@@ -552,7 +554,6 @@ export default function NuevaCargaPage() {
         numeroSerie: producto.numeroSerie || '', // 🆕 NUEVO: Usar número de serie real
         cantidad: producto.cantidad,
         observaciones: producto.observaciones,
-        paraServicioTecnico: producto.paraServicioTecnico || false, // 🎯 NUEVO: Control manual
         imagen: '',
         voltaje: '',
         frecuencia: '',
@@ -590,7 +591,6 @@ export default function NuevaCargaPage() {
         numeroSerie: producto.numeroSerie || '', // 🆕 NUEVO: Usar número de serie real
         cantidad: producto.cantidad,
         observaciones: producto.observaciones,
-        paraServicioTecnico: producto.paraServicioTecnico || false, // 🎯 NUEVO: Control manual
         imagen: '',
         voltaje: '',
         frecuencia: '',
@@ -617,7 +617,6 @@ export default function NuevaCargaPage() {
         numeroSerie: producto.numeroSerie || '', // 🆕 NUEVO: Usar número de serie real
         cantidad: producto.cantidad,
         observaciones: producto.observaciones,
-        paraServicioTecnico: producto.paraServicioTecnico || false, // 🎯 NUEVO: Control manual
         imagen: '',
         voltaje: '',
         frecuencia: '',
@@ -637,8 +636,7 @@ export default function NuevaCargaPage() {
       {
         nombre: '',
         numeroSerie: '',
-        cantidad: 1,
-        paraServicioTecnico: false // 🎯 NUEVO: Por defecto NO marcado
+        cantidad: 1
       }
     ]);
   };
@@ -724,7 +722,6 @@ export default function NuevaCargaPage() {
           modelo: producto.nombre,
           cantidad: producto.cantidad,
           observaciones: producto.observaciones,
-          paraServicioTecnico: producto.paraServicioTecnico || false, // 🎯 NUEVO: Control manual
           numeroSerie: producto.numeroSerie || '', // 🆕 NUEVO: Usar número de serie real
           imagen: '',
           voltaje: '',
@@ -840,8 +837,13 @@ export default function NuevaCargaPage() {
             </Button>
             <Button
               type="button"
-              variant={modoFormulario === 'equipo' ? 'default' : 'outline'}
-              onClick={() => setModoFormulario('equipo')}
+              variant="outline"
+              onClick={() => {
+                toast.info('Jack también está trabajando acá...', {
+                  duration: 3000,
+                  description: 'Esta funcionalidad estará disponible pronto'
+                });
+              }}
               className="flex items-center space-x-2"
             >
               <Heart className="h-4 w-4" />
@@ -899,7 +901,7 @@ export default function NuevaCargaPage() {
                     <div>
                       <Label htmlFor="cliente">Cliente/Institución *</Label>
                       <ClienteSelector
-                        value={watch('cliente')}
+                        value={watch('cliente') || ''}
                         onChange={(value) => setValue('cliente', value)}
                         error={errors.cliente?.message}
                       />
@@ -1125,7 +1127,7 @@ export default function NuevaCargaPage() {
                               key={producto.id}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3 bg-white rounded-lg border shadow-sm"
+                              className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center p-3 bg-white rounded-lg border shadow-sm"
                             >
                               <div className="md:col-span-1">
                                 <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
@@ -1165,19 +1167,6 @@ export default function NuevaCargaPage() {
                                   onChange={(e) => actualizarProductoRapido(producto.id, 'observaciones', e.target.value)}
                                   placeholder="Notas..."
                                   className="w-full h-8 text-xs"
-                                />
-                              </div>
-
-                              {/* 🎯 NUEVO: Checkbox para Servicio Técnico */}
-                              <div className="md:col-span-1 flex flex-col items-center justify-center">
-                                <Label className="text-xs text-center mb-1">
-                                  🔧 Servicio
-                                </Label>
-                                <input
-                                  type="checkbox"
-                                  checked={producto.paraServicioTecnico || false}
-                                  onChange={(e) => actualizarProductoRapido(producto.id, 'paraServicioTecnico', e.target.checked)}
-                                  className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500"
                                 />
                               </div>
 
@@ -1475,7 +1464,7 @@ export default function NuevaCargaPage() {
                                 {productosWatched[productoIndex]?.subitems?.map((subitem, subitemIndex) => (
                                   <div
                                     key={subitemIndex}
-                                    className="grid grid-cols-1 md:grid-cols-6 gap-3 p-3 bg-gray-50 rounded border"
+                                    className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3 bg-gray-50 rounded border"
                                   >
                                     <div className="md:col-span-2">
                                       <Label>Nombre del Componente</Label>
@@ -1497,17 +1486,6 @@ export default function NuevaCargaPage() {
                                         type="number"
                                         min="1"
                                         {...register(`productos.${productoIndex}.subitems.${subitemIndex}.cantidad`, { valueAsNumber: true })}
-                                      />
-                                    </div>
-                                    {/* 🎯 NUEVO: Checkbox para Servicio Técnico */}
-                                    <div className="flex flex-col items-center justify-center">
-                                      <Label className="text-xs text-center mb-2">
-                                        🔧 Mantenimiento<br />Técnico
-                                      </Label>
-                                      <input
-                                        type="checkbox"
-                                        {...register(`productos.${productoIndex}.subitems.${subitemIndex}.paraServicioTecnico`)}
-                                        className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500"
                                       />
                                     </div>
                                     <div className="flex items-end">
