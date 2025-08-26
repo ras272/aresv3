@@ -248,8 +248,31 @@ export default function CatalogoProductosPage() {
 
       if (productoEditando) {
         console.log('🔄 Actualizando producto existente:', productoEditando.id);
+        
+        // 🔍 Detectar cambios importantes para mostrar toast apropiado
+        const huboCambiosImportantes = 
+          formProducto.nombre !== productoEditando.nombre ||
+          formProducto.marca !== productoEditando.marca;
+          
+        if (huboCambiosImportantes) {
+          // Toast especial para cambios que activan sincronización
+          toast.loading('Actualizando producto y sincronizando en todas las tablas...', {
+            id: 'sync-toast',
+            duration: Infinity // Se cierra manualmente
+          });
+        }
+        
         await updateCatalogoProducto(productoEditando.id, productoData);
-        toast.success('Producto actualizado exitosamente');
+        
+        if (huboCambiosImportantes) {
+          toast.success('✅ Producto actualizado y sincronizado en todo el sistema', {
+            id: 'sync-toast',
+            description: 'Los cambios se han aplicado automáticamente al stock, remisiones y todas las demás tablas relacionadas.',
+            duration: 6000
+          });
+        } else {
+          toast.success('Producto actualizado exitosamente');
+        }
       } else {
         console.log('🆕 Creando nuevo producto');
         await addCatalogoProducto(productoData);
@@ -259,6 +282,9 @@ export default function CatalogoProductosPage() {
       setModalProductoOpen(false);
     } catch (error) {
       console.error('❌ Error guardando producto:', error);
+      
+      // Cerrar toast de loading si existe
+      toast.dismiss('sync-toast');
       
       // Manejo específico de errores de base de datos
       if (error && typeof error === 'object' && 'message' in error) {
@@ -678,6 +704,22 @@ export default function CatalogoProductosPage() {
                 <Package className="w-5 h-5" />
                 {productoEditando ? 'Editar Producto' : 'Nuevo Producto'}
               </DialogTitle>
+              {productoEditando && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
+                      <span className="text-white text-xs font-bold">i</span>
+                    </div>
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">🔄 Sincronización Automática</p>
+                      <p className="text-xs">
+                        Si cambias el <strong>nombre</strong> o <strong>marca</strong>, 
+                        los cambios se aplicarán automáticamente al stock, remisiones y todas las tablas relacionadas.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </DialogHeader>
             
             <div className="space-y-6 py-4">

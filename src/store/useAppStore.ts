@@ -1758,6 +1758,19 @@ export const useAppStore = create<AppState>()(
         updateCatalogoProducto: async (id: string, updates: Partial<CatalogoProducto>) => {
           try {
             console.log("🔄 Actualizando producto del catálogo...", { id, updates });
+            
+            // 🔍 NUEVO: Obtener datos actuales del producto para detectar cambios importantes
+            const { data: productoActual, error: fetchError } = await supabase
+              .from("catalogo_productos")
+              .select("nombre, marca")
+              .eq("id", id)
+              .single();
+
+            if (fetchError) {
+              console.error("❌ Error obteniendo producto actual:", fetchError);
+              throw fetchError;
+            }
+
             const updateData: any = {};
             
             // Campos básicos
@@ -1794,6 +1807,7 @@ export const useAppStore = create<AppState>()(
 
             console.log("📄 Datos a actualizar en Supabase:", updateData);
 
+            // Actualizar en el catálogo
             const { error } = await supabase
               .from("catalogo_productos")
               .update(updateData)
@@ -1802,6 +1816,53 @@ export const useAppStore = create<AppState>()(
             if (error) {
               console.error("❌ Error de Supabase al actualizar:", error);
               throw error;
+            }
+
+            // 🔄 NUEVO: Detectar si hubo cambios en nombre, marca o modelo
+            const huboCambiosImportantes = 
+              (updates.nombre && updates.nombre !== productoActual.nombre) ||
+              (updates.marca && updates.marca !== productoActual.marca);
+
+            if (huboCambiosImportantes) {
+              console.log("🔄 Detectados cambios importantes, sincronizando en todas las tablas...");
+              
+              try {
+                // Importar dinámicamente para evitar dependencias circulares
+                const { sincronizarProductoEnTodasLasTablas } = await import("../lib/product-sync");
+                
+                const cambios = {
+                  nombreAnterior: productoActual.nombre, // ✅ El nombre que está actualmente en otras tablas
+                  marcaAnterior: productoActual.marca,   // ✅ La marca que está actualmente en otras tablas
+                  modeloAnterior: '', // CatalogoProducto no tiene modelo
+                  nombreNuevo: updates.nombre || productoActual.nombre,     // ✅ El nuevo nombre que queremos
+                  marcaNueva: updates.marca || productoActual.marca,       // ✅ La nueva marca que queremos
+                  modeloNuevo: '', // CatalogoProducto no tiene modelo
+                  categoriaProducto: updates.categoria
+                };
+
+                console.log("📋 Parámetros de sincronización:", {
+                  buscando: { nombre: cambios.nombreAnterior, marca: cambios.marcaAnterior },
+                  actualizandoA: { nombre: cambios.nombreNuevo, marca: cambios.marcaNueva }
+                });
+
+                const syncResult = await sincronizarProductoEnTodasLasTablas(id, cambios);
+                
+                if (syncResult.success) {
+                  console.log(`✅ Sincronización exitosa: ${syncResult.registrosActualizados} registros actualizados en ${syncResult.tablasSincronizadas.length} tablas`);
+                  
+                  // Mostrar resumen detallado
+                  syncResult.detalles.forEach(detalle => {
+                    if (detalle.actualizados > 0) {
+                      console.log(`   📄 ${detalle.tabla}: ${detalle.actualizados} registros`);
+                    }
+                  });
+                } else {
+                  console.warn("⚠️ Sincronización completada con advertencias:", syncResult.errores);
+                }
+              } catch (syncError) {
+                console.error("❌ Error en la sincronización automática:", syncError);
+                // No fallar la actualización del catálogo por errores de sincronización
+              }
             }
 
             // Recargar catálogo para mantener consistencia
