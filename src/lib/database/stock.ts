@@ -165,23 +165,6 @@ class StockModuleImpl implements StockModule {
         console.log('🔍 Buscando producto con ID:', productId);
       }
       
-      // Encontrar todos los componentes que corresponden a este producto agrupado
-      const { data: componentes, error: fetchError } = await supabase
-        .from('componentes_disponibles')
-        .select('*')
-
-      if (fetchError) throw fetchError;
-
-      if (this.config?.enableLogging) {
-        console.log('🔍 Total componentes en BD:', componentes?.length || 0);
-        console.log('🔍 Primeros 3 componentes:', componentes?.slice(0, 3).map(c => ({
-          nombre: c.nombre,
-          marca: c.marca,
-          modelo: c.modelo,
-          id_generado: `${c.nombre}-${c.marca}-${c.modelo}`.toLowerCase().replace(/\s+/g, '-')
-        })));
-      }
-
       // Función para normalizar strings (manejar acentos y caracteres especiales)
       const normalizeString = (str: string) => {
         return str
@@ -192,15 +175,32 @@ class StockModuleImpl implements StockModule {
           .replace(/[^a-z0-9-]/g, ''); // Remover caracteres especiales excepto guiones
       };
 
+      // Buscar solo en stock_items (ya no usamos componentes_disponibles)
+      const { data: stockItems, error: stockError } = await supabase
+        .from('stock_items')
+        .select('*');
+
+      if (stockError) throw stockError;
+
+      if (this.config?.enableLogging) {
+        console.log('🔍 Total stock items en BD:', stockItems?.length || 0);
+        console.log('🔍 Primeros 3 stock items:', stockItems?.slice(0, 3).map(item => ({
+          nombre: item.nombre,
+          marca: item.marca,
+          modelo: item.modelo,
+          id_generado: normalizeString(`${item.nombre}-${item.marca}-${item.modelo}`)
+        })));
+      }
+
       // Filtrar los items que corresponden al producto
-      const itemsDelProducto = componentes.filter(item => {
+      const itemsDelProducto = stockItems.filter(item => {
         // Usar la misma lógica de generación de ID que en la página de stock
         const productoId = `${item.nombre}-${item.marca}-${item.modelo}`;
         const productoIdNormalizado = normalizeString(productoId);
         const productIdNormalizado = normalizeString(productId);
         
         if (this.config?.enableLogging) {
-          console.log('🔍 Comparando:', { 
+          console.log('🔍 Comparando en stock_items:', { 
             generado: productoIdNormalizado, 
             buscado: productIdNormalizado, 
             coincide: productoIdNormalizado === productIdNormalizado,
@@ -219,116 +219,45 @@ class StockModuleImpl implements StockModule {
       });
 
       if (this.config?.enableLogging) {
-        console.log('🔍 Items encontrados:', itemsDelProducto.length);
+        console.log('🔍 Items encontrados en stock_items:', itemsDelProducto.length);
       }
 
       if (itemsDelProducto.length === 0) {
-        if (this.config?.enableLogging) {
-          console.log('🔍 No encontrado en componentes_disponibles, buscando en stock_items...');
-        }
-        
-        // Buscar en stock_items si no se encuentra en componentes_disponibles
-        const { data: stockItems, error: stockError } = await supabase
-          .from('stock_items')
-          .select('*');
-
-        if (stockError) throw stockError;
-
-        const stockItemsDelProducto = stockItems.filter(item => {
-          const productoId = `${item.nombre}-${item.marca}-${item.modelo}`;
-          const productoIdNormalizado = normalizeString(productoId);
-          const productIdNormalizado = normalizeString(productId);
-          
-          if (this.config?.enableLogging) {
-            console.log('🔍 Comparando en stock_items:', { 
-              generado: productoIdNormalizado, 
-              buscado: productIdNormalizado, 
-              coincide: productoIdNormalizado === productIdNormalizado,
-              item: { 
-                nombre: item.nombre, 
-                marca: item.marca, 
-                modelo: item.modelo
-              }
-            });
-          }
-          return productoIdNormalizado === productIdNormalizado;
-        });
-
-        if (stockItemsDelProducto.length === 0) {
-          throw new Error('Producto no encontrado en stock (ni en componentes_disponibles ni en stock_items)');
-        }
-
-        // Actualizar en stock_items
-        const updateData: any = {
-          updated_at: new Date().toISOString()
-        };
-        
-        if (updates.imagen !== undefined) {
-          updateData.imagen_url = updates.imagen;
-        }
-        if (updates.observaciones !== undefined) {
-          updateData.observaciones = updates.observaciones;
-        }
-
-        const updatePromises = stockItemsDelProducto.map(item =>
-          supabase
-            .from('stock_items')
-            .update(updateData)
-            .eq('id', item.id)
-        );
-
-        const results = await Promise.all(updatePromises);
-        const errors = results.filter(result => result.error);
-        if (errors.length > 0) {
-          throw new Error(`Error actualizando ${errors.length} items en stock_items`);
-        }
-
-        if (this.config?.enableLogging) {
-          console.log('✅ Producto actualizado exitosamente en stock_items:', {
-            productId,
-            itemsActualizados: stockItemsDelProducto.length,
-            imagen: updates.imagen ? 'Actualizada' : 'Sin cambios',
-            observaciones: updates.observaciones ? 'Actualizadas' : 'Sin cambios'
-          });
-        }
-
-        return true;
+        throw new Error('Producto no encontrado en stock_items');
       }
 
-      // Actualizar todos los items relacionados
+      // Actualizar en stock_items
       const updateData: any = {
         updated_at: new Date().toISOString()
       };
       
-      // Solo incluir campos que no sean undefined
       if (updates.imagen !== undefined) {
-        updateData.imagen = updates.imagen;
+        updateData.imagen_url = updates.imagen;
       }
       if (updates.observaciones !== undefined) {
         updateData.observaciones = updates.observaciones;
       }
 
       if (this.config?.enableLogging) {
-        console.log('🔄 Datos a actualizar:', updateData);
+        console.log('🔄 Datos a actualizar en stock_items:', updateData);
       }
 
       const updatePromises = itemsDelProducto.map(item =>
         supabase
-          .from('componentes_disponibles')
+          .from('stock_items')
           .update(updateData)
           .eq('id', item.id)
       );
 
       const results = await Promise.all(updatePromises);
-
-      // Verificar si hubo errores
       const errors = results.filter(result => result.error);
       if (errors.length > 0) {
-        throw new Error(`Error actualizando ${errors.length} items`);
+        console.error('❌ Errores en actualizaciones:', errors);
+        throw new Error(`Error actualizando ${errors.length} items en stock_items`);
       }
 
       if (this.config?.enableLogging) {
-        console.log('✅ Producto actualizado exitosamente:', {
+        console.log('✅ Producto actualizado exitosamente en stock_items:', {
           productId,
           itemsActualizados: itemsDelProducto.length,
           imagen: updates.imagen ? 'Actualizada' : 'Sin cambios',

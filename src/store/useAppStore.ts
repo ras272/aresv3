@@ -213,8 +213,15 @@ export const useAppStore = create<AppState>()(
           try {
             console.log("🔄 Cargando stock general desde Supabase...");
             const stockItems = await getAllStockItems();
+
+            // Mapear para asegurar que tenemos el campo tipoProducto
+            const stockItemsFormateados = stockItems.map(item => ({
+              ...item,
+              tipoProducto: item.tipoComponente || 'Producto' // Asegurar compatibilidad
+            }));
+
             set({
-              stockItems: stockItems,
+              stockItems: stockItemsFormateados,
             });
             console.log("✅ Stock general cargado exitosamente:", {
               items: stockItems.length,
@@ -230,24 +237,21 @@ export const useAppStore = create<AppState>()(
           motivo: string
         ) => {  
           try {
-            // 🔧 DETECCIÓN AUTOMÁTICA: Copiar lógica de registrarSalidaStock
-            const { data: stockItem } = await supabase
+            // Solo trabajamos con stock_items ahora
+            const { data: stockItem, error: stockError } = await supabase
               .from("stock_items")
-              .select("id")
+              .select("id, cantidad_actual")
               .eq("id", itemId)
               .single();
 
-            const tableName = stockItem
-              ? "stock_items"
-              : "componentes_disponibles";
-            const cantidadField = stockItem
-              ? "cantidad_actual"
-              : "cantidad_disponible";
+            if (stockError || !stockItem) {
+              throw new Error(`Item no encontrado en stock_items: ${itemId}`);
+            }
 
             const { error } = await supabase
-              .from(tableName)
+              .from("stock_items")
               .update({
-                [cantidadField]: nuevaCantidad,
+                cantidad_actual: nuevaCantidad,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", itemId);
@@ -271,7 +275,7 @@ export const useAppStore = create<AppState>()(
             // Importar desde el módulo correcto de stock
             const { updateStockItemDetails } = await import("@/lib/database/stock");
 
-            // Actualizar solo en componentes_disponibles (donde están los datos reales)
+            // Actualizar en stock_items (la única tabla que ahora se usa)
             await updateStockItemDetails(productId, updates);
 
             // Recargar datos
@@ -423,25 +427,25 @@ export const useAppStore = create<AppState>()(
               productoModelo,
             });
 
-            // 🔧 CORRECCIÓN: Obtener números de serie solo de componentes disponibles (cantidad > 0)
-            const { data: componentesDisponibles, error: errorComponentes } =
+            // 🔧 CORRECCIÓN: Obtener números de serie solo de stock_items (cantidad > 0)
+            const { data: stockItems, error: errorStock } =
               await supabase
-                .from("componentes_disponibles")
+                .from("stock_items")
                 .select("numero_serie")
                 .eq("nombre", productoNombre)
                 .eq("marca", productoMarca)
-                .gt("cantidad_disponible", 0) // Solo componentes con cantidad > 0
+                .gt("cantidad_actual", 0) // Solo items con cantidad > 0
                 .not("numero_serie", "is", null)
                 .neq("numero_serie", "");
 
-            if (errorComponentes) throw errorComponentes;
+            if (errorStock) throw errorStock;
 
-            // Procesar componentes para obtener números de serie únicos disponibles
+            // Procesar stock items para obtener números de serie únicos disponibles
             const numerosSerieSet = new Set<string>();
 
-            componentesDisponibles.forEach((componente) => {
-              if (componente.numero_serie && componente.numero_serie.trim()) {
-                const sn = componente.numero_serie.trim();
+            stockItems.forEach((item) => {
+              if (item.numero_serie && item.numero_serie.trim()) {
+                const sn = item.numero_serie.trim();
                 numerosSerieSet.add(sn);
               }
             });
@@ -1145,55 +1149,47 @@ export const useAppStore = create<AppState>()(
 
             // Determinar si es del inventario técnico o stock general
             if (itemId) {
-              // 🔧 CORRECCIÓN: Obtener datos directamente de la base de datos para asegurar que tenemos el número de serie
-              const { data: componenteDB, error: componenteError } =
-                await supabase
-                  .from("componentes_disponibles")
-                  .select(
-                    "id, nombre, marca, modelo, numero_serie, cantidad_disponible"
-                  )
-                  .eq("id", itemId)
-                  .single();
-
-              if (componenteError || !componenteDB) {
+              // 🔧 CORRECCIÓN: Ahora solo trabajamos con stock_items
+              // Si se pasa itemId, asumir que es de stock_items
+              const stockItem = get().stockItems.find(s => s.id === itemId);
+              
+              if (!stockItem) {
                 console.error(
-                  "❌ No se encontró el componente en la base de datos:",
-                  itemId,
-                  componenteError
+                  "❌ No se encontró el item en stock_items:",
+                  itemId
                 );
-                throw new Error(`Componente no encontrado: ${itemId}`);
+                throw new Error(`Item no encontrado en stock: ${itemId}`);
               }
 
-              console.log("🔍 Procesando salida para componente desde DB:", {
-                id: componenteDB.id,
-                nombre: componenteDB.nombre,
-                numeroSerie: componenteDB.numero_serie,
-                numeroSerieType: typeof componenteDB.numero_serie,
+              console.log("🔍 Procesando salida para stock item desde store:", {
+                id: stockItem.id,
+                nombre: stockItem.nombre,
+                numeroSerie: stockItem.numeroSerie,
               });
 
               // 🔧 USAR FUNCIÓN DIRECTA DE DATABASE.TS en lugar del store
               await registrarSalidaStock({
                 itemId: itemId,
-                productoNombre: componenteDB.nombre,
-                productoMarca: componenteDB.marca,
-                productoModelo: componenteDB.modelo,
-                numeroSerie: componenteDB.numero_serie, // 🆕 Desde la base de datos directamente
+                productoNombre: stockItem.nombre,
+                productoMarca: stockItem.marca,
+                productoModelo: stockItem.modelo,
+                numeroSerie: stockItem.numeroSerie,
                 cantidad: cantidad,
-                cantidadAnterior: componenteDB.cantidad_disponible,
+                cantidadAnterior: stockItem.cantidadDisponible,
                 motivo: motivo,
                 destino: cliente || "Cliente",
                 responsable: "Sistema - Remisión",
                 cliente: cliente,
                 numeroFactura: numeroFactura,
                 observaciones: `Remisión: ${numeroRemision || "N/A"}`,
-                carpetaOrigen: componenteDB.marca,
+                carpetaOrigen: stockItem.marca,
               });
 
               console.log(
                 "✅ Movimiento de stock registrado para:",
-                componenteDB.nombre,
+                stockItem.nombre,
                 "S/N:",
-                componenteDB.numero_serie
+                stockItem.numeroSerie
               );
             } else if (stockItemId) {
               // Es del stock general (stock_items)

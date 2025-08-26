@@ -13,6 +13,7 @@ import { TrazabilidadStats } from "@/components/stock/TrazabilidadStats";
 import { MovimientosCarpetaModal } from "@/components/stock/MovimientosCarpetaModal";
 import { MovimientosStock } from "@/components/stock/MovimientosStock";
 import { RegistrarSalidaModal } from "@/components/stock/RegistrarSalidaModal";
+import { StockSkeleton, CarpetaSkeleton } from "@/components/stock/StockSkeleton";
 
 import {
   Package,
@@ -26,7 +27,22 @@ import {
   ArrowDownCircle,
   Box,
   X,
-
+  Grid3X3,
+  List,
+  Filter,
+  SortAsc,
+  SortDesc,
+  MapPin,
+  DollarSign,
+  Calendar,
+  Eye,
+  EyeOff,
+  Zap,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  Star,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -65,7 +81,12 @@ export default function StockPage() {
     registrarSalidaStock,
   } = useAppStore();
 
+  const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState("");
+  const [vistaCompacta, setVistaCompacta] = useState(false);
+  const [filtroStock, setFiltroStock] = useState<'todos' | 'bajo' | 'sin_stock' | 'disponible'>('todos');
+  const [ordenPor, setOrdenPor] = useState<'nombre' | 'stock' | 'valor' | 'fecha'>('nombre');
+  const [ordenDireccion, setOrdenDireccion] = useState<'asc' | 'desc'>('asc');
   const [carpetasAbiertas, setCarpetasAbiertas] = useState<Set<string>>(
     new Set(["ares"])
   );
@@ -85,6 +106,10 @@ export default function StockPage() {
   // Estado para modal de movimientos generales
   const [modalMovimientosGeneralOpen, setModalMovimientosGeneralOpen] = useState(false);
 
+  // Estado para modal de imagen completa
+  const [modalImagenOpen, setModalImagenOpen] = useState(false);
+  const [imagenSeleccionada, setImagenSeleccionada] = useState<{url: string; nombre: string} | null>(null);
+
   // Estados para crear carpeta manualmente
   const [modalCrearCarpeta, setModalCrearCarpeta] = useState(false);
   const [nombreNuevaCarpeta, setNombreNuevaCarpeta] = useState("");
@@ -95,8 +120,22 @@ export default function StockPage() {
 
 
   useEffect(() => {
-    loadStock();
-    loadMovimientosStock();
+    const cargarDatos = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([
+          loadStock(),
+          loadMovimientosStock()
+        ]);
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+      } finally {
+        // Delay mínimo para mostrar el skeleton
+        setTimeout(() => setLoading(false), 500);
+      }
+    };
+
+    cargarDatos();
   }, [loadStock, loadMovimientosStock]);
 
   // Agrupar productos por marca/carpeta
@@ -254,15 +293,92 @@ export default function StockPage() {
 
   // Filtrar productos por búsqueda
   const filtrarProductos = (productos: ProductoAgrupado[]) => {
-    if (!busqueda.trim()) return productos;
+    let productosFiltrados = productos;
 
-    const termino = busqueda.toLowerCase();
-    return productos.filter(
-      (producto) =>
-        producto.nombre.toLowerCase().includes(termino) ||
-        producto.marca.toLowerCase().includes(termino) ||
-        producto.modelo.toLowerCase().includes(termino)
-    );
+    // Filtro de búsqueda
+    if (busqueda.trim()) {
+      const termino = busqueda.toLowerCase();
+      productosFiltrados = productosFiltrados.filter(
+        (producto) =>
+          producto.nombre.toLowerCase().includes(termino) ||
+          producto.marca.toLowerCase().includes(termino) ||
+          producto.modelo.toLowerCase().includes(termino)
+      );
+    }
+
+    // Filtro por stock
+    if (filtroStock !== 'todos') {
+      productosFiltrados = productosFiltrados.filter((producto) => {
+        const stockTotal = producto.cantidadTotal;
+        switch (filtroStock) {
+          case 'sin_stock':
+            return stockTotal === 0;
+          case 'bajo':
+            return stockTotal > 0 && stockTotal <= 5;
+          case 'disponible':
+            return stockTotal > 5;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Ordenamiento
+    productosFiltrados.sort((a, b) => {
+      let valorA: any, valorB: any;
+      
+      switch (ordenPor) {
+        case 'stock':
+          valorA = a.cantidadTotal;
+          valorB = b.cantidadTotal;
+          break;
+        case 'valor':
+          // Buscar el primer item para obtener precio
+          const itemA = stockItems.find(item => 
+            item.nombre === a.nombre && item.marca === a.marca && item.modelo === a.modelo
+          );
+          const itemB = stockItems.find(item => 
+            item.nombre === b.nombre && item.marca === b.marca && item.modelo === b.modelo
+          );
+          valorA = (itemA?.precio || 0) * a.cantidadTotal;
+          valorB = (itemB?.precio || 0) * b.cantidadTotal;
+          break;
+        case 'fecha':
+          // Por ahora usamos el ID como proxy de fecha
+          valorA = a.id;
+          valorB = b.id;
+          break;
+        default: // nombre
+          valorA = a.nombre.toLowerCase();
+          valorB = b.nombre.toLowerCase();
+      }
+      
+      if (ordenDireccion === 'asc') {
+        return valorA < valorB ? -1 : valorA > valorB ? 1 : 0;
+      } else {
+        return valorA > valorB ? -1 : valorA < valorB ? 1 : 0;
+      }
+    });
+
+    return productosFiltrados;
+  };
+
+  // Función para obtener el color del badge de stock
+  const getStockBadgeColor = (cantidad: number) => {
+    if (cantidad === 0) return "bg-red-100 text-red-800 border-red-200";
+    if (cantidad <= 5) return "bg-orange-100 text-orange-800 border-orange-200";
+    if (cantidad <= 10) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    return "bg-green-100 text-green-800 border-green-200";
+  };
+
+  // Función para obtener el ícono de carpeta
+  const getCarpetaIcon = (carpeta: string) => {
+    const nombre = carpeta.toLowerCase();
+    if (nombre.includes('urgente') || nombre.includes('critico')) return AlertTriangle;
+    if (nombre.includes('nuevo') || nombre.includes('reciente')) return Star;
+    if (nombre.includes('repuesto') || nombre.includes('componente')) return Settings;
+    if (nombre.includes('equipo') || nombre.includes('dispositivo')) return Zap;
+    return Folder;
   };
 
   return (
@@ -275,57 +391,128 @@ export default function StockPage() {
           {/* Estadísticas de Trazabilidad */}
           <TrazabilidadStats />
 
-          {/* Barra de herramientas */}
+          {/* Barra de herramientas mejorada */}
           <Card className="border-none shadow-md">
             <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
-                <div className="relative flex-1 w-full">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar productos..."
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    className="pl-10 border-gray-300 focus:border-blue-500 rounded-lg"
-                  />
+              <div className="space-y-4">
+                {/* Primera fila: Búsqueda y vista */}
+                <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
+                  <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar productos por nombre, marca o modelo..."
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                      className="pl-10 border-gray-300 focus:border-blue-500 rounded-lg"
+                    />
+                  </div>
+                  
+                  {/* Controles de vista */}
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant={vistaCompacta ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setVistaCompacta(!vistaCompacta)}
+                      className="flex items-center space-x-2"
+                    >
+                      {vistaCompacta ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+                      <span className="hidden sm:inline">
+                        {vistaCompacta ? "Compacta" : "Expandida"}
+                      </span>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 w-full md:w-auto">
-                  <Button
-                    onClick={() => setModalMovimientosGeneralOpen(true)}
-                    variant="outline"
-                    className="flex items-center space-x-2 text-blue-600 border-blue-300 hover:bg-blue-100 transition-colors"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    <span>Movimientos Recientes</span>
-                  </Button>
-                  <Button
-                    onClick={() => (window.location.href = "/stock/nuevo")}
-                    className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Nuevo Item</span>
-                  </Button>
-                  <Button
-                    onClick={() => setModalCrearCarpeta(true)}
-                    variant="outline"
-                    className="flex items-center space-x-2 border-gray-300 hover:bg-gray-100"
-                  >
-                    <Folder className="h-4 w-4" />
-                    <span>Nueva Carpeta</span>
-                  </Button>
+
+                {/* Segunda fila: Filtros y ordenamiento */}
+                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                  {/* Filtro por stock */}
+                  <div className="flex items-center space-x-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <select
+                      value={filtroStock}
+                      onChange={(e) => setFiltroStock(e.target.value as any)}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="todos">Todos los productos</option>
+                      <option value="disponible">Stock disponible</option>
+                      <option value="bajo">Stock bajo</option>
+                      <option value="sin_stock">Sin stock</option>
+                    </select>
+                  </div>
+
+                  {/* Ordenamiento */}
+                  <div className="flex items-center space-x-2">
+                    <select
+                      value={ordenPor}
+                      onChange={(e) => setOrdenPor(e.target.value as any)}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="nombre">Ordenar por nombre</option>
+                      <option value="stock">Ordenar por stock</option>
+                      <option value="valor">Ordenar por valor</option>
+                      <option value="fecha">Ordenar por fecha</option>
+                    </select>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setOrdenDireccion(ordenDireccion === 'asc' ? 'desc' : 'asc')}
+                      className="p-2"
+                    >
+                      {ordenDireccion === 'asc' ? 
+                        <SortAsc className="h-4 w-4" /> : 
+                        <SortDesc className="h-4 w-4" />
+                      }
+                    </Button>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center space-x-2 ml-auto">
+                    <Button
+                      onClick={() => setModalMovimientosGeneralOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-2 text-blue-600 border-blue-300 hover:bg-blue-100 transition-colors"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Movimientos</span>
+                    </Button>
+                    <Button
+                      onClick={() => (window.location.href = "/stock/nuevo")}
+                      size="sm"
+                      className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden sm:inline">Nuevo Item</span>
+                    </Button>
+                    <Button
+                      onClick={() => setModalCrearCarpeta(true)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-2 border-gray-300 hover:bg-gray-100"
+                    >
+                      <Folder className="h-4 w-4" />
+                      <span className="hidden sm:inline">Nueva Carpeta</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Productos organizados por carpetas */}
-          <div className="space-y-4">
+          {loading ? (
+            <div className="space-y-6">
+              <CarpetaSkeleton cantidad={3} />
+            </div>
+          ) : (
+            <div className="space-y-4">
             {/* Mostrar carpetas vacías creadas manualmente */}
             {Array.from(carpetasVacias).map((carpeta) => {
               const carpetaId = carpeta.toLowerCase().replace(/\s+/g, "-");
               const estaAbierta = carpetasAbiertas.has(carpetaId);
 
               return (
-                <Card key={`empty-${carpeta}`} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+                <Card key={`empty-${carpeta}`} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                   <CardHeader
                     className="cursor-pointer hover:bg-gray-50 transition-colors p-4"
                     onClick={() => toggleCarpeta(carpetaId)}
@@ -337,19 +524,27 @@ export default function StockPage() {
                         ) : (
                           <ChevronRight className="h-5 w-5 text-gray-500" />
                         )}
-                        <Folder className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <CardTitle className="text-lg font-semibold text-gray-700">
-                            {carpeta}
+                        {React.createElement(getCarpetaIcon(carpeta), { 
+                          className: "h-5 w-5 text-gray-400" 
+                        })}
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-gray-700 flex items-center space-x-2">
+                            <span>{carpeta}</span>
+                            <Badge variant="outline" className="text-gray-500 border-gray-300">
+                              Vacía
+                            </Badge>
                           </CardTitle>
-                          <p className="text-sm text-gray-500">
-                            0 unidades • 0 productos
+                          <p className="text-sm text-gray-500 mt-1">
+                            0 unidades • 0 productos • Sin valor asignado
                           </p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-gray-500 border-gray-300">
-                        Vacía
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <div className="text-right">
+                          <div className="text-xs text-gray-400">Valor total</div>
+                          <div className="font-semibold text-gray-500">$0</div>
+                        </div>
+                      </div>
                     </div>
                   </CardHeader>
 
@@ -383,56 +578,129 @@ export default function StockPage() {
               const carpetaId = carpeta.toLowerCase().replace(/\s+/g, "-");
               const estaAbierta = carpetasAbiertas.has(carpetaId);
               const productosFiltrados = filtrarProductos(productos);
+              const totalUnidades = productos.reduce((sum, p) => sum + p.cantidadTotal, 0);
+              const totalProductos = productos.length;
+              const productosStockBajo = productos.filter(p => p.cantidadTotal > 0 && p.cantidadTotal <= 5).length;
+              const productosSinStock = productos.filter(p => p.cantidadTotal === 0).length;
+              
+              // Calcular valor total estimado
+              const valorTotal = productos.reduce((sum, producto) => {
+                const primerItem = stockItems.find(
+                  item => item.nombre === producto.nombre && 
+                         item.marca === producto.marca && 
+                         item.modelo === producto.modelo
+                );
+                return sum + ((primerItem?.precio || 0) * producto.cantidadTotal);
+              }, 0);
 
               if (productosFiltrados.length === 0 && busqueda.trim()) {
                 return null;
               }
 
+              const CarpetaIcon = getCarpetaIcon(carpeta);
+
               return (
-                <Card key={carpeta} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+                <Card key={carpeta} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                   <CardHeader
                     className="cursor-pointer hover:bg-gray-50 transition-colors p-4"
                     onClick={() => toggleCarpeta(carpetaId)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 flex-1">
                         {estaAbierta ? (
                           <ChevronDown className="h-5 w-5 text-gray-500" />
                         ) : (
                           <ChevronRight className="h-5 w-5 text-gray-500" />
                         )}
-                        <Folder className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <CardTitle className="text-lg font-semibold text-gray-800">
-                            {carpeta}
-                          </CardTitle>
-                          <p className="text-sm text-gray-500">
-                            {productos.reduce(
-                              (sum, p) => sum + p.cantidadTotal,
-                              0
-                            )}{" "}
-                            unidades • {productos.length} productos
-                          </p>
+                        <CarpetaIcon className="h-5 w-5 text-blue-500" />
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <CardTitle className="text-lg font-semibold text-gray-800">
+                              {carpeta}
+                            </CardTitle>
+                            
+                            {/* Preview de productos con imágenes */}
+                            <div className="flex -space-x-2">
+                              {productos.slice(0, 3).map((producto, index) => (
+                                producto.imagen && (
+                                  <img
+                                    key={index}
+                                    src={producto.imagen}
+                                    alt={producto.nombre}
+                                    className="w-8 h-8 rounded-full border-2 border-white object-cover hover:scale-110 transition-transform cursor-pointer"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setImagenSeleccionada({url: producto.imagen!, nombre: producto.nombre});
+                                      setModalImagenOpen(true);
+                                    }}
+                                    title={`${producto.nombre} - Clic para ver imagen completa`}
+                                  />
+                                )
+                              ))}
+                              {productos.length > 3 && (
+                                <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center hover:bg-gray-300 transition-colors">
+                                  <span className="text-xs text-gray-600 font-medium">+{productos.length - 3}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-4 mt-2">
+                            <p className="text-sm text-gray-500">
+                              {totalUnidades} unidades • {totalProductos} productos
+                            </p>
+                            
+                            {/* Badges de estado */}
+                            <div className="flex items-center space-x-2">
+                              {productosSinStock > 0 && (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                                  {productosSinStock} sin stock
+                                </Badge>
+                              )}
+                              {productosStockBajo > 0 && (
+                                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
+                                  {productosStockBajo} stock bajo
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCarpetaSeleccionada(carpeta);
-                            setModalMovimientosOpen(true);
-                          }}
-                          className="flex items-center space-x-1 border-gray-300 hover:bg-gray-100"
-                          title="Ver movimientos de esta carpeta"
-                        >
-                          <BarChart3 className="h-4 w-4" />
-                          <span>Movimientos</span>
-                        </Button>
-                        <Badge variant="outline" className="border-gray-300">
-                          {productosFiltrados.length} productos
-                        </Badge>
+                      
+                      <div className="flex items-center space-x-4">
+                        {/* Valor total */}
+                        <div className="text-right">
+                          <div className="text-xs text-gray-400">Valor estimado</div>
+                          <div className="font-semibold text-gray-700">
+                            ${valorTotal.toLocaleString()}
+                          </div>
+                        </div>
+                        
+                        {/* Acciones */}
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCarpetaSeleccionada(carpeta);
+                              setModalMovimientosOpen(true);
+                            }}
+                            className="flex items-center space-x-1 border-gray-300 hover:bg-gray-100"
+                            title="Ver movimientos de esta carpeta"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                            <span className="hidden lg:inline">Movimientos</span>
+                          </Button>
+                          
+                          <Badge variant="outline" className="border-gray-300">
+                            {productosFiltrados.length} productos
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
@@ -445,56 +713,102 @@ export default function StockPage() {
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <CardContent className="pt-0 p-0">
-                          <div className="overflow-x-auto">
-                            <table className="w-full min-w-max">
-                              <thead className="text-xs text-gray-600 uppercase bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                  <th className="text-left py-3 px-4 font-semibold">Producto</th>
-                                  <th className="text-center py-3 px-4 font-semibold">Stock</th>
-                                  <th className="text-right py-3 px-4 font-semibold">Acciones</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-200">
-                                {productosFiltrados.map((producto) => (
-                                  <tr key={producto.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="py-3 px-4">
-                                      <div className="flex items-center space-x-3">
-                                        {producto.imagen && (
-                                          <img
-                                            src={producto.imagen}
-                                            alt={producto.nombre}
-                                            className="w-10 h-10 object-cover rounded-md border border-gray-200"
-                                            onError={(e) => {
-                                              e.currentTarget.style.display = 'none';
-                                            }}
-                                          />
-                                        )}
-                                        <div>
-                                          <div className="font-medium text-sm text-gray-800">
+                        <CardContent className="pt-0 p-4">
+                          {/* Vista en grid de productos */}
+                          {loading ? (
+                            <StockSkeleton vistaCompacta={vistaCompacta} cantidad={6} />
+                          ) : (
+                            <div className={`grid gap-4 ${
+                              vistaCompacta 
+                                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                            }`}>
+                            {productosFiltrados.map((producto) => {
+                              const primerItem = stockItems.find(
+                                (item) =>
+                                  item.nombre === producto.nombre &&
+                                  item.marca === producto.marca &&
+                                  item.modelo === producto.modelo
+                              );
+                              
+                              const valorProducto = (primerItem?.precio || 0) * producto.cantidadTotal;
+                              const stockBadgeColor = getStockBadgeColor(producto.cantidadTotal);
+                              
+                              return (
+                                <motion.div
+                                  key={producto.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="group"
+                                >
+                                  <Card className="h-full hover:shadow-lg transition-all duration-200 border border-gray-200 group-hover:border-blue-300">
+                                    <CardContent className={`p-4 h-full flex flex-col ${
+                                      vistaCompacta ? 'space-y-2' : 'space-y-3'
+                                    }`}>
+                                      {/* Header del producto */}
+                                      <div className="flex items-start space-x-3">
+                                        {/* Imagen del producto */}
+                                        <div className={`flex-shrink-0 ${
+                                          vistaCompacta ? 'w-16 h-16' : 'w-24 h-24'
+                                        }`}>
+                                          {producto.imagen ? (
+                                            <img
+                                              src={producto.imagen}
+                                              alt={producto.nombre}
+                                              className={`w-full h-full object-cover rounded-lg border border-gray-200 group-hover:shadow-md transition-shadow cursor-pointer hover:scale-105 ${
+                                                vistaCompacta ? '' : 'hover:scale-110'
+                                              }`}
+                                              onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                              }}
+                                              onClick={() => {
+                                                setImagenSeleccionada({url: producto.imagen!, nombre: producto.nombre});
+                                                setModalImagenOpen(true);
+                                              }}
+                                              title="Clic para ver imagen completa"
+                                            />
+                                          ) : (
+                                            <div className={`w-full h-full bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center`}>
+                                              <Package className={`${vistaCompacta ? 'h-8 w-8' : 'h-12 w-12'} text-gray-400`} />
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Información del producto */}
+                                        <div className="flex-1 min-w-0">
+                                          <h3 className={`font-semibold text-gray-800 truncate ${
+                                            vistaCompacta ? 'text-sm' : 'text-base'
+                                          }`} title={producto.nombre}>
                                             {producto.nombre}
-                                          </div>
-                                          <div className="text-xs text-gray-500">
+                                          </h3>
+                                          <p className={`text-gray-600 truncate ${
+                                            vistaCompacta ? 'text-xs' : 'text-sm'
+                                          }`} title={`${producto.marca} • ${producto.modelo}`}>
                                             {producto.marca} • {producto.modelo}
-                                          </div>
+                                          </p>
+                                          
+                                          {/* Ubicaciones (solo en vista expandida) */}
+                                          {!vistaCompacta && producto.ubicaciones.length > 0 && (
+                                            <div className="flex items-center mt-1 text-xs text-gray-500">
+                                              <MapPin className="h-3 w-3 mr-1" />
+                                              <span className="truncate">
+                                                {producto.ubicaciones.slice(0, 2).map(u => u.ubicacion).join(', ')}
+                                                {producto.ubicaciones.length > 2 && ` +${producto.ubicaciones.length - 2}`}
+                                              </span>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
-                                    </td>
-                                    <td className="py-3 px-4 text-center">
-                                      {/* Información del producto agrupado basada en el primer item */}
-                                      {(() => {
-                                        const primerItem = stockItems.find(
-                                          (item) =>
-                                            item.nombre === producto.nombre &&
-                                            item.marca === producto.marca &&
-                                            item.modelo === producto.modelo
-                                        );
-                                        
-                                        return primerItem?.permite_fraccionamiento ? (
+                                      
+                                      {/* Información de stock */}
+                                      <div className="space-y-2">
+                                        {primerItem?.permite_fraccionamiento ? (
+                                          /* Stock fraccionado */
                                           <div className="space-y-2">
                                             {/* Badge de estado de caja */}
-                                            <div className="mb-1">
-                                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                            <div className="flex justify-center">
+                                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                                 primerItem.estado_caja === 'cajas_completas' ? 'bg-blue-100 text-blue-800' :
                                                 primerItem.estado_caja === 'caja_abierta' ? 'bg-orange-100 text-orange-800' :
                                                 primerItem.estado_caja === 'solo_unidades' ? 'bg-green-100 text-green-800' :
@@ -506,48 +820,98 @@ export default function StockPage() {
                                             </div>
                                             
                                             {/* Información detallada del stock fraccionado */}
-                                            <div className="space-y-1 text-sm">
-                                              <div className="flex items-center justify-center text-sm">
-                                                <Box className="h-3 w-3 text-gray-400 mr-1" />
-                                                <span className="text-gray-700">{primerItem.cajas_completas} cajas</span>
+                                            <div className={`grid grid-cols-2 gap-2 text-center ${
+                                              vistaCompacta ? 'text-xs' : 'text-sm'
+                                            }`}>
+                                              <div className="bg-blue-50 rounded p-2">
+                                                <div className="flex items-center justify-center text-blue-600">
+                                                  <Box className="h-3 w-3 mr-1" />
+                                                  <span className="font-semibold">{primerItem.cajas_completas}</span>
+                                                </div>
+                                                <div className="text-blue-700 text-xs">cajas</div>
                                               </div>
+                                              
                                               {(primerItem.unidades_sueltas || 0) > 0 && (
-                                                <div className="flex items-center justify-center text-sm">
-                                                  <Package className="h-3 w-3 text-gray-400 mr-1" />
-                                                  <span className="text-gray-700">{primerItem.unidades_sueltas} sueltas</span>
+                                                <div className="bg-green-50 rounded p-2">
+                                                  <div className="flex items-center justify-center text-green-600">
+                                                    <Package className="h-3 w-3 mr-1" />
+                                                    <span className="font-semibold">{primerItem.unidades_sueltas}</span>
+                                                  </div>
+                                                  <div className="text-green-700 text-xs">sueltas</div>
                                                 </div>
                                               )}
+                                            </div>
+                                            
+                                            <div className="text-center">
                                               <div className="text-sm font-semibold text-blue-600">
                                                 Total: {primerItem.unidades_totales} unidades
                                               </div>
                                             </div>
                                           </div>
                                         ) : (
-                                          /* Stock normal sin fraccionamiento */
-                                          <>
-                                            <span
-                                              className={`font-bold text-lg ${
-                                                producto.cantidadTotal <= 5 &&
-                                                producto.cantidadTotal > 0
+                                          /* Stock normal */
+                                          <div className="text-center">
+                                            <div className={`flex items-center justify-center space-x-2 ${
+                                              vistaCompacta ? 'text-lg' : 'text-2xl'
+                                            }`}>
+                                              <span className={`font-bold ${
+                                                producto.cantidadTotal <= 5 && producto.cantidadTotal > 0
                                                   ? "text-orange-500"
                                                   : producto.cantidadTotal === 0
                                                   ? "text-red-500"
                                                   : "text-green-500"
-                                              }`}
-                                            >
-                                              {producto.cantidadTotal}
-                                            </span>
-                                            {producto.cantidadTotal <= 5 && (
-                                              <div className="text-xs text-orange-500">
-                                                Stock bajo
+                                              }`}>
+                                                {producto.cantidadTotal}
+                                              </span>
+                                              <span className="text-sm text-gray-500">unidades</span>
+                                            </div>
+                                            
+                                            {producto.cantidadTotal <= 5 && producto.cantidadTotal > 0 && (
+                                              <div className="flex items-center justify-center text-orange-500 text-xs mt-1">
+                                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                                <span>Stock bajo</span>
                                               </div>
                                             )}
-                                          </>
-                                        );
-                                      })()}
-                                    </td>
-                                    <td className="py-3 px-4">
-                                      <div className="flex items-center justify-end space-x-2">
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Información adicional (solo en vista expandida) */}
+                                      {!vistaCompacta && (
+                                        <div className="space-y-2 pt-2 border-t border-gray-100">
+                                          {/* Precio y valor */}
+                                          {primerItem?.precio && primerItem.precio > 0 && (
+                                            <div className="flex items-center justify-between text-sm">
+                                              <span className="text-gray-600 flex items-center">
+                                                <DollarSign className="h-3 w-3 mr-1" />
+                                                Precio unit.
+                                              </span>
+                                              <span className="font-medium">
+                                                ${primerItem.precio.toLocaleString()}
+                                              </span>
+                                            </div>
+                                          )}
+                                          
+                                          {valorProducto > 0 && (
+                                            <div className="flex items-center justify-between text-sm">
+                                              <span className="text-gray-600">Valor total</span>
+                                              <span className="font-semibold text-blue-600">
+                                                ${valorProducto.toLocaleString()}
+                                              </span>
+                                            </div>
+                                          )}
+                                          
+                                          {/* Observaciones */}
+                                          {producto.observaciones && (
+                                            <div className="text-xs text-gray-500 truncate" title={producto.observaciones}>
+                                              {producto.observaciones}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Acciones */}
+                                      <div className="flex items-center justify-end space-x-2 mt-auto pt-2">
                                         <Button
                                           variant="ghost"
                                           size="sm"
@@ -571,20 +935,38 @@ export default function StockPage() {
                                           <ArrowDownCircle className="h-4 w-4" />
                                         </Button>
                                       </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                    </CardContent>
+                                  </Card>
+                                </motion.div>
+                              );
+                            })}
+                            </div>
+                          )}
 
-                          {productosFiltrados.length === 0 && (
-                            <div className="text-center py-8 text-gray-500 bg-gray-50">
-                              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                              <p className="font-medium">
-                                No hay productos en esta carpeta que coincidan con
-                                la búsqueda
-                              </p>
+                          {!loading && productosFiltrados.length === 0 && (
+                            <div className="col-span-full">
+                              <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                                <Package className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                                <p className="font-medium text-lg mb-2">
+                                  No hay productos en esta carpeta
+                                </p>
+                                <p className="text-sm">
+                                  {busqueda.trim() 
+                                    ? "No se encontraron productos que coincidan con la búsqueda" 
+                                    : "Los productos agregados desde mercaderías aparecerán aquí"
+                                  }
+                                </p>
+                                {busqueda.trim() && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setBusqueda('')}
+                                    className="mt-3"
+                                  >
+                                    Limpiar búsqueda
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           )}
                         </CardContent>
@@ -595,21 +977,41 @@ export default function StockPage() {
               );
             })}
 
-            {Object.keys(productosAgrupados).length === 0 && (
+            {Object.keys(productosAgrupados).length === 0 && Array.from(carpetasVacias).length === 0 && (
               <Card className="border border-gray-200 shadow-sm rounded-lg">
-                <CardContent className="p-12 text-center">
-                  <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    No hay productos en stock
-                  </h3>
-                  <p className="text-gray-500">
-                    Los productos agregados desde mercaderías aparecerán aquí
-                    organizados por carpetas.
-                  </p>
+                <CardContent className="p-16 text-center">
+                  <div className="max-w-md mx-auto">
+                    <Package className="w-20 h-20 mx-auto text-gray-400 mb-6" />
+                    <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                      Tu inventario está vacío
+                    </h3>
+                    <p className="text-gray-500 mb-6">
+                      Los productos agregados desde mercaderías aparecerán aquí 
+                      organizados automáticamente por carpetas.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button
+                        onClick={() => (window.location.href = "/stock/nuevo")}
+                        className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Agregar Primer Producto</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => (window.location.href = "/mercaderias")}
+                        className="flex items-center space-x-2"
+                      >
+                        <Package className="h-4 w-4" />
+                        <span>Ir a Mercaderías</span>
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
           </div>
+          )}
         </div>
       </div>
 
@@ -742,6 +1144,83 @@ export default function StockPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Imagen Completa */}
+      <AnimatePresence>
+        {modalImagenOpen && imagenSeleccionada && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
+            onClick={() => setModalImagenOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="relative max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 border-b">
+                <div className="flex items-center space-x-3">
+                  <ImageIcon className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <h3 className="font-semibold text-gray-800">{imagenSeleccionada.nombre}</h3>
+                    <p className="text-sm text-gray-500">Vista previa de imagen</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(imagenSeleccionada.url, '_blank')}
+                    className="text-gray-600 hover:text-blue-500"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Abrir original
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setModalImagenOpen(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Contenido de la imagen */}
+              <div className="p-4 flex items-center justify-center bg-gray-100">
+                <img
+                  src={imagenSeleccionada.url}
+                  alt={imagenSeleccionada.nombre}
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder-image.png';
+                  }}
+                />
+              </div>
+              
+              {/* Footer con acciones */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 border-t">
+                <div className="text-sm text-gray-600">
+                  Haz clic fuera de la imagen para cerrar
+                </div>
+                <Button
+                  onClick={() => setModalImagenOpen(false)}
+                  variant="outline"
+                  className="border-gray-300 hover:bg-gray-100"
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }
