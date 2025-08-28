@@ -47,15 +47,15 @@ export function MobileTable({
 }: MobileTableProps) {
   const { isFieldMode, screenWidth } = useFieldMode();
   
-  // 🔧 EXTREMO: Forzar móvil en cualquier pantalla pequeña
-  const shouldUseMobile = isFieldMode || screenWidth < 1000 || window?.innerWidth < 1000;
+  // 🔧 MEJORADO: Detección más agresiva de móvil
+  const shouldUseMobile = isFieldMode || screenWidth < 1024 || (typeof window !== 'undefined' && window.innerWidth < 1024);
 
   if (data.length === 0) {
     return (
-      <div className="text-center py-12">
-        <EmptyIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">{emptyStateTitle}</h3>
-        <p className="text-gray-500">{emptyStateMessage}</p>
+      <div className="text-center py-8 sm:py-12">
+        <EmptyIcon className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300 mx-auto mb-2 sm:mb-4" />
+        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">{emptyStateTitle}</h3>
+        <p className="text-sm text-gray-500">{emptyStateMessage}</p>
       </div>
     );
   }
@@ -63,7 +63,7 @@ export function MobileTable({
   if (shouldUseMobile) {
     // Versión móvil: Cards apiladas
     return (
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3 p-2 sm:p-3">
         {data.map((item, index) => (
           <motion.div
             key={item.id || index}
@@ -78,11 +78,11 @@ export function MobileTable({
     );
   }
 
-  // Versión desktop: Tabla con scroll horizontal obligatorio en pantallas pequeñas
+  // Versión desktop: Tabla optimizada sin min-width fijo
   return (
     <div className="h-full flex flex-col">
       <div className="overflow-x-auto overflow-y-auto flex-1">
-        <table className="w-full table-auto min-w-[800px]">
+        <table className="w-full table-auto">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
               {columns.filter(col => col.desktop !== false).map((column, index) => {
@@ -162,146 +162,144 @@ export function MobileEquipoCard({
     switch (estadoGeneral) {
       case 'CRITICO':
         return (
-          <Badge variant="destructive" className="flex items-center space-x-1">
-            <AlertTriangle className="w-3 h-3" />
+          <Badge variant="destructive" className="flex items-center space-x-1 text-xs px-2 py-1 whitespace-nowrap">
+            <AlertTriangle className="w-2 h-2 flex-shrink-0" />
             <span>CRÍTICO</span>
           </Badge>
         );
       case 'REPARACION':
         return (
-          <Badge variant="secondary" className="bg-yellow-600 text-white flex items-center space-x-1">
-            <Wrench className="w-3 h-3" />
-            <span>EN REPARACIÓN</span>
+          <Badge variant="secondary" className="bg-yellow-600 text-white flex items-center space-x-1 text-xs px-2 py-1 whitespace-nowrap">
+            <Wrench className="w-2 h-2 flex-shrink-0" />
+            <span>REPARACIÓN</span>
           </Badge>
         );
       case 'OPERATIVO':
         return (
-          <Badge variant="default" className="bg-green-600 flex items-center space-x-1">
-            <CheckCircle className="w-3 h-3" />
-            <span>OPERATIVO</span>
+          <Badge variant="default" className="bg-green-600 flex items-center space-x-1 text-xs px-2 py-1 whitespace-nowrap">
+            <CheckCircle className="w-2 h-2 flex-shrink-0" />
+            <span>OK</span>
           </Badge>
         );
       default:
-        return <Badge variant="outline">Sin datos</Badge>;
+        return <Badge variant="outline" className="text-xs px-2 py-1 whitespace-nowrap">Sin datos</Badge>;
     }
   };
 
   return (
-    <Card className={`p-4 ${getEstadoColor()} shadow-sm hover:shadow-md transition-all`}>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-bold text-lg text-gray-900 mb-1">
-            {equipo.nombreEquipo}
-          </h3>
-          <div className="flex items-center text-gray-600 mb-2">
-            <MapPin className="h-4 w-4 mr-1" />
-            <span className="font-medium">{equipo.cliente}</span>
+    <Card className={`${getEstadoColor()} shadow-sm hover:shadow-md transition-all w-full overflow-hidden`}>
+      <div className="p-3 w-full">
+        {/* Header compacto */}
+        <div className="flex items-start gap-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-base text-gray-900 mb-1 truncate">
+              {equipo.nombreEquipo}
+            </h3>
+            <div className="flex items-center text-gray-600 mb-1 min-w-0">
+              <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span className="text-sm font-medium truncate">{equipo.cliente}</span>
+            </div>
+            <p className="text-xs text-gray-500 truncate">{equipo.ubicacion}</p>
           </div>
-          <p className="text-sm text-gray-500">{equipo.ubicacion}</p>
+          <div className="flex-shrink-0">
+            {getEstadoBadge()}
+          </div>
         </div>
-        {getEstadoBadge()}
-      </div>
 
-      {/* Detalles técnicos */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Marca/Modelo</p>
-          <p className="font-medium text-gray-900">{equipo.marca}</p>
-          <p className="text-sm text-gray-600">{equipo.modelo}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Tipo</p>
-          <p className="font-medium text-gray-900">{equipo.tipoEquipo}</p>
-        </div>
-      </div>
+        {/* Información en filas optimizadas */}
+        <div className="space-y-2 mb-3">
+          {/* Fila 1: Marca/Modelo */}
+          <div className="flex items-center justify-between min-w-0">
+            <div className="min-w-0 flex-1">
+              <span className="text-xs text-gray-500">Marca: </span>
+              <span className="text-sm font-medium text-gray-900 truncate">{equipo.marca}</span>
+            </div>
+            <Badge variant="outline" className="text-xs px-2 py-0.5 ml-2 flex-shrink-0 whitespace-nowrap">
+              {equipo.tipoEquipo}
+            </Badge>
+          </div>
 
-      {/* Serie y fecha */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Serie Base</p>
-            <code className="text-sm font-mono bg-white px-2 py-1 rounded border">
+          {/* Fila 2: Serie */}
+          <div className="w-full overflow-hidden">
+            <span className="text-xs text-gray-500">Serie: </span>
+            <code className="text-xs font-mono bg-gray-100 px-1 py-0.5 rounded truncate inline-block max-w-full">
               {equipo.numeroSerieBase}
             </code>
           </div>
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Fecha Entrega</p>
-            <div className="flex items-center text-sm text-gray-700">
-              <Calendar className="h-3 w-3 mr-1" />
-              {new Date(equipo.fechaEntrega).toLocaleDateString('es-ES')}
+        </div>
+
+        {/* Sección de estadísticas compacta */}
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 mb-3">
+          {/* Componentes */}
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 mb-1">Componentes</p>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                {componentes.total}
+              </Badge>
+              {componentes.operativos > 0 && (
+                <Badge variant="default" className="text-xs px-1.5 py-0.5 bg-green-100 text-green-800">
+                  {componentes.operativos}✓
+                </Badge>
+              )}
+              {componentes.enReparacion > 0 && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-800">
+                  {componentes.enReparacion}🔧
+                </Badge>
+              )}
+              {componentes.fueraServicio > 0 && (
+                <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                  {componentes.fueraServicio}❌
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          {/* Mantenimientos */}
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 mb-1">Mantenimientos</p>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant={mantenimientosCount > 0 ? 'default' : 'secondary'} className="text-xs px-1.5 py-0.5">
+                {mantenimientosCount}
+              </Badge>
+              {ultimoMantenimiento && (
+                <Badge 
+                  variant={
+                    ultimoMantenimiento.estado === 'Finalizado' ? 'default' :
+                    ultimoMantenimiento.estado === 'En proceso' ? 'secondary' : 'destructive'
+                  }
+                  className="text-xs px-1.5 py-0.5"
+                >
+                  {ultimoMantenimiento.estado === 'Finalizado' ? 'OK' : 
+                   ultimoMantenimiento.estado === 'En proceso' ? 'Proc' : 'Pend'}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Estado de componentes */}
-      <div className="mb-4">
-        <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Componentes</p>
-        <div className="flex flex-wrap gap-1">
-          <Badge variant="outline" className="text-xs">
-            {componentes.total} total
-          </Badge>
-          {componentes.operativos > 0 && (
-            <Badge variant="default" className="text-xs bg-green-100 text-green-800">
-              {componentes.operativos} ✓
-            </Badge>
-          )}
-          {componentes.enReparacion > 0 && (
-            <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
-              {componentes.enReparacion} 🔧
-            </Badge>
-          )}
-          {componentes.fueraServicio > 0 && (
-            <Badge variant="destructive" className="text-xs">
-              {componentes.fueraServicio} ❌
-            </Badge>
-          )}
+        {/* Acciones compactas */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEliminar({ id: equipo.id, nombre: equipo.nombreEquipo })}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-8 px-2 text-xs flex-shrink-0"
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Eliminar
+          </Button>
+          
+          <Button
+            size="sm"
+            onClick={() => onVer(equipo.id)}
+            className="flex items-center space-x-1 h-8 px-3 text-xs flex-shrink-0"
+          >
+            <Eye className="h-3 w-3" />
+            <span>Ver</span>
+            <ChevronRight className="h-3 w-3" />
+          </Button>
         </div>
-      </div>
-
-      {/* Mantenimientos */}
-      <div className="mb-4">
-        <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Mantenimientos</p>
-        <div className="flex items-center space-x-2">
-          <Badge variant={mantenimientosCount > 0 ? 'default' : 'secondary'} className="text-xs">
-            {mantenimientosCount} total
-          </Badge>
-          {ultimoMantenimiento && (
-            <Badge 
-              variant={
-                ultimoMantenimiento.estado === 'Finalizado' ? 'default' :
-                ultimoMantenimiento.estado === 'En proceso' ? 'secondary' : 'destructive'
-              }
-              className="text-xs"
-            >
-              Último: {ultimoMantenimiento.estado}
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      {/* Acciones */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onEliminar({ id: equipo.id, nombre: equipo.nombreEquipo })}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Eliminar
-        </Button>
-        
-        <Button
-          size="sm"
-          onClick={() => onVer(equipo.id)}
-          className="flex items-center space-x-2"
-        >
-          <Eye className="h-4 w-4" />
-          <span>Ver Detalles</span>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
       </div>
     </Card>
   );
@@ -445,9 +443,10 @@ export function MobileComponenteCard({
 
       {/* Observaciones */}
       {componente.observaciones && (
-        <div className="mb-4 p-2 bg-gray-50 rounded">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Observaciones</p>
-          <p className="text-sm text-gray-700">{componente.observaciones}</p>
+        <div className="mb-4 p-3 bg-gray-50 border-l-2 border-l-gray-300 rounded-r-sm">
+          <p className="text-xs text-gray-700">
+            {componente.observaciones}
+          </p>
         </div>
       )}
 

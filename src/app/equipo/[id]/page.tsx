@@ -808,9 +808,11 @@ export default function EquipoDetailPage() {
                             <span className="font-medium">Serie:</span> {componente.numeroSerie}
                           </p>
                           {componente.observaciones && (
-                            <p className="text-sm text-gray-600">
-                              <span className="font-medium">Observaciones:</span> {componente.observaciones}
-                            </p>
+                            <div className="mt-2">
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 text-xs px-2 py-1 max-w-full font-bold">
+                                {componente.observaciones}
+                              </Badge>
+                            </div>
                           )}
                         </div>
                         

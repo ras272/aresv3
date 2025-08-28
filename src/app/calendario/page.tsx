@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useAppStore } from '@/store/useAppStore';
 import { 
   Calendar as CalendarIcon,
@@ -20,7 +23,8 @@ import {
   Eye,
   MapPin,
   Wrench,
-  Phone
+  Phone,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -160,6 +164,284 @@ export default function CalendarioPage() {
       year: 'numeric', 
       month: 'long'
     });
+  };
+
+  // Generar grid del calendario mensual
+  const generarDiasMes = () => {
+    const año = fechaActual.getFullYear();
+    const mes = fechaActual.getMonth();
+    const primerDia = new Date(año, mes, 1);
+    const ultimoDia = new Date(año, mes + 1, 0);
+    const diasEnMes = ultimoDia.getDate();
+    const diaSemanaInicio = primerDia.getDay(); // 0 = domingo
+    
+    const dias = [];
+    
+    // Días vacíos del mes anterior
+    for (let i = 0; i < diaSemanaInicio; i++) {
+      dias.push(null);
+    }
+    
+    // Días del mes actual
+    for (let dia = 1; dia <= diasEnMes; dia++) {
+      const fecha = new Date(año, mes, dia);
+      const mantenimientosDelDia = obtenerMantenimientosPorFecha(fecha);
+      dias.push({
+        numero: dia,
+        fecha: fecha,
+        mantenimientos: mantenimientosDelDia,
+        esHoy: fecha.toDateString() === new Date().toDateString()
+      });
+    }
+    
+    return dias;
+  };
+
+  // Generar días de la semana
+  const generarDiasSemana = () => {
+    const dias = [];
+    const inicioSemana = new Date(fechaActual);
+    inicioSemana.setDate(fechaActual.getDate() - fechaActual.getDay()); // Ir al domingo
+    
+    for (let i = 0; i < 7; i++) {
+      const fecha = new Date(inicioSemana);
+      fecha.setDate(inicioSemana.getDate() + i);
+      const mantenimientosDelDia = obtenerMantenimientosPorFecha(fecha);
+      
+      dias.push({
+        fecha: fecha,
+        mantenimientos: mantenimientosDelDia,
+        esHoy: fecha.toDateString() === new Date().toDateString()
+      });
+    }
+    
+    return dias;
+  };
+
+  // Renderizar vista mensual
+  const renderVistasMes = () => {
+    const dias = generarDiasMes();
+    const nombresDias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    
+    return (
+      <div className="bg-white rounded-lg border">
+        {/* Header con días de la semana */}
+        <div className="grid grid-cols-7 border-b">
+          {nombresDias.map(dia => (
+            <div key={dia} className="p-3 text-center text-sm font-medium text-gray-500 bg-gray-50">
+              {dia}
+            </div>
+          ))}
+        </div>
+        
+        {/* Grid de días */}
+        <div className="grid grid-cols-7">
+          {dias.map((dia, index) => (
+            <div
+              key={index}
+              className={`min-h-[120px] border-b border-r p-2 ${
+                dia ? 'bg-white hover:bg-gray-50 cursor-pointer' : 'bg-gray-50'
+              } ${dia?.esHoy ? 'bg-blue-50 border-blue-200' : ''}`}
+              onClick={() => dia && handleClickDia(dia.fecha)}
+            >
+              {dia && (
+                <>
+                  <div className={`text-sm font-medium mb-2 ${
+                    dia.esHoy ? 'text-blue-600' : 'text-gray-900'
+                  }`}>
+                    {dia.numero}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    {dia.mantenimientos.slice(0, 3).map(mantenimiento => (
+                      <div
+                        key={mantenimiento.id}
+                        className={`text-xs p-1 rounded truncate ${
+                          obtenerColorPrioridadCalendario(mantenimiento.prioridad)
+                        }`}
+                        title={`${mantenimiento.nombreEquipo} - ${mantenimiento.descripcion}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMantenimientoSeleccionado(mantenimiento);
+                          setMostrarModal(true);
+                        }}
+                      >
+                        {mantenimiento.nombreEquipo}
+                      </div>
+                    ))}
+                    
+                    {dia.mantenimientos.length > 3 && (
+                      <div className="text-xs text-gray-500 p-1">
+                        +{dia.mantenimientos.length - 3} más
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Renderizar vista semanal
+  const renderVistaSemana = () => {
+    const dias = generarDiasSemana();
+    const horas = Array.from({ length: 13 }, (_, i) => i + 7); // 7:00 a 19:00
+    
+    return (
+      <div className="bg-white rounded-lg border overflow-x-auto">
+        {/* Header con días */}
+        <div className="grid grid-cols-8 border-b">
+          <div className="p-3 text-sm font-medium text-gray-500 bg-gray-50">Hora</div>
+          {dias.map(dia => (
+            <div key={dia.fecha.toISOString()} className={`p-3 text-center text-sm ${
+              dia.esHoy ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-gray-50 text-gray-500'
+            }`}>
+              <div className="font-medium">{dia.fecha.toLocaleDateString('es-ES', { weekday: 'short' })}</div>
+              <div className="text-lg">{dia.fecha.getDate()}</div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Grid de horarios */}
+        <div className="max-h-96 overflow-y-auto">
+          {horas.map(hora => (
+            <div key={hora} className="grid grid-cols-8 border-b min-h-[60px]">
+              <div className="p-2 text-xs text-gray-500 bg-gray-50 flex items-center justify-center">
+                {hora}:00
+              </div>
+              
+              {dias.map(dia => {
+                const mantenimientosHora = dia.mantenimientos.filter(m => {
+                  const fechaMantenimiento = new Date(m.fechaProgramada || m.fecha);
+                  return fechaMantenimiento.getHours() === hora;
+                });
+                
+                return (
+                  <div key={`${dia.fecha.toISOString()}-${hora}`} className="p-1 border-r hover:bg-gray-50">
+                    {mantenimientosHora.map(mantenimiento => (
+                      <div
+                        key={mantenimiento.id}
+                        className={`text-xs p-1 rounded mb-1 cursor-pointer ${
+                          obtenerColorPrioridadCalendario(mantenimiento.prioridad)
+                        }`}
+                        onClick={() => {
+                          setMantenimientoSeleccionado(mantenimiento);
+                          setMostrarModal(true);
+                        }}
+                        title={`${mantenimiento.nombreEquipo} - ${mantenimiento.descripcion}`}
+                      >
+                        {mantenimiento.nombreEquipo}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Renderizar vista diaria
+  const renderVistaDia = () => {
+    const mantenimientosDelDia = obtenerMantenimientosPorFecha(fechaActual);
+    const horas = Array.from({ length: 13 }, (_, i) => i + 7); // 7:00 a 19:00
+    
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-lg border">
+          <div className="p-4 border-b bg-gray-50">
+            <h4 className="font-medium text-gray-900">
+              {formatearFecha(fechaActual)}
+            </h4>
+            <p className="text-sm text-gray-600">
+              {mantenimientosDelDia.length} mantenimientos programados
+            </p>
+          </div>
+          
+          <div className="max-h-96 overflow-y-auto">
+            {horas.map(hora => {
+              const mantenimientosHora = mantenimientosDelDia.filter(m => {
+                const fechaMantenimiento = new Date(m.fechaProgramada || m.fecha);
+                return fechaMantenimiento.getHours() === hora;
+              });
+              
+              return (
+                <div key={hora} className="flex border-b min-h-[80px]">
+                  <div className="w-16 p-3 text-sm text-gray-500 bg-gray-50 flex items-start justify-center">
+                    {hora}:00
+                  </div>
+                  
+                  <div className="flex-1 p-3">
+                    {mantenimientosHora.length > 0 ? (
+                      <div className="space-y-2">
+                        {mantenimientosHora.map(mantenimiento => (
+                          <div
+                            key={mantenimiento.id}
+                            className="border rounded-lg p-3 hover:shadow-sm cursor-pointer"
+                            onClick={() => {
+                              setMantenimientoSeleccionado(mantenimiento);
+                              setMostrarModal(true);
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="font-medium text-sm">{mantenimiento.nombreEquipo}</h5>
+                              <Badge className={obtenerColorPrioridad(mantenimiento.prioridad)}>
+                                {mantenimiento.prioridad}
+                              </Badge>
+                            </div>
+                            
+                            <p className="text-xs text-gray-600 mb-1">{mantenimiento.descripcion}</p>
+                            
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {mantenimiento.cliente}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {mantenimiento.tecnicoAsignado}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {mantenimiento.tiempoEstimado}h
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-400 italic">Sin mantenimientos programados</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Obtener colores para el calendario (más sutiles)
+  const obtenerColorPrioridadCalendario = (prioridad: string) => {
+    switch (prioridad) {
+      case 'Crítica': return 'bg-red-100 text-red-700 border border-red-200';
+      case 'Alta': return 'bg-orange-100 text-orange-700 border border-orange-200';
+      case 'Media': return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+      case 'Baja': return 'bg-green-100 text-green-700 border border-green-200';
+      default: return 'bg-gray-100 text-gray-700 border border-gray-200';
+    }
+  };
+
+  // Manejar click en día del calendario
+  const handleClickDia = (fecha: Date) => {
+    setFechaActual(fecha);
+    setVista('dia');
   };
 
   // Crear nuevo mantenimiento programado
@@ -322,31 +604,28 @@ export default function CalendarioPage() {
           </Card>
         </div>
 
-        {/* Vista del calendario simplificada */}
+        {/* Vista del calendario real */}
         <Card className="p-6">
-          <div className="text-center py-12">
-            <CalendarIcon className="h-16 w-16 mx-auto mb-4 text-blue-500" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              🚀 ¡Calendario de Mantenimientos Implementado!
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Sistema completo con vistas mensual, semanal y diaria
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-semibold text-blue-900">Vista Mensual</h4>
-                <p className="text-sm text-blue-700">Planificación general del mes</p>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <h4 className="font-semibold text-green-900">Vista Semanal</h4>
-                <p className="text-sm text-green-700">Asignación de técnicos</p>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <h4 className="font-semibold text-purple-900">Vista Diaria</h4>
-                <p className="text-sm text-purple-700">Trabajo detallado del día</p>
-              </div>
+          {vista === 'mes' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Vista Mensual</h3>
+              {renderVistasMes()}
             </div>
-          </div>
+          )}
+          
+          {vista === 'semana' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Vista Semanal</h3>
+              {renderVistaSemana()}
+            </div>
+          )}
+          
+          {vista === 'dia' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Vista Diaria</h3>
+              {renderVistaDia()}
+            </div>
+          )}
         </Card>
 
         {/* Lista de mantenimientos programados */}
@@ -419,7 +698,7 @@ export default function CalendarioPage() {
             ))}
             
             {mantenimientosFiltrados.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-8 text-gray-500">
                 <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p>No hay mantenimientos programados</p>
                 <p className="text-sm">¡Crea el primer mantenimiento preventivo!</p>
@@ -538,220 +817,288 @@ export default function CalendarioPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setMostrarModalNuevo(false)}
           >
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">
-                  📅 Nuevo Mantenimiento Programado
-                </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMostrarModalNuevo(false)}
-                >
-                  ✕
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                {/* Selección de Equipo */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Equipo *
-                  </label>
-                  <select
-                    value={nuevoMantenimiento.equipoId}
-                    onChange={(e) => setNuevoMantenimiento(prev => ({
-                      ...prev,
-                      equipoId: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Selecciona un equipo</option>
-                    {equipos.map(equipo => (
-                      <option key={equipo.id} value={equipo.id}>
-                        {equipo.nombreEquipo} - {equipo.cliente}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Fecha Programada */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha Programada *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={nuevoMantenimiento.fechaProgramada}
-                    onChange={(e) => setNuevoMantenimiento(prev => ({
-                      ...prev,
-                      fechaProgramada: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Descripción */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción del Mantenimiento *
-                  </label>
-                  <textarea
-                    value={nuevoMantenimiento.descripcion}
-                    onChange={(e) => setNuevoMantenimiento(prev => ({
-                      ...prev,
-                      descripcion: e.target.value
-                    }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Describe el mantenimiento a realizar..."
-                  />
-                </div>
-
-                {/* Grid para campos en paralelo */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Técnico Asignado */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Técnico Asignado
-                    </label>
-                    <select
-                      value={nuevoMantenimiento.tecnicoAsignado}
-                      onChange={(e) => setNuevoMantenimiento(prev => ({
-                        ...prev,
-                        tecnicoAsignado: e.target.value
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {tecnicos.map(tecnico => (
-                        <option key={tecnico} value={tecnico}>{tecnico}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Prioridad */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Prioridad
-                    </label>
-                    <select
-                      value={nuevoMantenimiento.prioridad}
-                      onChange={(e) => setNuevoMantenimiento(prev => ({
-                        ...prev,
-                        prioridad: e.target.value as 'Baja' | 'Media' | 'Alta' | 'Crítica'
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="Baja">Baja</option>
-                      <option value="Media">Media</option>
-                      <option value="Alta">Alta</option>
-                      <option value="Crítica">Crítica</option>
-                    </select>
-                  </div>
-
-                  {/* Tiempo Estimado */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tiempo Estimado (horas)
-                    </label>
-                    <input
-                      type="number"
-                      min="0.5"
-                      max="24"
-                      step="0.5"
-                      value={nuevoMantenimiento.tiempoEstimado}
-                      onChange={(e) => setNuevoMantenimiento(prev => ({
-                        ...prev,
-                        tiempoEstimado: parseFloat(e.target.value)
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Días de Notificación */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Notificar con anticipación (días)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="30"
-                      value={nuevoMantenimiento.diasNotificacionAnticipada}
-                      onChange={(e) => setNuevoMantenimiento(prev => ({
-                        ...prev,
-                        diasNotificacionAnticipada: parseInt(e.target.value)
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Mantenimiento Recurrente */}
-                <div className="border-t pt-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <input
-                      type="checkbox"
-                      id="esRecurrente"
-                      checked={nuevoMantenimiento.esRecurrente}
-                      onChange={(e) => setNuevoMantenimiento(prev => ({
-                        ...prev,
-                        esRecurrente: e.target.checked
-                      }))}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="esRecurrente" className="text-sm font-medium text-gray-700">
-                      🔄 Mantenimiento Recurrente
-                    </label>
-                  </div>
-
-                  {nuevoMantenimiento.esRecurrente && (
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CalendarIcon className="w-6 h-6" />
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Frecuencia
-                      </label>
-                      <select
-                        value={nuevoMantenimiento.frecuenciaMantenimiento}
+                      <h2 className="text-xl font-bold">
+                        Nuevo Mantenimiento Programado
+                      </h2>
+                      <p className="text-blue-100 text-sm">
+                        Sistema de planificación de mantenimientos ARES
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMostrarModalNuevo(false)}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Información del Equipo */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Wrench className="w-5 h-5" />
+                        Información del Equipo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label htmlFor="equipo">Equipo a mantener</Label>
+                        <Select
+                          value={nuevoMantenimiento.equipoId}
+                          onValueChange={(value) => setNuevoMantenimiento(prev => ({
+                            ...prev,
+                            equipoId: value
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un equipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {equipos.map(equipo => (
+                              <SelectItem key={equipo.id} value={equipo.id}>
+                                {equipo.nombreEquipo} - {equipo.cliente}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {nuevoMantenimiento.equipoId && (
+                        <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                          {(() => {
+                            const equipoSeleccionado = equipos.find(e => e.id === nuevoMantenimiento.equipoId);
+                            return equipoSeleccionado ? (
+                              <>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <MapPin className="w-4 h-4 text-gray-500" />
+                                  <span>{equipoSeleccionado.cliente}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Wrench className="w-4 h-4 text-gray-500" />
+                                  <span>{equipoSeleccionado.marca} {equipoSeleccionado.modelo}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <User className="w-4 h-4 text-gray-500" />
+                                  <span>{equipoSeleccionado.ubicacion}</span>
+                                </div>
+                              </>
+                            ) : null;
+                          })()} 
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Programación */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Clock className="w-5 h-5" />
+                        Programación
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label htmlFor="fechaProgramada">Fecha y Hora Programada</Label>
+                        <Input
+                          id="fechaProgramada"
+                          type="datetime-local"
+                          value={nuevoMantenimiento.fechaProgramada}
+                          onChange={(e) => setNuevoMantenimiento(prev => ({
+                            ...prev,
+                            fechaProgramada: e.target.value
+                          }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="tiempoEstimado">Tiempo Estimado (horas)</Label>
+                        <Input
+                          id="tiempoEstimado"
+                          type="number"
+                          min="0.5"
+                          max="24"
+                          step="0.5"
+                          value={nuevoMantenimiento.tiempoEstimado}
+                          onChange={(e) => setNuevoMantenimiento(prev => ({
+                            ...prev,
+                            tiempoEstimado: parseFloat(e.target.value)
+                          }))}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Detalles del Mantenimiento */}
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5" />
+                      Detalles del Mantenimiento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="descripcion">Descripción del Trabajo</Label>
+                      <Textarea
+                        id="descripcion"
+                        placeholder="Describe detalladamente el mantenimiento a realizar..."
+                        value={nuevoMantenimiento.descripcion}
                         onChange={(e) => setNuevoMantenimiento(prev => ({
                           ...prev,
-                          frecuenciaMantenimiento: e.target.value as 'Mensual' | 'Bimestral' | 'Trimestral' | 'Semestral' | 'Anual'
+                          descripcion: e.target.value
                         }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="Mensual">Mensual</option>
-                        <option value="Bimestral">Bimestral</option>
-                        <option value="Trimestral">Trimestral</option>
-                        <option value="Semestral">Semestral</option>
-                        <option value="Anual">Anual</option>
-                      </select>
+                        rows={3}
+                      />
                     </div>
-                  )}
-                </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="tecnicoAsignado">Técnico Asignado</Label>
+                        <Select
+                          value={nuevoMantenimiento.tecnicoAsignado}
+                          onValueChange={(value) => setNuevoMantenimiento(prev => ({
+                            ...prev,
+                            tecnicoAsignado: value
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tecnicos.map(tecnico => (
+                              <SelectItem key={tecnico} value={tecnico}>{tecnico}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                {/* Botones de Acción */}
-                <div className="flex justify-end space-x-3 pt-6 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setMostrarModalNuevo(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={crearNuevoMantenimiento}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear Mantenimiento
-                  </Button>
+                      <div>
+                        <Label htmlFor="prioridad">Prioridad</Label>
+                        <Select
+                          value={nuevoMantenimiento.prioridad}
+                          onValueChange={(value) => setNuevoMantenimiento(prev => ({
+                            ...prev,
+                            prioridad: value as 'Baja' | 'Media' | 'Alta' | 'Crítica'
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Baja">Baja</SelectItem>
+                            <SelectItem value="Media">Media</SelectItem>
+                            <SelectItem value="Alta">Alta</SelectItem>
+                            <SelectItem value="Crítica">Crítica</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="diasNotificacion">Notificar (días antes)</Label>
+                        <Input
+                          id="diasNotificacion"
+                          type="number"
+                          min="1"
+                          max="30"
+                          value={nuevoMantenimiento.diasNotificacionAnticipada}
+                          onChange={(e) => setNuevoMantenimiento(prev => ({
+                            ...prev,
+                            diasNotificacionAnticipada: parseInt(e.target.value)
+                          }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="esRecurrente"
+                        checked={nuevoMantenimiento.esRecurrente}
+                        onChange={(e) => setNuevoMantenimiento(prev => ({
+                          ...prev,
+                          esRecurrente: e.target.checked
+                        }))}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <Label htmlFor="esRecurrente">Mantenimiento Recurrente</Label>
+                    </div>
+
+                    {nuevoMantenimiento.esRecurrente && (
+                      <div>
+                        <Label htmlFor="frecuencia">Frecuencia</Label>
+                        <Select
+                          value={nuevoMantenimiento.frecuenciaMantenimiento}
+                          onValueChange={(value) => setNuevoMantenimiento(prev => ({
+                            ...prev,
+                            frecuenciaMantenimiento: value as 'Mensual' | 'Bimestral' | 'Trimestral' | 'Semestral' | 'Anual'
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Mensual">Mensual</SelectItem>
+                            <SelectItem value="Bimestral">Bimestral</SelectItem>
+                            <SelectItem value="Trimestral">Trimestral</SelectItem>
+                            <SelectItem value="Semestral">Semestral</SelectItem>
+                            <SelectItem value="Anual">Anual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t bg-gray-50 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Técnico:</span>{" "}
+                    {nuevoMantenimiento.tecnicoAsignado}
+                  </div>
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => setMostrarModalNuevo(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={crearNuevoMantenimiento}
+                      disabled={
+                        !nuevoMantenimiento.equipoId ||
+                        !nuevoMantenimiento.fechaProgramada ||
+                        !nuevoMantenimiento.descripcion
+                      }
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crear Mantenimiento
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>

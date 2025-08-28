@@ -323,23 +323,23 @@ export function EquiposCliente({
                 <div className="text-right">
                   <span
                     className={`px-3 py-1.5 rounded-full text-sm font-medium ${getEstadoColor(
-                      equipo.estado || "Operativo"
+                      "Operativo"
                     )}`}
                   >
-                    {equipo.estado || "Operativo"}
+                    {"Operativo"}
                   </span>
                 </div>
               </div>
 
               {/* Components */}
-              {equipo.componentes_equipo &&
-                equipo.componentes_equipo.length > 0 && (
+              {equipo.componentes &&
+                equipo.componentes.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <p className="text-sm font-medium text-gray-700 mb-3">
-                      Componentes ({equipo.componentes_equipo.length}):
+                      Componentes ({equipo.componentes.length}):
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {equipo.componentes_equipo.map((comp: any) => (
+                      {equipo.componentes.map((comp: any) => (
                         <div
                           key={comp.id}
                           className="bg-gray-50 p-3 rounded-md"
@@ -364,9 +364,11 @@ export function EquiposCliente({
                             </span>
                           </div>
                           {comp.observaciones && (
-                            <p className="text-xs text-gray-600 mt-2">
-                              {comp.observaciones}
-                            </p>
+                            <div className="mt-2 p-3 bg-gray-50 border-l-2 border-l-gray-300 rounded-r-sm">
+                              <p className="text-sm text-gray-700">
+                                {comp.observaciones}
+                              </p>
+                            </div>
                           )}
                         </div>
                       ))}
@@ -476,24 +478,28 @@ export function EquiposCliente({
             Próximos Mantenimientos (30 días)
           </h3>
           <div className="space-y-3">
-            {proximosMantenimientos.slice(0, 3).map((mant) => (
-              <div
-                key={mant.id}
-                className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-              >
-                <div>
-                  <span className="font-medium text-gray-900">
-                    {mant.equipos?.nombreEquipo || "Equipo N/A"}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-2">
-                    ({mant.tipo})
+            {proximosMantenimientos.slice(0, 3).map((mant) => {
+              // Encontrar el equipo asociado a este mantenimiento
+              const equipoAsociado = equipos.find(e => e.id === mant.equipoId);
+              return (
+                <div
+                  key={mant.id}
+                  className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <span className="font-medium text-gray-900">
+                      {equipoAsociado?.nombreEquipo || "Equipo N/A"}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({mant.tipo})
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded">
+                    {formatDate(mant.fechaProgramada || mant.fecha)}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded">
-                  {formatDate(mant.fechaProgramada)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -511,53 +517,57 @@ export function EquiposCliente({
             </p>
           </div>
         ) : (
-          mantenimientos.slice(0, 10).map((mantenimiento) => (
-            <div
-              key={mantenimiento.id}
-              className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all duration-200"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-semibold text-gray-900">
-                    {mantenimiento.equipos?.nombreEquipo || "Equipo N/A"}
-                  </h4>
-                  <p className="text-sm text-gray-600 font-medium">
-                    {mantenimiento.tipo}
-                  </p>
-                  <div className="flex items-center mt-2 text-sm text-gray-500">
-                    <svg
-                      className="w-4 h-4 mr-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    {formatDate(mantenimiento.fechaProgramada)}
+          mantenimientos.slice(0, 10).map((mantenimiento) => {
+            // Encontrar el equipo asociado a este mantenimiento
+            const equipoAsociado = equipos.find(e => e.id === mantenimiento.equipoId);
+            return (
+              <div
+                key={mantenimiento.id}
+                className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-semibold text-gray-900">
+                      {equipoAsociado?.nombreEquipo || "Equipo N/A"}
+                    </h4>
+                    <p className="text-sm text-gray-600 font-medium">
+                      {mantenimiento.tipo}
+                    </p>
+                    <div className="flex items-center mt-2 text-sm text-gray-500">
+                      <svg
+                        className="w-4 h-4 mr-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      {formatDate(mantenimiento.fechaProgramada || mantenimiento.fecha)}
+                    </div>
                   </div>
+                  <span
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium ${getEstadoColor(
+                      mantenimiento.estado
+                    )}`}
+                  >
+                    {mantenimiento.estado}
+                  </span>
                 </div>
-                <span
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${getEstadoColor(
-                    mantenimiento.estado
-                  )}`}
-                >
-                  {mantenimiento.estado}
-                </span>
+                {mantenimiento.descripcion && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-600">
+                      {mantenimiento.descripcion}
+                    </p>
+                  </div>
+                )}
               </div>
-              {mantenimiento.descripcion && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm text-gray-600">
-                    {mantenimiento.descripcion}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

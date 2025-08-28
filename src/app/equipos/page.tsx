@@ -142,39 +142,37 @@ export default function EquiposPage() {
       title="Gestión de Equipos" 
       subtitle="Administra todos los equipos médicos y sus componentes registrados en el sistema"
     >
-      <div className="w-full max-w-full overflow-hidden">
-        <div className="h-full flex flex-col space-y-3 sm:space-y-4 lg:space-y-6 px-2 sm:px-4 lg:px-6">
+      <div className="w-full overflow-hidden">
+        <div className="h-full flex flex-col space-y-2 sm:space-y-3 lg:space-y-4 px-1 sm:px-2 lg:px-4">
         {/* Header Actions - Mobile Optimized */}
-        <div className="flex flex-col gap-3 sm:gap-4 px-1 sm:px-0">
+        <div className="flex flex-col gap-2 sm:gap-3 px-1 sm:px-2">
           {/* Fila 1: Búsqueda y Botones */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <div className="relative flex-1 min-w-0">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 flex-shrink-0" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 flex-shrink-0" />
               <Input
                 placeholder="Buscar equipos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full min-w-0"
+                className="pl-8 w-full min-w-0 h-9 text-sm"
               />
             </div>
             {/* 🎯 Botones solo para roles que no sean técnico */}
             {!esTecnico && (
-              <div className="flex gap-2 sm:gap-3 flex-shrink-0">
+              <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                 <Button
                   variant="outline"
                   onClick={exportarCSV}
-                  className="flex items-center space-x-2 flex-1 sm:flex-none px-3 sm:px-4"
+                  className="flex items-center space-x-1 flex-1 sm:flex-none px-2 sm:px-3"
                   size="sm"
                 >
-                  <Download className="h-4 w-4 flex-shrink-0" />
-                  <span className="hidden sm:inline">Exportar CSV</span>
-                  <span className="sm:hidden">CSV</span>
+                  <Download className="h-3 w-3 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm">CSV</span>
                 </Button>
                 <Link href="/equipos/nuevo" className="flex-1 sm:flex-none">
-                  <Button className="w-full flex items-center justify-center space-x-2 px-3 sm:px-4" size="sm">
-                    <Plus className="h-4 w-4 flex-shrink-0" />
-                    <span className="hidden sm:inline">Nuevo Equipo</span>
-                    <span className="sm:hidden">Nuevo</span>
+                  <Button className="w-full flex items-center justify-center space-x-1 px-2 sm:px-3 text-xs sm:text-sm" size="sm">
+                    <Plus className="h-3 w-3 flex-shrink-0" />
+                    <span>Nuevo</span>
                   </Button>
                 </Link>
               </div>
@@ -182,11 +180,11 @@ export default function EquiposPage() {
           </div>
 
           {/* Fila 2: Filtros */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             {/* Filtro por Cliente */}
             <div className="flex-1 min-w-0 sm:max-w-xs">
               <Select value={filtroCliente} onValueChange={setFiltroCliente}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-9 text-sm">
                   <SelectValue placeholder="Filtrar por cliente" />
                 </SelectTrigger>
                 <SelectContent>
@@ -201,11 +199,11 @@ export default function EquiposPage() {
             </div>
 
             {/* Información de filtros activos */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-1 text-xs text-gray-600 overflow-hidden">
               {filtroCliente !== 'todos' && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Building className="h-3 w-3" />
-                  {filtroCliente}
+                <Badge variant="secondary" className="flex items-center gap-1 text-xs px-2 py-1">
+                  <Building className="h-2 w-2" />
+                  <span className="truncate max-w-20">{filtroCliente}</span>
                   <button
                     onClick={() => setFiltroCliente('todos')}
                     className="ml-1 text-gray-500 hover:text-gray-700"
@@ -220,9 +218,9 @@ export default function EquiposPage() {
                     setSearchTerm('');
                     setFiltroCliente('todos');
                   }}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  className="text-blue-600 hover:text-blue-800 text-xs font-medium whitespace-nowrap"
                 >
-                  Limpiar filtros
+                  Limpiar
                 </button>
               )}
             </div>
@@ -230,18 +228,18 @@ export default function EquiposPage() {
         </div>
 
         {/* Stats - Mobile Optimized */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Card className="p-3 sm:p-4">
+            <Card className="p-2 sm:p-3">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">Total Equipos</p>
-                  <p className="text-lg sm:text-2xl font-bold text-gray-900">{equiposFiltrados.length}</p>
+                  <p className="text-xs text-gray-600 truncate">Total</p>
+                  <p className="text-sm sm:text-lg font-bold text-gray-900">{equiposFiltrados.length}</p>
                 </div>
-                <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0 ml-2" />
+                <Heart className="h-4 w-4 sm:h-6 sm:w-6 text-blue-500 flex-shrink-0 ml-1" />
               </div>
             </Card>
           </motion.div>
@@ -251,15 +249,15 @@ export default function EquiposPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="p-3 sm:p-4">
+            <Card className="p-2 sm:p-3">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">Operativos</p>
-                  <p className="text-lg sm:text-2xl font-bold text-green-600">
+                  <p className="text-xs text-gray-600 truncate">OK</p>
+                  <p className="text-sm sm:text-lg font-bold text-green-600">
                     {equiposFiltrados.filter(e => getEstadoGeneralEquipo(e.id) === 'OPERATIVO').length}
                   </p>
                 </div>
-                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0 ml-2" />
+                <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-green-500 flex-shrink-0 ml-1" />
               </div>
             </Card>
           </motion.div>
@@ -269,15 +267,15 @@ export default function EquiposPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="p-3 sm:p-4 bg-yellow-50 border-yellow-200">
+            <Card className="p-2 sm:p-3 bg-yellow-50 border-yellow-200">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-yellow-700 truncate">En Reparación</p>
-                  <p className="text-lg sm:text-2xl font-bold text-yellow-800">
+                  <p className="text-xs text-yellow-700 truncate">Rep.</p>
+                  <p className="text-sm sm:text-lg font-bold text-yellow-800">
                     {equiposFiltrados.filter(e => getEstadoGeneralEquipo(e.id) === 'REPARACION').length}
                   </p>
                 </div>
-                <Wrench className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0 ml-2" />
+                <Wrench className="h-4 w-4 sm:h-6 sm:w-6 text-yellow-600 flex-shrink-0 ml-1" />
               </div>
             </Card>
           </motion.div>
@@ -286,16 +284,17 @@ export default function EquiposPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            className="hidden lg:block"
           >
-            <Card className="p-3 sm:p-4 bg-red-50 border-red-200">
+            <Card className="p-2 sm:p-3 bg-red-50 border-red-200">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-red-700 truncate">Críticos</p>
-                  <p className="text-lg sm:text-2xl font-bold text-red-800">
+                  <p className="text-xs text-red-700 truncate">Críticos</p>
+                  <p className="text-sm sm:text-lg font-bold text-red-800">
                     {equiposFiltrados.filter(e => getEstadoGeneralEquipo(e.id) === 'CRITICO').length}
                   </p>
                 </div>
-                <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 flex-shrink-0 ml-2" />
+                <Heart className="h-4 w-4 sm:h-6 sm:w-6 text-red-600 flex-shrink-0 ml-1" />
               </div>
             </Card>
           </motion.div>
@@ -304,16 +303,17 @@ export default function EquiposPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
+            className="hidden lg:block"
           >
-            <Card className="p-3 sm:p-4">
+            <Card className="p-2 sm:p-3">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">Ubicaciones</p>
-                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
+                  <p className="text-xs text-gray-600 truncate">Ubicaciones</p>
+                  <p className="text-sm sm:text-lg font-bold text-gray-900">
                     {new Set(equiposFiltrados.map(e => e.ubicacion)).size}
                   </p>
                 </div>
-                <Building className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0 ml-2" />
+                <Building className="h-4 w-4 sm:h-6 sm:w-6 text-purple-500 flex-shrink-0 ml-1" />
               </div>
             </Card>
           </motion.div>
@@ -327,9 +327,9 @@ export default function EquiposPage() {
           className="flex-1 min-h-0"
         >
           <Card className="h-full flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Lista de Equipos ({equiposFiltrados.length})
+            <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-sm sm:text-lg font-semibold text-gray-900">
+                Equipos ({equiposFiltrados.length})
               </h3>
             </div>
             

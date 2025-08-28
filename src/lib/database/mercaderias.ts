@@ -154,7 +154,9 @@ const _createCargaMercaderia = async function(cargaData: CargaMercaderiaInput): 
       }
 
       // All products go to stock (creating folders by brand)
-      await createOrUpdateStockFromProduct(carga.codigo_carga, producto, cargaData.tipoCarga)
+      // 🎯 USAR código personalizado si existe, sino el automático para trazabilidad
+      const codigoParaTrazabilidad = carga.numero_carga_personalizado || carga.codigo_carga;
+      await createOrUpdateStockFromProduct(codigoParaTrazabilidad, producto, cargaData.tipoCarga)
 
       // All medical equipment automatically goes to the equipment module and stock
       if (producto.tipoProducto === 'Equipo Médico') {

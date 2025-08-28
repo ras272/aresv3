@@ -108,11 +108,13 @@ export async function procesarProductoParaStock(cargaId: string, producto: any, 
 
     // 🎯 OBTENER INFORMACIÓN DE LA CARGA PARA TRAZABILIDAD
     let cargaInfo = null;
+    let codigoParaTrazabilidad = cargaId; // Por defecto usar el cargaId recibido
+    
     try {
       console.log('🔍 Buscando información de carga:', cargaId);
       const { data: carga, error: cargaError } = await supabase
         .from('cargas_mercaderia')
-        .select('destino, codigo_carga')
+        .select('destino, codigo_carga, numero_carga_personalizado')
         .eq('codigo_carga', cargaId)
         .single();
       
@@ -120,7 +122,12 @@ export async function procesarProductoParaStock(cargaId: string, producto: any, 
         console.error('❌ Error obteniendo información de carga:', cargaError);
       } else if (carga) {
         cargaInfo = carga;
-        console.log('✅ Información de carga obtenida:', cargaInfo);
+        // 🎯 PRIORIZAR código personalizado si existe para trazabilidad
+        codigoParaTrazabilidad = carga.numero_carga_personalizado || carga.codigo_carga;
+        console.log('✅ Información de carga obtenida:', {
+          ...cargaInfo,
+          codigoParaTrazabilidad
+        });
       } else {
         console.log('⚠️ No se encontró la carga:', cargaId);
       }
@@ -172,14 +179,14 @@ export async function procesarProductoParaStock(cargaId: string, producto: any, 
     }
 
     // 4. Procesar producto con información de carpeta
-    await procesarProductoIndividualConCarpetaConErrores(cargaId, producto, carpetaInfo, cargaInfo);
+    await procesarProductoIndividualConCarpetaConErrores(codigoParaTrazabilidad, producto, carpetaInfo, cargaInfo);
 
     // 5. Procesar subitems si existen
     if (producto.subitems && producto.subitems.length > 0) {
       for (const subitem of producto.subitems) {
         // 🔧 CORRECCIÓN: Procesar TODOS los subitems para stock, no solo los marcados para servicio técnico
         try {
-          await procesarSubitemParaStock(cargaId, producto, subitem, carpetaInfo);
+          await procesarSubitemParaStock(codigoParaTrazabilidad, producto, subitem, carpetaInfo);
         } catch (subitemError) {
           console.error(`❌ Error procesando subitem ${subitem.nombre}:`, subitemError);
           // Continuar con otros subitems en caso de error
@@ -291,7 +298,7 @@ async function procesarProductoIndividualConCarpeta(cargaId: string, producto: a
         productoMarca: producto.marca,
         carpetaOrigen: carpetaInfo.rutaCompleta,
         carpetaDestino: carpetaInfo.rutaCompleta,
-        codigoCargaOrigen: cargaId,
+        codigoCargaOrigen: cargaId, // Este es el código que aparece en trazabilidad
         observaciones: cargaInfo ? `Mercadería destinada a: ${cargaInfo.destino}` : undefined
       });
     } else {
@@ -339,7 +346,7 @@ async function procesarProductoIndividualConCarpeta(cargaId: string, producto: a
         productoMarca: producto.marca,
         carpetaOrigen: null,
         carpetaDestino: carpetaInfo.rutaCompleta,
-        codigoCargaOrigen: cargaId,
+        codigoCargaOrigen: cargaId, // Este es el código que aparece en trazabilidad
         observaciones: cargaInfo ? `Mercadería destinada a: ${cargaInfo.destino}` : undefined
       });
     }
