@@ -22,6 +22,7 @@ import {
   ChevronUp,
   Activity,
   Zap,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SimpleThemeToggle } from "@/components/ui/simple-theme-toggle";
@@ -149,6 +150,13 @@ const navigationSections: NavigationSection[] = [
         icon: FileText,
         permission: "reportes",
       },
+      {
+        name: "Historial Sortly",
+        href: "/transacciones-sortly",
+        icon: History,
+        permission: "transacciones-sortly",
+        badge: "new",
+      },
     ],
   },
   {
@@ -215,6 +223,7 @@ export function SidebarNew() {
       productos: "productos.view",
       servtec: "servtec.view",
       repuestos: "repuestos.view",
+      "transacciones-sortly": "dashboard.view",
     };
 
     const mappedPermission = permissionMap[permission] || permission;
