@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { createRepuesto } from '@/lib/repuestos-database';
 import { RepuestoFormData } from '@/lib/schemas';
 
@@ -36,7 +36,6 @@ export function RepuestoForm({ onRepuestoCreated }: RepuestoFormProps) {
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;

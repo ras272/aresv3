@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { asignarRepuestoAEquipo } from '@/lib/repuestos-database';
 import { Search, Plus, Package } from 'lucide-react';
 
@@ -38,7 +38,6 @@ export function AsignarRepuestoModal({
   const [tecnico, setTecnico] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const handleSearchRepuesto = () => {
     // TODO: Implementar búsqueda de repuestos

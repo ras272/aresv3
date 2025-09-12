@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { getRepuestoById, updateRepuesto } from '@/lib/repuestos-database';
 import { Repuesto } from '@/types';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -15,7 +15,6 @@ import { ArrowLeft, Save } from 'lucide-react';
 export default function EditRepuestoPage() {
   const params = useParams();
   const router = useRouter();
-  const { toast } = useToast();
   const repuestoId = params.id as string;
 
   const [repuesto, setRepuesto] = useState<Repuesto | null>(null);
