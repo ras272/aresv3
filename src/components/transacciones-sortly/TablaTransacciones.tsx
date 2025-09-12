@@ -121,6 +121,7 @@ export function TablaTransacciones({ transacciones, loading, onEditar, onElimina
                 <TableHead>Producto</TableHead>
                 <TableHead>Cantidad</TableHead>
                 <TableHead>Cliente/Destino</TableHead>
+                <TableHead>Observaciones</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -165,6 +166,15 @@ export function TablaTransacciones({ transacciones, loading, onEditar, onElimina
                   <TableCell>
                     {transaccion.cliente_destino || (
                       <span className="text-gray-400 italic">No especificado</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {transaccion.observaciones ? (
+                      <div className="max-w-xs truncate" title={transaccion.observaciones}>
+                        {transaccion.observaciones}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 italic">Sin observaciones</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
