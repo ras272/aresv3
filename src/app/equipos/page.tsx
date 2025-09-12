@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { MobileTable, MobileEquipoCard } from '@/components/ui/mobile-table';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useAppStore } from '@/store/useAppStore';
+import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/components/PermissionGuard';
 import { 
   Search, 
@@ -31,7 +32,7 @@ import { toast } from 'sonner';
 
 export default function EquiposPage() {
   const { equipos, mantenimientos, searchEquipos, deleteEquipo } = useAppStore();
-  const { getCurrentUser } = usePermissions();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCliente, setFiltroCliente] = useState('todos');
   const [equipoAEliminar, setEquipoAEliminar] = useState<{ id: string; nombre: string } | null>(null);
@@ -52,8 +53,7 @@ export default function EquiposPage() {
   })();
   
   // 🎯 Verificar si el usuario actual es técnico
-  const currentUser = getCurrentUser();
-  const esTecnico = currentUser?.rol === 'tecnico';
+  const esTecnico = user?.rol === 'tecnico';
 
   // 📊 OBTENER LISTA DE CLIENTES ÚNICOS
   const clientesUnicos = () => {

@@ -1390,11 +1390,13 @@ class StockModuleImpl implements StockModule {
           ).length
         },
 
-        // Top productos con más movimientos (usando metadata)
+        // Top productos con más movimientos (usando campos principales y metadata como fallback)
         productosConMasMovimientos: Object.entries(
           movimientos.reduce((acc: any, mov) => {
-            const metadata = mov.metadata || {};
-            const key = `${metadata.productoNombre || 'Sin nombre'} - ${metadata.productoMarca || 'Sin marca'}`;
+            // Priorizar campos principales sobre metadata
+            const productoNombre = mov.producto_nombre || mov.metadata?.productoNombre || 'Sin nombre';
+            const productoMarca = mov.producto_marca || mov.metadata?.productoMarca || 'Sin marca';
+            const key = `${productoNombre} - ${productoMarca}`;
             acc[key] = (acc[key] || 0) + 1;
             return acc;
           }, {})
@@ -1403,12 +1405,18 @@ class StockModuleImpl implements StockModule {
           .slice(0, 5)
           .map(([producto, cantidad]) => ({ producto, cantidad })),
 
-        // Carpetas con más actividad (usando metadata)
+        // Carpetas con más actividad (usando campos principales y metadata como fallback)
         carpetasConMasActividad: Object.entries(
           movimientos.reduce((acc: any, mov) => {
-            const metadata = mov.metadata || {};
-            if (metadata.carpetaOrigen) {
-              acc[metadata.carpetaOrigen] = (acc[metadata.carpetaOrigen] || 0) + 1;
+            // Priorizar campos principales sobre metadata
+            const carpetaOrigen = mov.carpeta_origen || mov.metadata?.carpetaOrigen;
+            const carpetaDestino = mov.carpeta_destino || mov.metadata?.carpetaDestino;
+            
+            if (carpetaOrigen) {
+              acc[carpetaOrigen] = (acc[carpetaOrigen] || 0) + 1;
+            }
+            if (carpetaDestino && carpetaDestino !== carpetaOrigen) {
+              acc[carpetaDestino] = (acc[carpetaDestino] || 0) + 1;
             }
             return acc;
           }, {})

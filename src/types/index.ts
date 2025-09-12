@@ -386,6 +386,86 @@ export interface CatalogoProducto {
   updatedAt: string;
 }
 
+// ===============================================
+// TIPOS PARA EL SISTEMA DE REPUESTOS
+// ===============================================
+
+export interface Repuesto {
+  id: string;
+  codigo_repuesto: string;
+  nombre: string;
+  descripcion: string | null;
+  marca: string | null;
+  modelo: string | null;
+  numero_serie: string | null;
+  lote: string | null;
+  cantidad_actual: number;
+  cantidad_minima: number;
+  unidad_medida: string;
+  estado: 'Disponible' | 'Reservado' | 'En_uso' | 'Dañado' | 'Vencido';
+  categoria: string | null;
+  subcategoria: string | null;
+  proveedor: string | null;
+  precio_unitario: number | null;
+  moneda: string;
+  fecha_ingreso: string | null;
+  fecha_vencimiento: string | null;
+  fecha_ultimo_movimiento: string | null;
+  fotos: string[] | null;
+  documentos: string[] | null;
+  tags: string[] | null;
+  custom_fields: Record<string, any> | null;
+  qr_code: string | null;
+  barcode: string | null;
+  observaciones: string | null;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MovimientoRepuesto {
+  id: string;
+  repuesto_id: string;
+  tipo_movimiento: 'Entrada' | 'Salida' | 'Transferencia' | 'Ajuste' | 'Asignacion';
+  cantidad: number;
+  cantidad_anterior: number;
+  cantidad_nueva: number;
+  motivo: string;
+  referencia_externa: string | null;
+  usuario: string | null;
+  costo_unitario: number | null;
+  costo_total: number | null;
+  fecha_movimiento: string;
+  observaciones: string | null;
+  metadata: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface RepuestoEquipo {
+  id: string;
+  repuesto_id: string;
+  equipo_id: string;
+  mantenimiento_id: string | null;
+  cantidad_usada: number;
+  fecha_uso: string;
+  tecnico_responsable: string | null;
+  motivo_uso: string;
+  observaciones: string | null;
+  created_at: string;
+}
+
+export interface RepuestoConUso extends Repuesto {
+  usos: RepuestoEquipo[];
+}
+
+export interface UsoRepuestoConInfo extends RepuestoEquipo {
+  repuesto_nombre: string;
+  repuesto_codigo: string;
+  equipo_nombre: string;
+  equipo_serie: string;
+  mantenimiento_descripcion: string | null;
+}
+
 export interface AppState {
   // Hydration state
   isHydrated: boolean;

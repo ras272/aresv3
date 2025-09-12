@@ -15,10 +15,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Package, Zap, ShoppingCart, Trash2, Save, Heart, Plus, Upload, AlertCircle, Building, Search } from 'lucide-react';
+import { ArrowLeft, Package, Zap, ShoppingCart, Trash2, Save, Heart, Plus, Upload, AlertCircle, Building, Search, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
-import { ProductSelectorSimple as ProductSelector } from '@/components/mercaderias/ProductSelectorSimple';
-import { createProductoCatalogo } from '@/lib/catalogo-productos';
+import { ProductSelector } from '@/components/mercaderias/ProductSelector';
+import { ProductSelectorSimple } from '@/components/mercaderias/ProductSelectorSimple';
 import { supabase } from '@/lib/database/shared/supabase';
 import EquipoIngresadoModal from '@/components/servtec/EquipoIngresadoModal';
 import { IngresoFraccionamiento } from '@/components/IngresoFraccionamiento';
@@ -409,6 +409,14 @@ export default function NuevaCargaPage() {
   // Estado para modal de equipos ingresados
   const [equipoIngresadoModalOpen, setEquipoIngresadoModalOpen] = useState(false);
 
+  // Estados para repuestos
+  const [repuestos, setRepuestos] = useState<Array<{
+    id: string;
+    nombre: string;
+    numeroSerie: string;
+    marca: string;
+  }>>([]);
+
   // Función para cargar marcas desde el catálogo
   const cargarMarcasDelCatalogo = async () => {
     try {
@@ -432,6 +440,29 @@ export default function NuevaCargaPage() {
     } finally {
       setCargandoMarcas(false);
     }
+  };
+
+  // Función para agregar un repuesto
+  const agregarRepuesto = (nombre: string, numeroSerie: string, marca: string) => {
+    if (!nombre.trim()) {
+      toast.error('El nombre del repuesto es obligatorio');
+      return;
+    }
+
+    const nuevoRepuesto = {
+      id: `repuesto-${Date.now()}-${Math.random()}`,
+      nombre: nombre.trim(),
+      numeroSerie: numeroSerie.trim(),
+      marca: marca.trim()
+    };
+
+    setRepuestos([...repuestos, nuevoRepuesto]);
+    toast.success(`Repuesto "${nombre}" agregado`);
+  };
+
+  // Función para eliminar un repuesto
+  const eliminarRepuesto = (id: string) => {
+    setRepuestos(repuestos.filter(repuesto => repuesto.id !== id));
   };
 
   // Generar código de carga y cargar clínicas al cargar el componente
@@ -526,6 +557,14 @@ export default function NuevaCargaPage() {
       setValue('tipoCarga', 'stock');
     }
   }, [tipoCargaWatched, setValue]);
+
+  // Efecto para manejar el cambio de tipo de carga (eliminada asignación automática a "Repuestos")
+  useEffect(() => {
+    if (tipoCargaWatched === 'repuestos') {
+      // Ya no asignamos automáticamente a "Repuestos", dejamos que el usuario seleccione la marca
+      console.log('🔧 Tipo de carga repuestos seleccionado - usuario debe seleccionar marca');
+    }
+  }, [tipoCargaWatched]);
 
   const agregarProductoManual = () => {
     if (!nombreProducto.trim()) {
@@ -679,15 +718,36 @@ export default function NuevaCargaPage() {
     });
   };
 
+  // Función de envío del formulario
   const onSubmit = async (data: CargaMercaderiaFormData) => {
-    console.log('🔄 Enviando formulario...', {
-      modoFormulario,
-      data,
-      marcaSeleccionada,
-      productosRapidos: productosRapidos.length
-    });
+    console.log('🔥 FORM SUBMIT!', data);
+    console.log('🔥 Datos del formulario:', data);
+    
+    // Sincronizar repuestos antes de la validación si es modo repuestos
+    if (modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos') {
+      if (repuestos.length > 0) {
+        const productosFormateados = repuestos.map(repuesto => ({
+          producto: repuesto.nombre,
+          tipoProducto: 'Repuesto' as const,
+          marca: repuesto.marca,
+          modelo: repuesto.nombre,
+          numeroSerie: repuesto.numeroSerie || '',
+          cantidad: 1,
+          observaciones: '',
+          imagen: '',
+          voltaje: '',
+          frecuencia: '',
+          tipoTratamiento: '',
+          registroSanitario: '',
+          documentosAduaneros: '',
+          subitems: []
+        }));
+        setValue('productos', productosFormateados);
+        console.log('🔄 Repuestos sincronizados manualmente antes del envío:', productosFormateados);
+      }
+    }
 
-    if (modoFormulario === 'rapido') {
+    if (modoFormulario === 'rapido' && tipoCargaWatched !== 'repuestos') {
       // Modo rápido - validaciones existentes
       if (!marcaSeleccionada) {
         toast.error('Selecciona una marca para la carga');
@@ -696,6 +756,98 @@ export default function NuevaCargaPage() {
 
       if (productosRapidos.length === 0) {
         toast.error('Agrega al menos un producto a la carga');
+        return;
+      }
+    } else if (modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos') {
+      // Modo rápido para repuestos - ir directo a tabla de repuestos
+      if (repuestos.length === 0) {
+        toast.error('Agrega al menos un repuesto a la carga');
+        return;
+      }
+      
+      // 🚀 NUEVO FLUJO: Agregar repuestos directamente a la tabla repuestos_stock
+      setIsLoading(true);
+      try {
+        console.log('⚙️ Procesando repuestos directamente en tabla repuestos_stock...');
+        
+        let repuestosCreados = 0;
+        for (const repuesto of repuestos) {
+          // Generar código único para el repuesto
+          const { data: codigoData, error: codigoError } = await supabase.rpc('generar_codigo_repuesto');
+          if (codigoError) {
+            console.error('❌ Error generando código de repuesto:', codigoError);
+            throw new Error(`Error generando código para repuesto ${repuesto.nombre}: ${codigoError.message}`);
+          }
+          
+          // Crear cada repuesto en la tabla repuestos_stock
+          const nuevoRepuesto = {
+            codigo_repuesto: codigoData as string,
+            nombre: repuesto.nombre,
+            descripcion: `Repuesto ingresado desde carga de mercaderías - ${codigoCarga}`,
+            marca: repuesto.marca,
+            modelo: repuesto.nombre,
+            numero_serie: repuesto.numeroSerie,
+            cantidad_actual: 1, // Por defecto 1 unidad
+            cantidad_minima: 1,
+            categoria: 'Ingreso Manual',
+            proveedor: 'Carga Mercaderías',
+            estado: 'Disponible' as const
+          };
+          
+          const { data: repuestoCreado, error } = await supabase
+            .from('repuestos_stock')
+            .insert(nuevoRepuesto)
+            .select()
+            .single();
+            
+          if (error) {
+            console.error('❌ Error creando repuesto:', error);
+            throw new Error(`Error creando repuesto ${repuesto.nombre}: ${error.message}`);
+          }
+          
+          console.log('✅ Repuesto creado:', repuestoCreado);
+          repuestosCreados++;
+        }
+        
+        // También registrar la carga para trazabilidad
+        const cargaParaTrazabilidad = {
+          ...data,
+          tipoCarga: 'repuestos' as const,
+          productos: repuestos.map(repuesto => ({
+            producto: repuesto.nombre,
+            tipoProducto: 'Repuesto' as const,
+            marca: repuesto.marca,
+            modelo: repuesto.nombre,
+            numeroSerie: repuesto.numeroSerie || '',
+            cantidad: 1,
+            observaciones: 'Repuesto agregado a tabla repuestos_stock',
+            imagen: '',
+            voltaje: '',
+            frecuencia: '',
+            tipoTratamiento: '',
+            registroSanitario: '',
+            documentosAduaneros: '',
+            subitems: []
+          })),
+          observacionesGenerales: data.observacionesGenerales || `Ingreso de ${repuestosCreados} repuesto(s) - Procesados en tabla repuestos_stock`,
+          numeroCargaPersonalizado: numeroCargaGeneral || undefined
+        };
+        
+        const nuevaCarga = await addCargaMercaderia(cargaParaTrazabilidad);
+        
+        toast.success(`¡${repuestosCreados} repuesto(s) agregado(s) exitosamente!`, {
+          description: `Código: ${nuevaCarga.codigoCarga}. Los repuestos están ahora disponibles en el inventario de repuestos.`
+        });
+        
+        console.log('🔄 Navegando a la página de repuestos...');
+        router.push('/repuestos');
+        return; // ⚠️ IMPORTANTE: Salir aquí para evitar el flujo normal
+      } catch (error) {
+        console.error('❌ Error completo:', error);
+        toast.error('Error al procesar los repuestos', {
+          description: error instanceof Error ? error.message : 'Error desconocido. Por favor, intenta nuevamente.'
+        });
+        setIsLoading(false);
         return;
       }
     } else {
@@ -712,7 +864,7 @@ export default function NuevaCargaPage() {
       console.log('✅ Validaciones pasadas, procesando datos...');
       let cargaFinal;
 
-      if (modoFormulario === 'rapido') {
+      if (modoFormulario === 'rapido' && tipoCargaWatched !== 'repuestos') {
         console.log('📦 Modo rápido - convirtiendo productos...');
         // Convertir productos rápidos al formato requerido
         const productosFormateados = productosRapidos.map(producto => ({
@@ -739,6 +891,34 @@ export default function NuevaCargaPage() {
           numeroCargaPersonalizado: numeroCargaGeneral || undefined
         };
         console.log('📦 Productos formateados:', productosFormateados);
+      } else if (modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos') {
+        console.log('⚙️ Modo rápido - convirtiendo repuestos...');
+        // Convertir repuestos al formato requerido
+        const productosFormateados = repuestos.map(repuesto => ({
+          producto: repuesto.nombre,
+          tipoProducto: 'Repuesto' as const,
+          marca: repuesto.marca,
+          modelo: repuesto.nombre,
+          cantidad: 1,
+          observaciones: '',
+          numeroSerie: repuesto.numeroSerie || '',
+          imagen: '',
+          voltaje: '',
+          frecuencia: '',
+          tipoTratamiento: '',
+          registroSanitario: '',
+          documentosAduaneros: '',
+          subitems: []
+        }));
+
+        cargaFinal = {
+          ...data,
+          tipoCarga: 'repuestos' as const,
+          productos: productosFormateados,
+          observacionesGenerales: data.observacionesGenerales || 'Ingreso de repuestos',
+          numeroCargaPersonalizado: numeroCargaGeneral || undefined
+        };
+        console.log('⚙️ Repuestos formateados:', productosFormateados);
       } else {
         console.log('🏥 Modo equipo - usando productos del formulario...');
         // Modo equipo - usar productos del formulario directamente
@@ -758,7 +938,6 @@ export default function NuevaCargaPage() {
       // Determinar carpeta de destino según tipo de carga
       let carpetaDestino = '';
       let mensajeDestino = '';
-
       if (cargaFinal.tipoCarga === 'reparacion') {
         carpetaDestino = 'Servicio Técnico';
         mensajeDestino = 'Productos enviados a Servicio Técnico para reparación';
@@ -767,6 +946,9 @@ export default function NuevaCargaPage() {
         const primeraMarca = modoFormulario === 'rapido' ? marcaSeleccionada : cargaFinal.productos[0]?.marca;
         carpetaDestino = `${primeraMarca}/Cliente Específico`;
         mensajeDestino = `Productos enviados a ${primeraMarca}/Cliente Específico`;
+      } else if (cargaFinal.tipoCarga === 'repuestos') {
+        carpetaDestino = 'Repuestos';
+        mensajeDestino = 'Repuestos enviados al inventario técnico';
       } else {
         // Stock normal - usar la marca
         const primeraMarca = modoFormulario === 'rapido' ? marcaSeleccionada : cargaFinal.productos[0]?.marca;
@@ -775,9 +957,13 @@ export default function NuevaCargaPage() {
       }
 
       // Mensaje diferente según el modo
-      if (modoFormulario === 'rapido') {
+      if (modoFormulario === 'rapido' && tipoCargaWatched !== 'repuestos') {
         toast.success(`¡Carga registrada exitosamente!`, {
           description: `Código: ${nuevaCarga.codigoCarga}. ${productosRapidos.length} productos de ${marcaSeleccionada} registrados. ${mensajeDestino}.`
+        });
+      } else if (modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos') {
+        toast.success(`¡Carga registrada exitosamente!`, {
+          description: `Código: ${nuevaCarga.codigoCarga}. ${repuestos.length} repuesto(s) registrado(s). ${mensajeDestino}.`
         });
       } else {
         const equiposMedicos = data.productos.filter(p => p.tipoProducto === 'Equipo Médico').length;
@@ -855,6 +1041,30 @@ export default function NuevaCargaPage() {
         <form onSubmit={(e) => {
           console.log('🔥 FORM SUBMIT EVENT!', e);
           console.log('🔥 Datos del formulario antes del submit:', watch());
+          
+          // 🔄 SINCRONIZAR repuestos ANTES de la validación
+          if (modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos' && repuestos.length > 0) {
+            console.log('🔄 Sincronizando repuestos antes de validación...', repuestos);
+            const productosFormateados = repuestos.map(repuesto => ({
+              producto: repuesto.nombre,
+              tipoProducto: 'Repuesto' as const,
+              marca: repuesto.marca,
+              modelo: repuesto.nombre,
+              numeroSerie: repuesto.numeroSerie || '',
+              cantidad: 1,
+              observaciones: '',
+              imagen: '',
+              voltaje: '',
+              frecuencia: '',
+              tipoTratamiento: '',
+              registroSanitario: '',
+              documentosAduaneros: '',
+              subitems: []
+            }));
+            setValue('productos', productosFormateados);
+            console.log('✅ Repuestos sincronizados:', productosFormateados);
+          }
+          
           return handleSubmit(
             onSubmit,
             (errors) => {
@@ -889,6 +1099,7 @@ export default function NuevaCargaPage() {
                       <SelectItem value="stock">📦 Stock/Inventario - Para vender</SelectItem>
                       <SelectItem value="cliente">🏥 Cliente Específico - Con destino</SelectItem>
                       <SelectItem value="reparacion">🔧 Reparación - Equipos que regresan</SelectItem>
+                      <SelectItem value="repuestos">⚙️ Repuestos - Componentes técnicos</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.tipoCarga && (
@@ -946,8 +1157,184 @@ export default function NuevaCargaPage() {
             </Card>
           </motion.div>
 
+          {/* MODO RÁPIDO - Formulario simplificado para repuestos */}
+          {modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Wrench className="w-5 h-5 text-yellow-600" />
+                    <span>Ingreso Rápido de Repuestos</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Selector de marca */}
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                      📦 Seleccionar Marca para los Repuestos
+                    </Label>
+                    <Select
+                      value={marcaSeleccionada}
+                      onValueChange={setMarcaSeleccionada}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar marca..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cargandoMarcas ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Cargando marcas...
+                          </div>
+                        ) : marcasDisponibles.length > 0 ? (
+                          marcasDisponibles.map(marca => (
+                            <SelectItem key={marca} value={marca}>
+                              {marca}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            No hay marcas disponibles en el catálogo
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {marcaSeleccionada && (
+                      <p className="text-sm text-green-700 mt-2">
+                        ✅ Repuestos serán agregados a la marca: <strong>{marcaSeleccionada}</strong>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Formulario para agregar repuesto - Solo visible si hay marca seleccionada */}
+                  {marcaSeleccionada && (
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 border rounded-lg bg-card">
+                      <div className="md:col-span-5">
+                        <ProductSelector
+                          marca={marcaSeleccionada}
+                          value={nombreProducto}
+                          onChange={(value) => setNombreProducto(value)}
+                          onCreateNew={(nombre) => {
+                            // 🔧 NUEVO: Abrir catálogo con contexto de repuestos
+                            const url = `/productos?contexto=repuestos&marca=${encodeURIComponent(marcaSeleccionada)}&nombre=${encodeURIComponent(nombre)}`;
+                            window.open(url, '_blank');
+                            toast.info(`Abriendo catálogo para crear "${nombre}" como repuesto`, {
+                              description: 'Se abrirá en una nueva pestaña. Después de crearlo, regresa y actualiza esta página.'
+                            });
+                          }}
+                          placeholder="Seleccionar repuesto..."
+                          label="Nombre del Repuesto *"
+                          filtrarPorCategoria="Repuesto" // 🔧 NUEVO: Filtrar solo repuestos
+                        />
+                      </div>
+                    
+                    <div className="md:col-span-3">
+                      <Label htmlFor="numeroSerieRepuesto">N° Serie</Label>
+                      <Input
+                        id="numeroSerieRepuesto"
+                        value={numeroSerieProducto}
+                        onChange={(e) => setNumeroSerieProducto(e.target.value)}
+                        placeholder="Número de serie"
+                        className="h-10"
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <Label htmlFor="cantidadRepuesto">Cantidad</Label>
+                      <Input
+                        id="cantidadRepuesto"
+                        type="number"
+                        min="1"
+                        value={cantidadProducto}
+                        onChange={(e) => setCantidadProducto(parseInt(e.target.value) || 1)}
+                        className="h-10"
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (nombreProducto.trim()) {
+                            // Agregar repuesto con cantidad
+                            const nuevoRepuesto = {
+                              id: `repuesto-${Date.now()}-${Math.random()}`,
+                              nombre: nombreProducto.trim(),
+                              numeroSerie: numeroSerieProducto.trim(),
+                              marca: marcaSeleccionada
+                            };
+                            
+                            setRepuestos([...repuestos, nuevoRepuesto]);
+                            toast.success(`Repuesto "${nombreProducto}" agregado`);
+                            
+                            // Limpiar formulario
+                            setNombreProducto('');
+                            setNumeroSerieProducto('');
+                            setCantidadProducto(1);
+                          } else {
+                            toast.error('Nombre del repuesto es obligatorio');
+                          }
+                        }}
+                        className="w-full h-10"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Agregar
+                      </Button>
+                    </div>
+                  </div>
+                  )}
+
+                  {/* Lista de repuestos agregados */}
+                  <div className="border rounded-lg bg-card">
+                    <div className="p-4 border-b">
+                      <h3 className="text-lg font-medium">Repuestos Agregados ({repuestos.length})</h3>
+                    </div>
+                    
+                    {repuestos.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Wrench className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No hay repuestos agregados aún</p>
+                        <p className="text-sm">Agrega repuestos usando el formulario arriba</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {repuestos.map((repuesto) => (
+                          <div key={repuesto.id} className="p-4 flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <Wrench className="w-5 h-5 text-yellow-600" />
+                              </div>
+                              <div>
+                                <div className="font-medium">{repuesto.nombre}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {cantidadProducto} unidad(es) • {repuesto.marca} • {repuesto.numeroSerie || 'Sin N° Serie'}
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => eliminarRepuesto(repuesto.id)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* MODO RÁPIDO - Insumos de la misma marca */}
-          {modoFormulario === 'rapido' && (
+          {modoFormulario === 'rapido' && tipoCargaWatched !== 'repuestos' && (
             <>
               {/* Configuración Rápida de Productos */}
               <motion.div
@@ -1048,21 +1435,18 @@ export default function NuevaCargaPage() {
                               marca={marcaSeleccionada}
                               value={nombreProducto}
                               onChange={setNombreProducto}
-                              onCreateNew={async (nombre) => {
-                                try {
-                                  await createProductoCatalogo({
-                                    marca: marcaSeleccionada,
-                                    nombre: nombre,
-                                    descripcion: `Creado desde ingreso de mercaderías - ${new Date().toLocaleDateString()}`
-                                  });
-                                  setNombreProducto(nombre);
-                                  toast.success(`Producto "${nombre}" agregado al catálogo de ${marcaSeleccionada}`);
-                                } catch (error) {
-                                  console.error('Error creando producto:', error);
-                                  toast.error('Error al agregar producto al catálogo');
-                                }
+                              onCreateNew={(nombre) => {
+                                // 🔧 NUEVO: Abrir catálogo con contexto específico según el tipo de producto
+                                const contextoCategoria = tipoProductoComun === 'Repuesto' ? 'repuestos' : 
+                                                          tipoProductoComun === 'Insumo' ? 'insumos' : 'equipos';
+                                const url = `/productos?contexto=${contextoCategoria}&marca=${encodeURIComponent(marcaSeleccionada)}&nombre=${encodeURIComponent(nombre)}`;
+                                window.open(url, '_blank');
+                                toast.info(`Abriendo catálogo para crear "${nombre}" como ${tipoProductoComun}`, {
+                                  description: 'Se abrirá en una nueva pestaña. Después de crearlo, regresa y actualiza esta página.'
+                                });
                               }}
-                              placeholder="Seleccionar producto de la marca..."
+                              placeholder={`Seleccionar ${tipoProductoComun.toLowerCase()} de la marca...`}
+                              filtrarPorCategoria={tipoProductoComun} // 🔧 NUEVO: Filtrar por tipo de producto seleccionado
                             />
                           </div>
                           <div className="md:col-span-3">
@@ -1546,13 +1930,17 @@ export default function NuevaCargaPage() {
                 console.log('🔥 modoFormulario:', modoFormulario);
                 console.log('🔥 marcaSeleccionada:', marcaSeleccionada);
                 console.log('🔥 productosRapidos.length:', productosRapidos.length);
+                console.log('🔥 repuestos.length:', repuestos.length);
+                console.log('🔥 tipoCargaWatched:', tipoCargaWatched);
                 console.log('🔥 disabled condition:', isLoading ||
-                  (modoFormulario === 'rapido' && (!marcaSeleccionada || productosRapidos.length === 0)) ||
+                  (modoFormulario === 'rapido' && tipoCargaWatched !== 'repuestos' && (!marcaSeleccionada || productosRapidos.length === 0)) ||
+                  (modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos' && repuestos.length === 0) ||
                   (modoFormulario === 'equipo' && productosEquipo.length === 0)
                 );
               }}
               disabled={isLoading ||
-                (modoFormulario === 'rapido' && (!marcaSeleccionada || productosRapidos.length === 0)) ||
+                (modoFormulario === 'rapido' && tipoCargaWatched !== 'repuestos' && (!marcaSeleccionada || productosRapidos.length === 0)) ||
+                (modoFormulario === 'rapido' && tipoCargaWatched === 'repuestos' && repuestos.length === 0) ||
                 (modoFormulario === 'equipo' && productosEquipo.length === 0)
               }
               className="bg-blue-600 hover:bg-blue-700"
@@ -1567,7 +1955,9 @@ export default function NuevaCargaPage() {
                   <Save className="h-4 w-4 mr-2" />
                   <span>
                     {modoFormulario === 'rapido'
-                      ? `Guardar Carga (${productosRapidos.length} productos)`
+                      ? tipoCargaWatched === 'repuestos'
+                        ? `Guardar Carga (${repuestos.length} repuestos)`
+                        : `Guardar Carga (${productosRapidos.length} productos)`
                       : `Guardar Equipos (${productosEquipo.length} equipos → Servicio Técnico)`
                     }
                   </span>

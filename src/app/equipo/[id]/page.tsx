@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { usePermissions } from '@/components/PermissionGuard';
+// import { usePermissions } from '@/components/PermissionGuard';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppStore } from '@/store/useAppStore';
+import { useAuth } from '@/hooks/useAuth';
 import { mantenimientoSchema, MantenimientoFormData } from '@/lib/schemas';
 import { aiReporteService } from '@/lib/ai-service';
 import { WordReporteService } from '@/lib/word-service';
@@ -58,7 +59,7 @@ export default function EquipoDetailPage() {
   const equipoId = params.id as string;
   
   const { equipos, addMantenimiento, updateMantenimiento, deleteMantenimiento, updateComponente, getMantenimientosByEquipo, updateStockItem } = useAppStore();
-  const { getCurrentUser } = usePermissions();
+  const { user } = useAuth();
   const [showNewMantenimiento, setShowNewMantenimiento] = useState(false);
   const [selectedComponenteId, setSelectedComponenteId] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -80,6 +81,10 @@ export default function EquipoDetailPage() {
 
   // 🔧 Estado para repuestos utilizados (NUEVO - Sistema simple)
   const [repuestosUtilizados, setRepuestosUtilizados] = useState<any[]>([]);
+
+  // 🔧 Estado para trackear cambio automático a reparación
+  const [componenteEnReparacionTemporal, setComponenteEnReparacionTemporal] = useState<string | null>(null);
+  const [estadoTemporalSeleccionado, setEstadoTemporalSeleccionado] = useState<'En reparacion' | 'Fuera de servicio' | null>(null);
 
   // 🔧 Función para devolver repuestos al stock cuando se elimina un reporte
   const devolverRepuestosAlStock = async (mantenimiento: any, motivo: string = 'Reporte eliminado') => {
@@ -115,6 +120,22 @@ export default function EquipoDetailPage() {
     }
   };
 
+  // 🔧 Función para cerrar el modal y manejar reversión de estado
+  const cerrarModalMantenimiento = () => {
+    // Si había un componente en reparación temporal, revertir el cambio
+    if (componenteEnReparacionTemporal) {
+      // No hacemos nada porque el estado nunca se cambió realmente
+      setComponenteEnReparacionTemporal(null);
+      setEstadoTemporalSeleccionado(null);
+      toast.info('Cambio de estado cancelado');
+    }
+    
+    setShowNewMantenimiento(false);
+    setSelectedComponenteId('');
+    reset();
+    setSelectedFile(null);
+  };
+
   const equipo = equipos.find(e => e.id === equipoId);
   // 🔧 CORRECCIÓN: Obtener mantenimientos del store de forma reactiva
   const { mantenimientos: todosLosMantenimientos } = useAppStore();
@@ -129,8 +150,7 @@ export default function EquipoDetailPage() {
   // });
   
   // 🎯 Verificar si el usuario actual es técnico
-  const currentUser = getCurrentUser();
-  const esTecnico = currentUser?.rol === 'tecnico';
+  const esTecnico = user?.rol === 'tecnico';
 
   const {
     register,
@@ -192,6 +212,14 @@ export default function EquipoDetailPage() {
       const nuevoMantenimiento = await addMantenimiento(mantenimientoData);
       // console.log('✅ Mantenimiento creado:', nuevoMantenimiento);
       
+      // Si había un componente en reparación temporal, ahora sí actualizar su estado
+      if (componenteEnReparacionTemporal && estadoTemporalSeleccionado) {
+        // Usar el estado que realmente seleccionó el usuario
+        updateComponente(equipoId, componenteEnReparacionTemporal, { estado: estadoTemporalSeleccionado });
+        setComponenteEnReparacionTemporal(null);
+        setEstadoTemporalSeleccionado(null);
+      }
+      
       toast.success('Mantenimiento registrado correctamente');
       setShowNewMantenimiento(false);
       setSelectedComponenteId('');
@@ -210,18 +238,26 @@ export default function EquipoDetailPage() {
   };
 
   const updateEstadoComponente = (componenteId: string, nuevoEstado: 'Operativo' | 'En reparacion' | 'Fuera de servicio') => {
+    // Si el componente se pone "En reparación" o "Fuera de servicio", primero abrir el modal
+    if (nuevoEstado === 'En reparacion' || nuevoEstado === 'Fuera de servicio') {
+      setSelectedComponenteId(componenteId);
+      setComponenteEnReparacionTemporal(componenteId); // Guardar ID para revertir si se cancela
+      setEstadoTemporalSeleccionado(nuevoEstado); // Guardar el estado que realmente quiere el usuario
+      setShowNewMantenimiento(true);
+      // Pequeño delay para que el usuario vea qué pasó
+      setTimeout(() => {
+        if (nuevoEstado === 'En reparacion') {
+          toast.info('Documenta el problema encontrado en este componente');
+        } else {
+          toast.info('Documenta por qué el componente está fuera de servicio');
+        }
+      }, 1000);
+      return; // No actualizar el estado aún
+    }
+    
+    // Para estado "Operativo", actualizar normalmente
     updateComponente(equipoId, componenteId, { estado: nuevoEstado });
     toast.success(`Estado del componente actualizado`);
-    
-    // Si el componente se pone "En reparación", abrir automáticamente el modal de reclamo
-    if (nuevoEstado === 'En reparacion') {
-      setSelectedComponenteId(componenteId);
-      setShowNewMantenimiento(true);
-      // Pequeño delay para que el toast se vea antes del modal
-      setTimeout(() => {
-        toast.info('Documenta el problema encontrado en este componente');
-      }, 1000);
-    }
   };
 
   const getEstadoIcon = (estado: string) => {
@@ -404,7 +440,7 @@ export default function EquipoDetailPage() {
               cantidadAnterior: repuesto.stockAntes,
               mantenimientoId: selectedMantenimiento.id,
               equipoId: equipoId,
-              tecnicoResponsable: currentUser?.nombre || currentUser?.email || 'Sistema',
+              tecnicoResponsable: user?.nombre || user?.email || 'Sistema',
               observaciones: `Utilizado en servicio técnico - ${equipo.cliente} - ${selectedMantenimiento.descripcion}`
             });
             
@@ -698,16 +734,7 @@ export default function EquipoDetailPage() {
                   {mantenimientos.length} mantenimiento{mantenimientos.length !== 1 ? 's' : ''}
                 </Badge>
                 
-                {/* Quick actions */}
-                <Button
-                  size="sm"
-                  onClick={() => setShowNewMantenimiento(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Nuevo Reclamo</span>
-                  <span className="sm:hidden">Nuevo</span>
-                </Button>
+                {/* Quick actions removed */}
               </div>
             </div>
 
@@ -856,13 +883,6 @@ export default function EquipoDetailPage() {
                       </Badge>
                     )}
                   </div>
-                  <Button
-                    onClick={() => setShowNewMantenimiento(true)}
-                    className="w-full sm:w-auto flex items-center justify-center space-x-2 h-8 sm:h-9 text-xs sm:text-sm"
-                  >
-                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Nuevo Reclamo</span>
-                  </Button>
                 </div>
 
                 <div className="space-y-2 sm:space-y-4">
@@ -1822,7 +1842,7 @@ export default function EquipoDetailPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-              onClick={() => setShowNewMantenimiento(false)}
+              onClick={cerrarModalMantenimiento}
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -1927,7 +1947,7 @@ export default function EquipoDetailPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowNewMantenimiento(false)}
+                      onClick={cerrarModalMantenimiento}
                       className="flex-1"
                     >
                       Cancelar

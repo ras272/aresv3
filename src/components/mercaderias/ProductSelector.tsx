@@ -30,6 +30,7 @@ interface ProductSelectorProps {
   onCreateNew?: (nombre: string) => void;
   placeholder?: string;
   error?: string;
+  filtrarPorCategoria?: string;
 }
 
 export function ProductSelector({ 
@@ -38,7 +39,8 @@ export function ProductSelector({
   onChange, 
   onCreateNew,
   placeholder = "Seleccionar producto...",
-  error 
+  error,
+  filtrarPorCategoria
 }: ProductSelectorProps) {
   const [open, setOpen] = useState(false);
   const [productos, setProductos] = useState<ProductoCatalogo[]>([]);
@@ -51,14 +53,33 @@ export function ProductSelector({
     }
   }, [marca, open]);
 
+  useEffect(() => {
+    const handleFocus = () => {
+      if (marca && open) {
+        console.log('🔍 Recargando productos después de focus de ventana');
+        cargarProductosPorMarca();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [marca, open]);
+
   const cargarProductosPorMarca = async () => {
     if (!marca) return;
     
     try {
       setLoading(true);
       console.log('🔄 Cargando productos para marca:', marca);
-      const productosData = await getProductosByMarca(marca);
-      console.log('✅ Productos cargados:', productosData);
+      
+      const productosData = await getProductosByMarca(marca, filtrarPorCategoria);
+      
+      if (filtrarPorCategoria) {
+        console.log(`🔍 Productos filtrados por categoría "${filtrarPorCategoria}":`, productosData);
+      } else {
+        console.log('✅ Productos cargados:', productosData);
+      }
+      
       setProductos(productosData);
     } catch (error) {
       console.error('❌ Error cargando productos:', error);
@@ -101,6 +122,12 @@ export function ProductSelector({
   return (
     <div>
       <Label>Nombre del Producto *</Label>
+      {filtrarPorCategoria && (
+        <div className="text-xs text-orange-600 mt-1 mb-2 flex items-center gap-1">
+          <span>🔍</span>
+          <span>Mostrando solo productos de categoría: <strong>{filtrarPorCategoria}</strong></span>
+        </div>
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -114,11 +141,6 @@ export function ProductSelector({
               !value && "text-gray-500",
               error && "border-red-500"
             )}
-            style={{ 
-              backgroundColor: 'white',
-              opacity: 1,
-              pointerEvents: 'auto'
-            }}
           >
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-gray-400" />
@@ -136,14 +158,18 @@ export function ProductSelector({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0" align="start">
-          <Command>
+        <PopoverContent 
+          className="w-[400px] p-0" 
+          align="start"
+          style={{ backgroundColor: '#ffffff' }}
+        >
+          <Command style={{ backgroundColor: '#ffffff' }}>
             <CommandInput 
               placeholder={`Buscar productos de ${marca}...`}
               value={searchValue}
               onValueChange={setSearchValue}
             />
-            <CommandList>
+            <CommandList style={{ backgroundColor: '#ffffff' }}>
               {loading ? (
                 <div className="p-4 text-center text-sm text-gray-500">
                   Cargando productos...
@@ -174,29 +200,34 @@ export function ProductSelector({
                         <CommandItem
                           key={producto.id}
                           value={producto.nombre}
-                          onSelect={(selectedValue) => {
-                            console.log('🔍 Producto seleccionado:', selectedValue, producto);
-                            onChange(producto.nombre);
-                            setOpen(false);
-                            setSearchValue('');
+                          onSelect={() => handleSelect(producto)}
+                          className={cn(
+                            "flex items-center justify-between cursor-pointer p-2",
+                            // ✅ SOLUCIÓN PRINCIPAL: Forzar estilos específicos
+                            "text-gray-900 hover:bg-gray-100 hover:text-gray-900",
+                            "aria-selected:bg-gray-100 aria-selected:text-gray-900",
+                            "data-[selected]:bg-gray-100 data-[selected]:text-gray-900",
+                            // Asegurar que no se vea disabled
+                            "opacity-100 pointer-events-auto"
+                          )}
+                          // ✅ SOLUCIÓN ALTERNATIVA: Props directas
+                          style={{
+                            color: '#111827',
+                            opacity: 1,
+                            pointerEvents: 'auto'
                           }}
-                          onClick={() => {
-                            console.log('🖱️ Click directo en producto:', producto.nombre);
-                            onChange(producto.nombre);
-                            setOpen(false);
-                            setSearchValue('');
-                          }}
-                          className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-2"
                         >
                           <div className="flex items-center gap-2">
                             <Check
                               className={cn(
-                                "h-4 w-4",
+                                "h-4 w-4 text-blue-600",
                                 value === producto.nombre ? "opacity-100" : "opacity-0"
                               )}
                             />
                             <div>
-                              <div className="font-medium">{producto.nombre}</div>
+                              <div className="font-medium text-gray-900">
+                                {producto.nombre}
+                              </div>
                               {producto.descripcion && (
                                 <div className="text-xs text-gray-500">
                                   {producto.descripcion}
@@ -215,7 +246,11 @@ export function ProductSelector({
                    ) && 
                    onCreateNew && (
                     <CommandGroup>
-                      <CommandItem onSelect={handleCreateNew}>
+                      <CommandItem 
+                        onSelect={handleCreateNew}
+                        className="text-gray-900 hover:bg-gray-50 cursor-pointer bg-white"
+                        style={{ color: '#111827', opacity: 1 }}
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Crear "{searchValue}" en {marca}
                       </CommandItem>
@@ -237,6 +272,33 @@ export function ProductSelector({
           {productoSeleccionado.descripcion}
         </p>
       )}
+
+      {/* 🔧 SOLUCIÓN CSS GLOBAL (si las anteriores no funcionan) */}
+      <style jsx global>{`
+        [cmdk-item] {
+          color: #111827 !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          background-color: transparent !important;
+        }
+        [cmdk-item]:hover {
+          background-color: #f3f4f6 !important;
+          color: #111827 !important;
+        }
+        [cmdk-item][aria-selected="true"] {
+          background-color: #f3f4f6 !important;
+          color: #111827 !important;
+        }
+        [cmdk-item][data-selected] {
+          background-color: #f3f4f6 !important;
+          color: #111827 !important;
+        }
+        [cmdk-item][data-disabled] {
+          background-color: transparent !important;
+          color: #111827 !important;
+          opacity: 1 !important;
+        }
+      `}</style>
     </div>
   );
 }

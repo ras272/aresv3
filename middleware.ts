@@ -35,6 +35,7 @@ const ROUTE_CONFIG = {
     "/calendario",
     "/productos",
     "/admin",
+    "/repuestos",
     "/", // Dashboard/home page
   ],
 
@@ -59,6 +60,8 @@ const ROUTE_CONFIG = {
       "/inventario-tecnico",
       "/calendario",
       "/servtec",
+      "/reportes",
+      "/repuestos",
     ] as const,
   },
 } as const;

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/store/useAppStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SearchResult {
   id: string;
@@ -31,7 +32,7 @@ interface UniversalSearchProps {
   className?: string;
 }
 
-export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servicios...", className = "" }: UniversalSearchProps) {
+export function UniversalSearch({ placeholder, className = "" }: UniversalSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -43,6 +44,17 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
   const router = useRouter();
   
   const { equipos, mantenimientos, stockItems, loadAllData } = useAppStore();
+  const { user } = useAuth();
+  
+  // Verificar si el usuario es técnico
+  const isTecnico = user?.rol === 'tecnico';
+  
+  // Placeholder dinámico según el rol
+  const defaultPlaceholder = isTecnico 
+    ? "Buscar equipos y mantenimientos..."
+    : "Buscar equipos, clientes, servicios...";
+  
+  const searchPlaceholder = placeholder || defaultPlaceholder;
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -114,10 +126,12 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
       equipos: equipos.length,
       mantenimientos: mantenimientos.length,
       stockItems: stockItems.length,
-      query: query
+      query: query,
+      userRole: user?.rol,
+      isTecnico
     });
 
-    // Buscar en equipos
+    // Buscar en equipos (disponible para todos los roles)
     equipos.forEach(equipo => {
       const matches = [
         equipo.nombreEquipo?.toLowerCase().includes(query),
@@ -151,7 +165,7 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
       }
     });
 
-    // Buscar en mantenimientos
+    // Buscar en mantenimientos (disponible para todos los roles)
     mantenimientos.forEach(mantenimiento => {
       const equipo = equipos.find(e => e.id === mantenimiento.equipoId);
       const matches = [
@@ -180,47 +194,91 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
       }
     });
 
-    // Buscar en stock items
+    // Solo buscar en stock y clientes si NO es técnico
+    if (!isTecnico) {
+      // Buscar en stock items con agrupación inteligente
+      const stockPorGrupo: Record<string, {
+        id: string,
+        nombre: string,
+        marca: string,
+        modelo: string,
+        categoria: string,
+        cantidadTotal: number,
+        items: typeof stockItems
+      }> = {};
+    
+    // Paso 1: Agrupar items por nombre, marca y modelo
     stockItems.forEach(item => {
+      // Clave única que identifica a un grupo
+      const clave = `${item.nombre}-${item.marca}-${item.modelo}`;
+      
+      if (!stockPorGrupo[clave]) {
+        stockPorGrupo[clave] = {
+          id: clave,
+          nombre: item.nombre || 'Item sin nombre',
+          marca: item.marca || 'Sin marca',
+          modelo: item.modelo || 'Sin modelo',
+          categoria: (item.tipoProducto as string) || 'Sin categoría',
+          cantidadTotal: 0,
+          items: []
+        };
+      }
+      
+      // Agregar item al grupo y sumar cantidades
+      stockPorGrupo[clave].items.push(item);
+      stockPorGrupo[clave].cantidadTotal += item.cantidadDisponible || 0;
+    });
+
+    // Debug: Ver cómo quedaron agrupados los items
+    if (query.toLowerCase().includes('aplicador')) {
+      console.group('🔍 Debug: Agrupación de Aplicadores');
+      console.log('Items originales:', stockItems.filter(i => i.nombre?.toLowerCase().includes('aplicador')));
+      console.log('Items agrupados:', Object.values(stockPorGrupo).filter(g => g.nombre.toLowerCase().includes('aplicador')));
+      console.groupEnd();
+    }
+
+    // Paso 2: Buscar en los grupos
+    Object.values(stockPorGrupo).forEach(grupo => {
       const matches = [
-        item.nombre?.toLowerCase().includes(query),
-        item.marca?.toLowerCase().includes(query),
-        item.categoria?.toLowerCase().includes(query),
-        item.descripcion?.toLowerCase().includes(query)
+        grupo.nombre.toLowerCase().includes(query),
+        grupo.marca.toLowerCase().includes(query),
+        grupo.categoria?.toLowerCase().includes(query) || false,
+        grupo.modelo.toLowerCase().includes(query)
       ].some(Boolean);
 
       if (matches) {
         searchResults.push({
-          id: item.id,
+          id: grupo.id,
           type: 'componente',
-          title: item.nombre || 'Item sin nombre',
-          subtitle: `${item.marca || 'Sin marca'} - ${item.categoria || 'Sin categoría'}`,
-          description: `Stock: ${item.cantidadDisponible} unidades`,
+          title: grupo.nombre,
+          subtitle: `${grupo.marca} - ${grupo.modelo}`,
+          description: `Stock total: ${grupo.cantidadTotal} unidades (${grupo.items.length} ${grupo.items.length > 1 ? 'items' : 'item'})`,
           icon: Package,
           route: `/stock`,
           metadata: {
-            estado: item.cantidadDisponible <= 5 ? 'Stock bajo' : 'Disponible'
+            estado: grupo.cantidadTotal <= 5 ? 'Stock bajo' : 'Disponible'
           }
         });
       }
     });
 
-    // Buscar clientes únicos
-    const clientesUnicos = [...new Set(equipos.map(e => e.cliente).filter(Boolean))];
-    clientesUnicos.forEach(cliente => {
-      if (cliente.toLowerCase().includes(query)) {
-        const equiposCliente = equipos.filter(e => e.cliente === cliente);
-        searchResults.push({
-          id: `cliente-${cliente}`,
-          type: 'cliente',
-          title: cliente,
-          subtitle: `${equiposCliente.length} equipo${equiposCliente.length !== 1 ? 's' : ''}`,
-          description: 'Ver todos los equipos del cliente',
-          icon: Building2,
-          route: `/clinicas?search=${encodeURIComponent(cliente)}`,
-        });
-      }
-    });
+      // Buscar clientes únicos
+      const clientesUnicos = [...new Set(equipos.map(e => e.cliente).filter(Boolean))];
+      clientesUnicos.forEach(cliente => {
+        if (cliente.toLowerCase().includes(query)) {
+          const equiposCliente = equipos.filter(e => e.cliente === cliente);
+          searchResults.push({
+            id: `cliente-${cliente}`,
+            type: 'cliente',
+            title: cliente,
+            subtitle: `${equiposCliente.length} equipo${equiposCliente.length !== 1 ? 's' : ''}`,
+            description: 'Ver todos los equipos del cliente',
+            icon: Building2,
+            route: `/clinicas?search=${encodeURIComponent(cliente)}`,
+          });
+        }
+      });
+    }
 
     // Ordenar por relevancia (coincidencias exactas primero)
     return searchResults
@@ -317,7 +375,7 @@ export function UniversalSearch({ placeholder = "Buscar equipos, clientes, servi
         <Input
           ref={inputRef}
           type="text"
-          placeholder={placeholder}
+          placeholder={searchPlaceholder}
           value={query}
           onChange={handleInputChange}
           onFocus={() => {

@@ -1,5 +1,6 @@
 import { supabase } from './database/shared/supabase';
 import { User, UserRole } from '@/types/auth';
+import { hashPassword, verifyPassword } from './crypto';
 
 // ===============================================
 // FUNCIONES PARA GESTIÓN DE USUARIOS REALES
@@ -47,12 +48,15 @@ export async function createRealUser(userData: {
     }
 
     // Crear usuario
+    // Hash de la contraseña con bcrypt
+    const passwordHash = await hashPassword(userData.password);
+    
     const { data, error } = await supabase
       .from('usuarios')
       .insert({
         nombre: userData.nombre,
         email: userData.email,
-        password_hash: userData.password, // En producción usar bcrypt
+        password_hash: passwordHash, // Password hasheada con bcrypt
         rol: userData.rol,
         activo: true
       })
@@ -148,15 +152,21 @@ export async function authenticateUser(email: string, password: string): Promise
   error?: string;
 }> {
   try {
+    // Obtenemos el usuario por email
     const { data, error } = await supabase
       .from('usuarios')
       .select('*')
       .eq('email', email)
-      .eq('password_hash', password) // En producción usar bcrypt
       .eq('activo', true)
       .single();
 
     if (error || !data) {
+      return { success: false, error: 'Email o contraseña incorrectos' };
+    }
+
+    // Verificamos la contraseña usando bcrypt
+    const isValidPassword = await verifyPassword(password, data.password_hash);
+    if (!isValidPassword) {
       return { success: false, error: 'Email o contraseña incorrectos' };
     }
 

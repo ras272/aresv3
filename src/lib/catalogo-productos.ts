@@ -5,6 +5,7 @@ export interface ProductoCatalogo {
   marca: string;
   nombre: string;
   descripcion?: string;
+  categoria?: string; // 🆕 NUEVO: Campo categoría
   activo: boolean;
   created_at: string;
   updated_at: string;
@@ -28,15 +29,22 @@ export async function getAllProductosCatalogo(): Promise<ProductoCatalogo[]> {
   }
 }
 
-// Obtener productos por marca
-export async function getProductosByMarca(marca: string): Promise<ProductoCatalogo[]> {
+// Obtener productos por marca con filtro opcional por categoría
+export async function getProductosByMarca(marca: string, categoria?: string): Promise<ProductoCatalogo[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('catalogo_productos')
       .select('*')
       .eq('marca', marca)
-      .eq('activo', true)
-      .order('nombre', { ascending: true });
+      .eq('activo', true);
+    
+    // 🔧 NUEVO: Filtrar por categoría si se especifica
+    if (categoria) {
+      query = query.eq('categoria', categoria);
+      console.log(`🔍 Filtrando productos de marca "${marca}" por categoría "${categoria}"`);
+    }
+    
+    const { data, error } = await query.order('nombre', { ascending: true });
 
     if (error) throw error;
     return data || [];

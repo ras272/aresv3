@@ -2,7 +2,7 @@
 
 ## 📋 Estado Actual del Sistema
 
-### ✅ **IMPLEMENTADO Y FUNCIONANDO**
+### ✅ **MIGRACIÓN COMPLETADA - SISTEMA JWT PURO**
 
 #### 1. **Base de Datos (Supabase)**
 - ✅ Tabla `usuarios` con campos completos
@@ -12,33 +12,100 @@
 - ✅ Políticas RLS habilitadas
 - ✅ 3 usuarios iniciales creados
 
-#### 2. **Autenticación**
+#### 2. **Autenticación con JWT (Sistema Moderno)**
 - ✅ Login funcional conectado a base de datos real
 - ✅ Validación de credenciales contra Supabase
-- ✅ Almacenamiento seguro en localStorage
+- ✅ Almacenamiento seguro con cookies httpOnly y JWT
 - ✅ Redirección automática después del login
+- ✅ Sistema de refresh tokens automático
+- ✅ Blacklist de tokens para logout seguro
+- ✅ Middleware de autenticación en Next.js
 
 #### 3. **Gestión de Usuarios**
 - ✅ Página `/usuarios` completamente funcional
 - ✅ CRUD completo (Crear, Leer, Actualizar, Activar/Desactivar)
 - ✅ Protección por roles (solo super_admin y admin)
 - ✅ Interfaz intuitiva con búsqueda y filtros
+- ✅ Actualización automática de datos de usuario
 
 #### 4. **Sistema de Roles y Permisos**
 - ✅ 7 roles definidos con permisos específicos
 - ✅ Funciones helper para verificar permisos
 - ✅ Hook `useAuth()` para componentes React
 - ✅ Funciones standalone para verificación rápida
+- ✅ Componentes ProtectedRoute modernos
+
+#### 5. **Componentes de Protección Modernos**
+- ✅ `ProtectedRoute` - Protección básica de rutas
+- ✅ `RoleGuard` - Protección basada en roles
+- ✅ `PermissionGuard` - Protección basada en permisos
+- ✅ `AuthProvider` - Context de autenticación completo
+- ✅ Sistema de sincronización entre pestañas
+
+#### 6. **Sidebar Dinámico por Permisos** ✨ **NUEVO**
+- ✅ Navegación filtrada según rol del usuario
+- ✅ Ocultación automática de opciones sin permisos
+- ✅ Mapeo detallado de permisos a elementos del menú
+- ✅ Sistema responsive con colapso
+
+#### 7. **Páginas de Error Personalizadas** ✨ **NUEVO**
+- ✅ Imagen 404.png para errores de acceso
+- ✅ Página 404 personalizada (`not-found.tsx`)
+- ✅ Componentes de error unificados
+- ✅ Diseño consistente con el sistema
 
 ---
 
-## 👥 **Usuarios Disponibles**
+## 🗑️ **Componentes Eliminados (Migración Completada)**
 
-| Email | Contraseña | Rol | Descripción |
-|-------|------------|-----|-------------|
-| `superadmin@arestech.com` | `admin123` | Super Admin | Acceso total al sistema |
-| `contabilidad@arestech.com` | `conta123` | Contabilidad | Clínicas, documentos, archivos, tareas |
-| `tecnico@arestech.com` | `tecnico123` | Técnico | Dashboard, equipos, inventario (solo lectura) |
+- ❌ Sistema de localStorage legacy
+- ❌ AuthGuard.tsx legacy (reemplazado por ProtectedRoute)
+- ❌ Funciones de autenticación en AppStore
+- ❌ Hooks useAuth legacy
+- ❌ Referencias a sesionActual
+- ❌ getCurrentUser del store
+- ❌ Sistema de bypass temporal
+
+---
+
+## 👥 **Usuarios Disponibles para Testing**
+
+| Email | Contraseña | Nombre | Rol | Estado |
+|-------|------------|--------|-----|--------|
+| `superadmin@ares.com` | `aresabente` | Teresa Ferres | Super Admin | ✅ Activo |
+| `ceci@ares.com` | `demo123` | Ceci | Contabilidad | ✅ Activo |
+| `jack@ares.com` | *(inactivo)* | Jack Green | Super Admin | ❌ Inactivo |
+| `test@ares.com` | *(inactivo)* | test | Técnico | ❌ Inactivo |
+
+**⚠️ NOTA:** Los usuarios activos son `superadmin@ares.com` y `ceci@ares.com`.
+
+---
+
+## 🔒 **Características de Seguridad Implementadas**
+
+### ✅ **Seguridad de Tokens**
+- Tokens JWT firmados con claves seguras
+- Access tokens de 15 minutos
+- Refresh tokens de 7 días
+- Sistema de blacklist para logout seguro
+- Renovación automática transparente
+
+### ✅ **Protección de Cookies**
+- Cookies httpOnly (no accesibles desde JavaScript)
+- Flags Secure para HTTPS
+- SameSite strict para CSRF protection
+- Limpieza automática en logout
+
+### ✅ **Middleware de Seguridad**
+- Verificación de autenticación en cada request
+- Control de acceso basado en roles
+- Protección de rutas API y páginas
+- Headers de seguridad automáticos
+
+### ✅ **Sincronización Multi-Pestaña**
+- Logout sincronizado entre todas las pestañas
+- Estado de autenticación compartido
+- Eventos de localStorage para comunicación
 
 ---
 
@@ -48,13 +115,22 @@
 
 ```
 src/
-├── types/auth.ts              # Tipos y definición de permisos
+├── types/auth.ts              # Tipos y definición completa de permisos
 ├── lib/auth-real.ts           # Funciones de base de datos
 ├── hooks/useAuth.ts           # Hook de React para auth
 ├── app/login/page.tsx         # Página de login
 ├── app/usuarios/page.tsx      # Página de gestión de usuarios
-└── components/usuarios/
-    └── GestionUsuarios.tsx    # Componente principal de gestión
+├── app/not-found.tsx          # Página 404 personalizada 🆕
+├── components/usuarios/
+│   └── GestionUsuarios.tsx    # Componente principal de gestión
+├── components/auth/
+│   ├── AuthProvider.tsx       # Context de autenticación
+│   ├── UnauthorizedAccess.tsx # Componente de error con imagen 404 🆕
+│   └── ProtectedRoute.tsx     # Rutas protegidas
+├── components/layout/
+│   └── SidebarNew.tsx         # Sidebar dinámico por permisos 🆕
+└── components/
+    └── PermissionGuard.tsx    # Guard de permisos con imagen 404 🆕
 ```
 
 ### **Base de Datos**
@@ -115,11 +191,17 @@ sesiones_usuario (
 
 ### **Contabilidad** (`contabilidad`)
 - **Permisos**: 
-  - `clinicas.manage`
-  - `documentos.manage`
-  - `archivos.manage`
-  - `tareas.manage`
-  - `reportes.financial`
+  - `dashboard.view`
+  - `clinicas.view`, `clinicas.edit`
+  - `documentos.view`, `documentos.create`, `documentos.edit`, `documentos.delete`
+  - `archivos.view`, `archivos.upload`, `archivos.download`, `archivos.manage_folders`
+  - `remisiones.view`, `remisiones.create`, `remisiones.edit`
+  - `reportes.view`, `reportes.financial`, `reportes.export`
+  - `mercaderias.view`, `mercaderias.create`, `mercaderias.edit`
+  - `productos.view`, `productos.create`, `productos.edit`
+  - `stock.view`, `stock.manage`, `stock.export`
+- **Acceso**: Catálogo de Productos, Remisiones, Stock General
+- **Restricciones**: NO accede a equipos, calendario, usuarios
 
 ### **Técnico** (`tecnico`)
 - **Permisos**: 
@@ -142,6 +224,33 @@ sesiones_usuario (
 ---
 
 ## 🔧 **Cómo Usar el Sistema**
+
+### **Sidebar Dinámico por Permisos**
+```typescript
+// El sidebar se actualiza automáticamente según el usuario logueado
+// Ejemplo: Usuario con rol 'contabilidad' verá:
+// - Dashboard
+// - Inventario & Stock (Mercaderías, Productos, Stock)
+// - Documentos & Archivos (Documentos, Remisiones, Archivos, Reportes)
+// - Administración (Clínicas)
+
+// NO verá:
+// - Equipos & Servicio
+// - Usuarios (solo admins)
+// - Calendario
+```
+
+### **Páginas de Error con Imagen 404**
+```typescript
+// Uso automático en componentes de error
+<UnauthorizedAccess 
+  message="No tienes permisos para esta sección"
+  // Automáticamente muestra imagen 404.png
+/>
+
+// Página 404 para URLs inexistentes
+// Navegación a /pagina-inexistente automáticamente muestra not-found.tsx
+```
 
 ### **En Componentes React**
 ```typescript
@@ -298,6 +407,17 @@ export default function ClinicasPage() {
 4. **Creación de usuarios** desde la interfaz
 5. **Edición de usuarios** y actualización en tiempo real
 6. **Activación/desactivación** de usuarios
+7. **Sidebar dinámico** - verificar que cada rol ve solo sus opciones 🆕
+8. **Páginas de error** - verificar imagen 404 en accesos denegados 🆕
+
+### **Testing por Rol** 🆕
+
+#### **Contabilidad (ceci@ares.com)**
+- ✅ Debe ver: Dashboard, Mercaderías, Productos, Stock, Documentos, Remisiones, Archivos, Reportes, Clínicas
+- ❌ No debe ver: Equipos, Calendario, Usuarios, ServTec
+
+#### **Super Admin (superadmin@ares.com)**
+- ✅ Debe ver: Todas las opciones del sistema
 
 ### **Comandos de Prueba**
 ```bash
@@ -326,15 +446,15 @@ SELECT * FROM sesiones_usuario WHERE activa = true;
 - Verificar la conexión a Supabase
 
 #### **Error: "Token expirado"**
-- Limpiar localStorage: `localStorage.removeItem('ares_current_user')`
+- Las cookies se limpian automáticamente
 - Hacer login nuevamente
-- Verificar configuración de sesiones
+- Verificar que no hay problemas con las cookies en el navegador
 
 ### **Comandos de Debug**
 ```javascript
 // En consola del navegador
-console.log('Usuario actual:', localStorage.getItem('ares_current_user'));
-console.log('Permisos:', getCurrentUser()?.role);
+console.log('Cookies disponibles:', document.cookie);
+console.log('Estado de autenticación:', Boolean(document.cookie.includes('ares_session')));
 ```
 
 ---
@@ -357,6 +477,14 @@ Para dudas o problemas con el sistema de usuarios:
 
 ---
 
-**Última actualización**: 2 de Agosto, 2025
-**Versión del sistema**: 1.0.0
+**Última actualización**: 29 de Agosto, 2025 🆕
+**Versión del sistema**: 2.0.0 🆕
 **Estado**: ✅ Funcional y listo para producción
+
+### **🆕 Actualizaciones Recientes (v2.0.0)**
+- ✨ Sistema de permisos granular completamente rediseñado
+- ✨ Sidebar dinámico que se adapta según el rol del usuario
+- ✨ Imagen 404.png implementada en todas las páginas de error
+- ✨ Usuario Ceci (contabilidad) configurado con acceso a Stock, Productos y Remisiones
+- ✨ Página 404 personalizada para URLs no encontradas
+- ✨ Eliminación completa del acceso al calendario para contabilidad

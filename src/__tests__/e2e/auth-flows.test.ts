@@ -673,7 +673,7 @@ describe('End-to-End Authentication Flows', () => {
     it('should clear session data on logout', async () => {
       const user = userEvent.setup();
       
-      // Set initial cookies
+      // Simular cookies de sesión
       document.cookie = 'ares_session=token; ares_refresh=refresh';
       
       const LogoutComponent = () => {

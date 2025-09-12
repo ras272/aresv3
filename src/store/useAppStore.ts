@@ -780,10 +780,9 @@ export const useAppStore = create<AppState>()(
         },
 
         // ===============================================
-        // FUNCIONES DE AUTENTICACIÓN
+        // USUARIOS (Solo para gestión administrativa)
         // ===============================================
         usuarios: [],
-        sesionActual: null,
 
         loadUsuarios: async () => {
           try {
@@ -812,150 +811,6 @@ export const useAppStore = create<AppState>()(
           } catch (error) {
             console.error("❌ Error loading usuarios:", error);
           }
-        },
-
-        login: async (email: string, password: string) => {
-          try {
-            console.log("🔄 Intentando login...", { email });
-
-            // Buscar usuario en la base de datos
-            const { data, error } = await supabase
-              .from("sistema_usuarios")
-              .select("*")
-              .eq("email", email)
-              .eq("activo", true)
-              .single();
-
-            if (error || !data) {
-              throw new Error("Usuario no encontrado o inactivo");
-            }
-
-            // En un sistema real, aquí verificarías el password hash
-            // Por ahora, aceptamos cualquier password para la demo
-
-            const usuario: Usuario = {
-              id: data.id,
-              nombre: data.nombre,
-              email: data.email,
-              rol: data.rol as Usuario["rol"],
-              activo: data.activo,
-              ultimoAcceso: data.ultimo_acceso,
-              createdAt: data.created_at,
-              updatedAt: data.updated_at,
-            };
-
-            // Actualizar último acceso
-            await supabase
-              .from("sistema_usuarios")
-              .update({ ultimo_acceso: new Date().toISOString() })
-              .eq("id", data.id);
-
-            // Crear sesión
-            const sesion: SesionUsuario = {
-              usuario: usuario,
-              token: `token-${Date.now()}`,
-              fechaInicio: new Date().toISOString(),
-              activa: true,
-            };
-
-            set({ sesionActual: sesion });
-            console.log(
-              "✅ Login exitoso:",
-              usuario.nombre,
-              "Rol:",
-              usuario.rol
-            );
-
-            return sesion;
-          } catch (error) {
-            console.error("❌ Error en login:", error);
-            throw error;
-          }
-        },
-
-        logout: () => {
-          set({ sesionActual: null });
-          console.log("✅ Logout exitoso");
-        },
-
-        getCurrentUser: () => {
-          const { sesionActual } = get();
-          return sesionActual?.usuario || null;
-        },
-
-        getUserPermissions: (rol: Usuario["rol"]) => {
-          // Definición de permisos por rol según los requerimientos
-          const permisos: Record<Usuario["rol"], PermisosRol> = {
-            super_admin: {
-              // Super Admin: Acceso completo a todo
-              dashboard: { leer: true, escribir: true },
-              equipos: { leer: true, escribir: true },
-              inventarioTecnico: { leer: true, escribir: true },
-              calendario: { leer: true, escribir: true },
-              mercaderias: { leer: true, escribir: true },
-              documentos: { leer: true, escribir: true },
-              remisiones: { leer: true, escribir: true },
-              facturacion: { leer: true, escribir: true },
-              archivos: { leer: true, escribir: true },
-              tareas: { leer: true, escribir: true },
-              clinicas: { leer: true, escribir: true },
-              stock: { leer: true, escribir: true },
-              reportes: { leer: true, escribir: true },
-              configuracion: { leer: true, escribir: true },
-            },
-            contabilidad: {
-              // Contabilidad: Facturación, archivos, gestión documental, clínicas, tareas
-              dashboard: { leer: true, escribir: false },
-              equipos: { leer: false, escribir: false },
-              inventarioTecnico: { leer: false, escribir: false },
-              calendario: { leer: false, escribir: false },
-              mercaderias: { leer: false, escribir: false },
-              documentos: { leer: true, escribir: true },
-              remisiones: { leer: false, escribir: false },
-              facturacion: { leer: true, escribir: true },
-              archivos: { leer: true, escribir: true },
-              tareas: { leer: true, escribir: true },
-              clinicas: { leer: true, escribir: true },
-              stock: { leer: false, escribir: false },
-              reportes: { leer: true, escribir: false },
-              configuracion: { leer: false, escribir: false },
-            },
-            tecnico: {
-              // Técnico: Dashboard (solo lectura), equipos (solo lectura), inventario técnico (solo lectura), calendario
-              dashboard: { leer: true, escribir: false },
-              equipos: { leer: true, escribir: false },
-              inventarioTecnico: { leer: true, escribir: false },
-              calendario: { leer: true, escribir: true },
-              mercaderias: { leer: false, escribir: false },
-              documentos: { leer: false, escribir: false },
-              remisiones: { leer: false, escribir: false },
-              facturacion: { leer: false, escribir: false },
-              archivos: { leer: false, escribir: false },
-              tareas: { leer: false, escribir: false },
-              clinicas: { leer: false, escribir: false },
-              stock: { leer: false, escribir: false },
-              reportes: { leer: false, escribir: false },
-              configuracion: { leer: false, escribir: false },
-            },
-          };
-
-          return permisos[rol] || permisos.tecnico;
-        },
-
-        hasPermission: (modulo: keyof PermisosRol) => {
-          const usuario = get().getCurrentUser();
-          if (!usuario) return false;
-
-          const permisos = get().getUserPermissions(usuario.rol);
-          return permisos[modulo]?.leer || false;
-        },
-
-        hasWritePermission: (modulo: keyof PermisosRol) => {
-          const usuario = get().getCurrentUser();
-          if (!usuario) return false;
-
-          const permisos = get().getUserPermissions(usuario.rol);
-          return permisos[modulo]?.escribir || false;
         },
 
         // ===============================================

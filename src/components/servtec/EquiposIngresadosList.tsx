@@ -59,6 +59,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
+import { useAuth } from '@/hooks/useAuth';
 import { EquipoIngresado } from '@/types';
 import { toast } from 'sonner';
 import EquipoIngresadoModal from './EquipoIngresadoModal';
@@ -75,10 +76,9 @@ export default function EquiposIngresadosList({
     getEquiposIngresadosByEstado,
     deleteEquipoIngresado,
     crearTicketDesdeEquipoIngresado,
-    getCurrentUser,
   } = useAppStore();
 
-  const currentUser = getCurrentUser();
+  const { user } = useAuth();
   const equipos = getEquiposIngresados();
 
   const [searchTerm, setSearchTerm] = useState('');

@@ -43,5 +43,5 @@ export {
 } from './ErrorBoundary';
 
 // Legacy components (for backward compatibility)
-export { AuthGuard } from './AuthGuard';
+// Note: AuthGuard has been removed - use ProtectedRoute instead
 export { UserMenu } from './UserMenu';

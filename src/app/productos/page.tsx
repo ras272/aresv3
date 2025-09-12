@@ -29,8 +29,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/database/shared/supabase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/lib/database/shared/supabase';
 import { CatalogoProducto } from '@/types';
 import useAppStore from '@/store/useAppStore';
 
@@ -58,6 +58,7 @@ export default function CatalogoProductosPage() {
   const [modalProductoOpen, setModalProductoOpen] = useState(false);
   const [modalMarcaOpen, setModalMarcaOpen] = useState(false);
   const [productoEditando, setProductoEditando] = useState<CatalogoProducto | null>(null);
+  const [contextoRepuestos, setContextoRepuestos] = useState(false); // 🔧 NUEVO: Controlar contexto de repuestos
   
   // Estados para formularios
   const [formProducto, setFormProducto] = useState<Partial<CatalogoProducto>>({
@@ -87,6 +88,51 @@ export default function CatalogoProductosPage() {
   useEffect(() => {
     organizarProductosPorMarca();
   }, [catalogoProductos, busqueda]);
+
+  // 🔧 NUEVO: Detectar parámetros URL para contexto de repuestos
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const contexto = urlParams.get('contexto');
+    const marca = urlParams.get('marca');
+    const nombre = urlParams.get('nombre');
+    
+    if (contexto && marca) {
+      console.log(`🔧 Detectado contexto "${contexto}" desde URL:`, { marca, nombre });
+      
+      // Determinar categoría según el contexto
+      let categoriaDefecto = '';
+      let esContextoEspecifico = false;
+      
+      switch (contexto) {
+        case 'repuestos':
+          categoriaDefecto = 'Repuesto';
+          esContextoEspecifico = true;
+          break;
+        case 'insumos':
+          categoriaDefecto = 'Insumo';
+          esContextoEspecifico = true;
+          break;
+        case 'equipos':
+          categoriaDefecto = 'Equipo Médico';
+          esContextoEspecifico = true;
+          break;
+        default:
+          break;
+      }
+      
+      // Abrir modal automáticamente con datos precompletados
+      setTimeout(() => {
+        abrirModalProducto(marca, undefined, esContextoEspecifico);
+        if (nombre) {
+          setFormProducto(prev => ({ 
+            ...prev, 
+            nombre: decodeURIComponent(nombre),
+            categoria: categoriaDefecto
+          }));
+        }
+      }, 500); // Pequeña demora para que se carguen los datos
+    }
+  }, []);
 
   const cargarProductos = async () => {
     try {
@@ -126,7 +172,35 @@ export default function CatalogoProductosPage() {
     return `${marcaLimpia}${nombreLimpio}${timestamp}`;
   };
 
-  const abrirModalProducto = (marca?: string, producto?: CatalogoProducto) => {
+  const abrirModalProducto = (marca?: string, producto?: CatalogoProducto, contextoEspecifico?: boolean) => {
+    // 🔧 NUEVO: Determinar categoría según el contexto URL
+    let categoriaDefecto = '';
+    
+    if (contextoEspecifico) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const contexto = urlParams.get('contexto');
+      
+      switch (contexto) {
+        case 'repuestos':
+          categoriaDefecto = 'Repuesto';
+          setContextoRepuestos(true);
+          break;
+        case 'insumos':
+          categoriaDefecto = 'Insumo';
+          setContextoRepuestos(false);
+          break;
+        case 'equipos':
+          categoriaDefecto = 'Equipo Médico';
+          setContextoRepuestos(false);
+          break;
+        default:
+          setContextoRepuestos(false);
+          break;
+      }
+    } else {
+      setContextoRepuestos(false);
+    }
+    
     if (producto) {
       setProductoEditando(producto);
       setFormProducto({
@@ -153,7 +227,7 @@ export default function CatalogoProductosPage() {
         marca: marca || '',
         nombre: '',
         descripcion: '',
-        categoria: '',
+        categoria: categoriaDefecto, // 🔧 NUEVO: Pre-configurar categoría según contexto
         codigoProducto: '',
         precio: 0,
         moneda: 'USD',
@@ -276,7 +350,36 @@ export default function CatalogoProductosPage() {
       } else {
         console.log('🆕 Creando nuevo producto');
         await addCatalogoProducto(productoData);
-        toast.success('Producto agregado exitosamente');
+        
+        if (contextoEspecifico) {
+          // 🔧 NUEVO: Mensajes dinámicos según el contexto
+          const urlParams = new URLSearchParams(window.location.search);
+          const contexto = urlParams.get('contexto');
+          
+          let mensaje = '';
+          
+          switch (contexto) {
+            case 'repuestos':
+              mensaje = '🔧 Repuesto agregado al catálogo exitosamente';
+              break;
+            case 'insumos':
+              mensaje = '📦 Insumo agregado al catálogo exitosamente';
+              break;
+            case 'equipos':
+              mensaje = '🏥 Equipo Médico agregado al catálogo exitosamente';
+              break;
+            default:
+              mensaje = 'Producto agregado exitosamente';
+              break;
+          }
+          
+          toast.success(mensaje, {
+            description: 'Ahora aparecerá en el filtrado correspondiente. Puedes regresar a la página de mercaderías y actualizar.',
+            duration: 6000
+          });
+        } else {
+          toast.success('Producto agregado exitosamente');
+        }
       }
 
       setModalProductoOpen(false);
@@ -455,6 +558,54 @@ export default function CatalogoProductosPage() {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-gray-50">
+        {/* 🔧 NUEVO: Banner informativo para contextos específicos */}
+        {(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const contexto = urlParams.get('contexto');
+          
+          if (contexto) {
+            let mensaje = '';
+            let icono = '';
+            let colorClase = '';
+            
+            switch (contexto) {
+              case 'repuestos':
+                mensaje = 'Los productos creados aquí se configurarán automáticamente con categoría "Repuesto" para aparecer en el filtrado de ingreso de repuestos.';
+                icono = '🔧';
+                colorClase = 'orange';
+                break;
+              case 'insumos':
+                mensaje = 'Los productos creados aquí se configurarán automáticamente con categoría "Insumo" para el flujo de insumos.';
+                icono = '📦';
+                colorClase = 'blue';
+                break;
+              case 'equipos':
+                mensaje = 'Los productos creados aquí se configurarán automáticamente con categoría "Equipo Médico" para el flujo de equipos.';
+                icono = '🏥';
+                colorClase = 'green';
+                break;
+              default:
+                return null;
+            }
+            
+            return (
+              <div className={`bg-${colorClase}-100 border-l-4 border-${colorClase}-500 p-4 mx-4 mt-4 rounded-r-lg`}>
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <span className={`text-${colorClase}-500 text-lg`}>{icono}</span>
+                  </div>
+                  <div className="ml-3">
+                    <p className={`text-sm text-${colorClase}-700`}>
+                      <strong>Modo {contexto.charAt(0).toUpperCase() + contexto.slice(1)} Activo:</strong> {mensaje}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+        
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border mx-4 mt-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -478,7 +629,13 @@ export default function CatalogoProductosPage() {
                   Nueva Marca
                 </Button>
                 <Button
-                  onClick={() => abrirModalProducto()}
+                  onClick={() => {
+                    // 🔧 NUEVO: Detectar si viene de un contexto específico desde URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const contexto = urlParams.get('contexto');
+                    const esContextoEspecifico = ['repuestos', 'insumos', 'equipos'].includes(contexto || '');
+                    abrirModalProducto(undefined, undefined, esContextoEspecifico);
+                  }}
                   className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
@@ -556,7 +713,13 @@ export default function CatalogoProductosPage() {
                   }
                 </p>
                 {!busqueda && (
-                  <Button onClick={() => abrirModalProducto()}>
+                  <Button onClick={() => {
+                    // 🔧 NUEVO: Detectar si viene de un contexto específico desde URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const contexto = urlParams.get('contexto');
+                    const esContextoEspecifico = ['repuestos', 'insumos', 'equipos'].includes(contexto || '');
+                    abrirModalProducto(undefined, undefined, esContextoEspecifico);
+                  }}>
                     <Plus className="w-4 h-4 mr-2" />
                     Agregar Primer Producto
                   </Button>
@@ -594,7 +757,11 @@ export default function CatalogoProductosPage() {
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          abrirModalProducto(marca);
+                          // 🔧 NUEVO: Detectar si viene de un contexto específico desde URL
+                          const urlParams = new URLSearchParams(window.location.search);
+                          const contexto = urlParams.get('contexto');
+                          const esContextoEspecifico = ['repuestos', 'insumos', 'equipos'].includes(contexto || '');
+                          abrirModalProducto(marca, undefined, esContextoEspecifico);
                         }}
                         size="sm"
                         variant="outline"
@@ -720,6 +887,58 @@ export default function CatalogoProductosPage() {
                   </div>
                 </div>
               )}
+              {/* 🔧 NUEVO: Alertas para contextos específicos */}
+              {(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const contexto = urlParams.get('contexto');
+                
+                if (contexto && !productoEditando) {
+                  let mensaje = '';
+                  let categoria = '';
+                  let icono = '';
+                  let colorClase = '';
+                  
+                  switch (contexto) {
+                    case 'repuestos':
+                      mensaje = 'El producto se agregará con categoría "Repuesto" automáticamente. Esto permite que aparezca en el filtrado de repuestos.';
+                      categoria = 'Repuesto';
+                      icono = '🔧';
+                      colorClase = 'orange';
+                      break;
+                    case 'insumos':
+                      mensaje = 'El producto se agregará con categoría "Insumo" automáticamente. Esto permite que aparezca en el filtrado de insumos.';
+                      categoria = 'Insumo';
+                      icono = '📦';
+                      colorClase = 'blue';
+                      break;
+                    case 'equipos':
+                      mensaje = 'El producto se agregará con categoría "Equipo Médico" automáticamente. Esto permite que aparezca en el filtrado de equipos.';
+                      categoria = 'Equipo Médico';
+                      icono = '🏥';
+                      colorClase = 'green';
+                      break;
+                    default:
+                      return null;
+                  }
+                  
+                  return (
+                    <div className={`bg-${colorClase}-50 border border-${colorClase}-200 rounded-lg p-3 mt-2`}>
+                      <div className="flex items-start gap-2">
+                        <div className={`w-4 h-4 rounded-full bg-${colorClase}-500 flex items-center justify-center mt-0.5`}>
+                          <span className="text-white text-xs font-bold">{icono}</span>
+                        </div>
+                        <div className={`text-sm text-${colorClase}-800`}>
+                          <p className="font-medium mb-1">{icono} Agregando {categoria} al Catálogo</p>
+                          <p className="text-xs">
+                            {mensaje}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </DialogHeader>
             
             <div className="space-y-6 py-4">
@@ -741,12 +960,43 @@ export default function CatalogoProductosPage() {
                     </div>
                     <div>
                       <Label htmlFor="categoria">Categoría</Label>
-                      <Input
-                        id="categoria"
-                        value={formProducto.categoria || ''}
-                        onChange={(e) => setFormProducto(prev => ({ ...prev, categoria: e.target.value }))}
-                        placeholder="Ej: Insumo, Repuesto..."
-                      />
+                      {(() => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const contexto = urlParams.get('contexto');
+                        const esContextoEspecifico = ['repuestos', 'insumos', 'equipos'].includes(contexto || '');
+                        
+                        if (esContextoEspecifico) {
+                          // 🔧 NUEVO: Select con opciones específicas para contextos
+                          return (
+                            <Select
+                              value={formProducto.categoria || ''}
+                              onValueChange={(value) => setFormProducto(prev => ({ ...prev, categoria: value }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Repuesto">🔧 Repuesto</SelectItem>
+                                <SelectItem value="Insumo">📦 Insumo</SelectItem>
+                                <SelectItem value="Equipo Médico">🏥 Equipo Médico</SelectItem>
+                                <SelectItem value="Accesorio">🔌 Accesorio</SelectItem>
+                                <SelectItem value="Consumible">🧀 Consumible</SelectItem>
+                                <SelectItem value="Cosmético">💄 Cosmético</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          );
+                        } else {
+                          // Input normal para otros contextos
+                          return (
+                            <Input
+                              id="categoria"
+                              value={formProducto.categoria || ''}
+                              onChange={(e) => setFormProducto(prev => ({ ...prev, categoria: e.target.value }))}
+                              placeholder="Ej: Insumo, Repuesto, Equipo Médico..."
+                            />
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                   

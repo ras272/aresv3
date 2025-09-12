@@ -372,6 +372,11 @@ export function TablaCargas() {
                             <span className="text-xs">📦</span>
                             <span className="text-xs font-medium text-green-700">Stock</span>
                           </>
+                        ) : carga.tipoCarga === 'repuestos' ? (
+                          <>
+                            <span className="text-xs">🔧</span>
+                            <span className="text-xs font-medium text-yellow-700">Repuesto</span>
+                          </>
                         ) : (
                           <>
                             <span className="text-xs">🏥</span>
@@ -479,6 +484,11 @@ export function TablaCargas() {
                           <>
                             <span className="text-xl">📦</span>
                             <span className="text-sm font-medium text-green-700">Stock</span>
+                          </>
+                        ) : carga.tipoCarga === 'repuestos' ? (
+                          <>
+                            <span className="text-xl">🔧</span>
+                            <span className="text-sm font-medium text-yellow-700">Repuesto</span>
                           </>
                         ) : (
                           <>

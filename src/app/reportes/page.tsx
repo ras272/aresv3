@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/store/useAppStore";
-import { usePermissions } from "@/components/PermissionGuard";
+import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   FileText,
   Search,
@@ -52,7 +53,8 @@ import { RepuestosViewer } from "@/components/reportes/RepuestosViewer";
 export default function ReportesPage() {
   const { mantenimientos, equipos, updateMantenimiento, deleteMantenimiento } =
     useAppStore();
-  const { getCurrentUser } = usePermissions();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [busqueda, setBusqueda] = useState("");
   const [filtroFecha, setFiltroFecha] = useState("todos");
   const [filtroCliente, setFiltroCliente] = useState("todos");
@@ -648,7 +650,7 @@ export default function ReportesPage() {
                             >
                               <MessageCircle className="h-3 w-3" />
                             </Button>
-                            {getCurrentUser()?.rol === "super_admin" && (
+                            {user?.rol === "super_admin" && (
                               <Button
                                 variant="outline"
                                 size="sm"

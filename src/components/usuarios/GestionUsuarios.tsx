@@ -118,28 +118,7 @@ export default function GestionUsuarios() {
         if (result.success) {
           toast.success('Usuario actualizado exitosamente');
           
-          // 🔥 ACTUALIZAR LOCALSTORAGE SI ES EL USUARIO ACTUAL
-          const currentUser = getCurrentUser();
-          console.log('🔍 Usuario actual:', currentUser);
-          console.log('🔍 Usuario editando:', usuarioEditando);
-          
-          if (currentUser && currentUser.id === usuarioEditando.id) {
-            console.log('✅ Es el usuario actual, actualizando localStorage...');
-            const updatedUser = {
-              ...currentUser,
-              name: formData.nombre,
-              email: formData.email,
-              role: formData.rol
-            };
-            localStorage.setItem('ares_current_user', JSON.stringify(updatedUser));
-            console.log('✅ LocalStorage actualizado:', updatedUser);
-            
-            // Forzar re-render del navbar
-            window.dispatchEvent(new Event('user-updated'));
-            console.log('✅ Evento user-updated disparado');
-          } else {
-            console.log('❌ No es el usuario actual, no actualizando localStorage');
-          }
+          // ✅ Sistema JWT moderno maneja automáticamente la actualización de datos del usuario
           
           await cargarUsuarios();
           setModalAbierto(false);

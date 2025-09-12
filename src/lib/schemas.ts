@@ -74,7 +74,7 @@ export const productoCargaSchema = z.object({
 });
 
 export const cargaMercaderiaSchema = z.object({
-  tipoCarga: z.enum(['stock', 'cliente', 'reparacion'], {
+  tipoCarga: z.enum(['stock', 'cliente', 'reparacion', 'repuestos'], {
     required_error: 'Debe seleccionar el tipo de carga'
   }),
   // Campos condicionales para cliente específico
@@ -122,6 +122,64 @@ export const ingresoMercaderiaSchema = z.object({
   path: ['numeroSerie'],
 });
 
+// ===============================================
+// ESQUEMAS PARA EL SISTEMA DE REPUESTOS
+// ===============================================
+
+// Eliminamos la segunda importación de z ya que ya está importada al inicio del archivo
+
+export const repuestoSchema = z.object({
+  id: z.string().optional(),
+  codigo_repuesto: z.string().optional(),
+  nombre: z.string().min(1, 'El nombre es requerido'),
+  descripcion: z.string().optional().nullable(),
+  marca: z.string().optional().nullable(),
+  modelo: z.string().optional().nullable(),
+  numero_serie: z.string().optional().nullable(),
+  lote: z.string().optional().nullable(),
+  cantidad_actual: z.number().min(0, 'La cantidad debe ser mayor o igual a 0'),
+  cantidad_minima: z.number().min(1, 'La cantidad mínima debe ser mayor a 0'),
+  unidad_medida: z.string().optional().default('unidad'),
+  estado: z.enum(['Disponible', 'Reservado', 'En_uso', 'Dañado', 'Vencido']).default('Disponible'),
+  categoria: z.string().optional().nullable(),
+  subcategoria: z.string().optional().nullable(),
+  proveedor: z.string().optional().nullable(),
+  precio_unitario: z.number().optional().nullable(),
+  moneda: z.string().optional().default('USD'),
+  fecha_ingreso: z.string().optional().nullable(),
+  fecha_vencimiento: z.string().optional().nullable(),
+  fotos: z.array(z.string()).optional().nullable(),
+  documentos: z.array(z.string()).optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+  observaciones: z.string().optional().nullable(),
+  activo: z.boolean().optional().default(true),
+});
+
+export const movimientoRepuestoSchema = z.object({
+  id: z.string().optional(),
+  repuesto_id: z.string().min(1, 'El ID del repuesto es requerido'),
+  tipo_movimiento: z.enum(['Entrada', 'Salida', 'Transferencia', 'Ajuste', 'Asignacion']),
+  cantidad: z.number().min(1, 'La cantidad debe ser mayor a 0'),
+  cantidad_anterior: z.number().min(0),
+  cantidad_nueva: z.number().min(0),
+  motivo: z.string().min(1, 'El motivo es requerido'),
+  referencia_externa: z.string().optional().nullable(),
+  usuario: z.string().optional().nullable(),
+  costo_unitario: z.number().optional().nullable(),
+  costo_total: z.number().optional().nullable(),
+  observaciones: z.string().optional().nullable(),
+});
+
+export const asignacionRepuestoSchema = z.object({
+  repuesto_id: z.string().min(1, 'El ID del repuesto es requerido'),
+  equipo_id: z.string().min(1, 'El ID del equipo es requerido'),
+  mantenimiento_id: z.string().optional().nullable(),
+  cantidad_usada: z.number().min(1, 'La cantidad usada debe ser mayor a 0'),
+  tecnico_responsable: z.string().optional().nullable(),
+  motivo_uso: z.string().min(1, 'El motivo de uso es requerido'),
+  observaciones: z.string().optional().nullable(),
+});
+
 export type ComponenteFormData = z.infer<typeof componenteFormSchema>;
 export type ComponenteData = z.infer<typeof componenteSchema>;
 export type EquipoFormData = z.infer<typeof equipoSchema>;
@@ -130,3 +188,6 @@ export type SubItemFormData = z.infer<typeof subItemSchema>;
 export type ProductoCargaFormData = z.infer<typeof productoCargaSchema>;
 export type CargaMercaderiaFormData = z.infer<typeof cargaMercaderiaSchema>;
 export type IngresoMercaderiaFormData = z.infer<typeof ingresoMercaderiaSchema>; 
+export type RepuestoFormData = z.infer<typeof repuestoSchema>;
+export type MovimientoRepuestoFormData = z.infer<typeof movimientoRepuestoSchema>;
+export type AsignacionRepuestoFormData = z.infer<typeof asignacionRepuestoSchema>;

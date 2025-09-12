@@ -9,6 +9,7 @@ import {
   TableCell,
   WidthType,
   BorderStyle,
+  ImageRun,
 } from "docx";
 import { Remision } from "@/types";
 
@@ -84,33 +85,34 @@ export class WordRemisionService {
             },
           },
           children: [
-            // Header con logo de ARES (placeholder por ahora)
+            // Header con logo real de ARES
             new Paragraph({
               children: [
-                new TextRun({
-                  text: "🏥 ARES PARAGUAY",
-                  font: "Calibri",
-                  size: 28,
-                  bold: true,
-                  color: "2B5797", // Azul corporativo
+                new ImageRun({
+                  data: await this.cargarLogoAres(),
+                  transformation: {
+                    width: 120,
+                    height: 60,
+                  },
+                  type: "png",
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { after: 120 },
+              spacing: { after: 180 },
             }),
 
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "Sistema de Trazabilidad para Entregas Médicas",
+                  text: "ARES PARAGUAY",
                   font: "Calibri",
-                  size: 18,
-                  italics: true,
-                  color: "666666",
+                  size: 24,
+                  bold: true,
+                  color: "2B5797", // Azul corporativo
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { after: 360 },
+              spacing: { after: 300 },
             }),
 
             // Título principal
@@ -326,64 +328,7 @@ export class WordRemisionService {
                     }),
                   ],
                 }),
-                ...(remision.contacto
-                  ? [
-                      new TableRow({
-                        children: [
-                          new TableCell({
-                            children: [
-                              new Paragraph({
-                                children: [
-                                  new TextRun({
-                                    text: "Contacto:",
-                                    bold: true,
-                                  }),
-                                ],
-                              }),
-                            ],
-                          }),
-                          new TableCell({
-                            children: [
-                              new Paragraph({
-                                children: [
-                                  new TextRun({ text: remision.contacto }),
-                                ],
-                              }),
-                            ],
-                          }),
-                        ],
-                      }),
-                    ]
-                  : []),
-                ...(remision.telefono
-                  ? [
-                      new TableRow({
-                        children: [
-                          new TableCell({
-                            children: [
-                              new Paragraph({
-                                children: [
-                                  new TextRun({
-                                    text: "Teléfono:",
-                                    bold: true,
-                                  }),
-                                ],
-                              }),
-                            ],
-                          }),
-                          new TableCell({
-                            children: [
-                              new Paragraph({
-                                children: [
-                                  new TextRun({ text: remision.telefono }),
-                                ],
-                              }),
-                            ],
-                          }),
-                        ],
-                      }),
-                    ]
-                  : []),
+
                 new TableRow({
                   children: [
                     new TableCell({
@@ -734,5 +679,33 @@ export class WordRemisionService {
     const año = fecha.getFullYear();
 
     return `Asunción, ${dia.toString().padStart(2, "0")} de ${mes} del ${año}`;
+  }
+
+  private static async cargarLogoAres(): Promise<Uint8Array> {
+    try {
+      // Usar fetch para cargar la imagen desde la carpeta public
+      const response = await fetch('/isologo-ares.png');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      return new Uint8Array(arrayBuffer);
+    } catch (error) {
+      console.warn('No se pudo cargar el logo de ARES:', error);
+      // Si falla, crear un pixel transparente como fallback
+      // Esto evita que el documento falle completamente
+      const fallbackImage = new Uint8Array([
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1 pixel
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, // RGBA, no compression
+        0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, // IDAT chunk
+        0x54, 0x78, 0x9C, 0x62, 0x00, 0x02, 0x00, 0x00, // transparent pixel data
+        0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, // end
+        0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, // IEND
+        0x42, 0x60, 0x82
+      ]);
+      return fallbackImage;
+    }
   }
 }

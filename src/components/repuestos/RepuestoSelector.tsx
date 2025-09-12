@@ -13,61 +13,59 @@ import {
 import { Check, ChevronsUpDown, Plus, Package, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  getProductosByMarca,
-  ProductoCatalogo,
-} from "@/lib/catalogo-productos";
+  getRepuestosByMarca,
+  Repuesto,
+} from "@/lib/repuestos-database";
 import { toast } from "sonner";
 
-interface ProductSelectorProps {
+interface RepuestoSelectorProps {
   marca: string;
   value: string;
   onChange: (value: string) => void;
   onCreateNew?: (nombre: string) => void;
   placeholder?: string;
   error?: string;
-  label?: string; // Nueva propiedad opcional para la etiqueta
 }
 
-export function ProductSelectorSimple({
+export function RepuestoSelector({
   marca,
   value,
   onChange,
   onCreateNew,
-  placeholder = "Seleccionar producto...",
+  placeholder = "Seleccionar repuesto...",
   error,
-  label = "Nombre del Producto *" // Valor por defecto
-}: ProductSelectorProps) {
+}: RepuestoSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [productos, setProductos] = useState<ProductoCatalogo[]>([]);
+  const [repuestos, setRepuestos] = useState<Repuesto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     if (marca && open) {
-      cargarProductosPorMarca();
+      cargarRepuestosPorMarca();
     }
   }, [marca, open]);
 
-  const cargarProductosPorMarca = async () => {
+  const cargarRepuestosPorMarca = async () => {
     if (!marca) return;
 
     try {
       setLoading(true);
-      console.log("🔄 Cargando productos para marca:", marca);
-      const productosData = await getProductosByMarca(marca);
-      console.log("✅ Productos cargados:", productosData);
-      setProductos(productosData);
+      console.log("🔄 Cargando repuestos para marca:", marca);
+      const repuestosData = await getRepuestosByMarca(marca);
+      console.log("✅ Repuestos cargados:", repuestosData);
+      setRepuestos(repuestosData);
     } catch (error) {
-      console.error("❌ Error cargando productos:", error);
-      toast.error("Error al cargar productos de la marca");
+      console.error("❌ Error cargando repuestos:", error);
+      toast.error("Error al cargar repuestos de la marca");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelect = (producto: ProductoCatalogo) => {
-    console.log("🎯 Producto seleccionado (simple):", producto.nombre);
-    onChange(producto.nombre);
+  const handleSelect = (repuesto: Repuesto) => {
+    console.log("🎯 Repuesto seleccionado:", repuesto.nombre);
+    onChange(repuesto.nombre);
     setOpen(false);
     setSearchValue("");
   };
@@ -80,17 +78,17 @@ export function ProductSelectorSimple({
     }
   };
 
-  const productoSeleccionado = productos.find((p) => p.nombre === value);
-  const productosDisponibles = productos.filter((p) =>
+  const repuestoSeleccionado = repuestos.find((p) => p.nombre === value);
+  const repuestosDisponibles = repuestos.filter((p) =>
     p.nombre.toLowerCase().includes(searchValue.toLowerCase())
   );
 
   if (!marca) {
     return (
       <div>
-        <Label>{label}</Label>
+        <Label>Nombre del Repuesto</Label>
         <div className="mt-1 p-3 border rounded-md bg-gray-50 text-gray-500 text-sm">
-          Primero selecciona una marca para ver los productos disponibles
+          Primero selecciona una marca para ver los repuestos disponibles
         </div>
       </div>
     );
@@ -98,7 +96,7 @@ export function ProductSelectorSimple({
 
   return (
     <div>
-      <Label>{label}</Label>
+      <Label>Nombre del Repuesto *</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -114,10 +112,10 @@ export function ProductSelectorSimple({
           >
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-gray-400" />
-              {productoSeleccionado ? (
+              {repuestoSeleccionado ? (
                 <div className="flex items-center gap-2">
                   <span className="text-gray-900">
-                    {productoSeleccionado.nombre}
+                    {repuestoSeleccionado.nombre}
                   </span>
                   <Badge variant="outline" className="text-xs">
                     {marca}
@@ -135,7 +133,7 @@ export function ProductSelectorSimple({
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
               <Input
-                placeholder={`Buscar productos de ${marca}...`}
+                placeholder={`Buscar repuestos de ${marca}...`}
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="pl-8"
@@ -146,12 +144,12 @@ export function ProductSelectorSimple({
           <div className="max-h-[300px] overflow-y-auto">
             {loading ? (
               <div className="p-4 text-center text-sm text-gray-500">
-                Cargando productos...
+                Cargando repuestos...
               </div>
-            ) : productosDisponibles.length === 0 ? (
+            ) : repuestosDisponibles.length === 0 ? (
               <div className="p-4 text-center">
                 <div className="text-sm text-gray-500 mb-3">
-                  No se encontraron productos de "{marca}"
+                  No se encontraron repuestos de "{marca}"
                 </div>
                 {searchValue.trim() && onCreateNew && (
                   <Button
@@ -167,35 +165,38 @@ export function ProductSelectorSimple({
             ) : (
               <div className="p-1">
                 <div className="text-xs font-medium text-gray-500 px-2 py-1 mb-1">
-                  Productos de {marca}
+                  Repuestos de {marca}
                 </div>
-                {productosDisponibles.map((producto) => (
+                {repuestosDisponibles.map((repuesto) => (
                   <div
-                    key={producto.id}
-                    onClick={() => handleSelect(producto)}
+                    key={repuesto.id}
+                    onClick={() => handleSelect(repuesto)}
                     className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer rounded-sm"
                   >
                     <Check
                       className={cn(
                         "h-4 w-4",
-                        value === producto.nombre ? "opacity-100" : "opacity-0"
+                        value === repuesto.nombre ? "opacity-100" : "opacity-0"
                       )}
                     />
                     <div className="flex-1">
                       <div className="font-medium text-sm">
-                        {producto.nombre}
+                        {repuesto.nombre}
                       </div>
-                      {producto.descripcion && (
+                      {repuesto.descripcion && (
                         <div className="text-xs text-gray-500">
-                          {producto.descripcion}
+                          {repuesto.descripcion}
                         </div>
                       )}
+                      <div className="text-xs text-gray-400">
+                        Stock: {repuesto.cantidad_actual}
+                      </div>
                     </div>
                   </div>
                 ))}
 
                 {searchValue.trim() &&
-                  !productosDisponibles.some(
+                  !repuestosDisponibles.some(
                     (p) => p.nombre.toLowerCase() === searchValue.toLowerCase()
                   ) &&
                   onCreateNew && (
@@ -217,9 +218,9 @@ export function ProductSelectorSimple({
 
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
 
-      {productoSeleccionado?.descripcion && (
+      {repuestoSeleccionado?.descripcion && (
         <p className="text-gray-500 text-xs mt-1">
-          {productoSeleccionado.descripcion}
+          {repuestoSeleccionado.descripcion}
         </p>
       )}
     </div>

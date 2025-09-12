@@ -64,11 +64,15 @@ export function UnauthorizedAccess({
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-            <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          <div className="mx-auto mb-6">
+            <img 
+              src="/404.png" 
+              alt="Access Denied"
+              className="mx-auto h-32 w-auto object-contain"
+            />
           </div>
           <CardTitle className="text-xl font-semibold text-foreground">
-            Access Denied
+            Acceso Denegado
           </CardTitle>
           <CardDescription className="text-muted-foreground">
             {message}
@@ -180,14 +184,18 @@ interface UnauthorizedMessageProps {
 }
 
 export function UnauthorizedMessage({ 
-  message = 'You are not authorized to view this content',
+  message = 'No tienes autorización para ver este contenido',
   className = ''
 }: UnauthorizedMessageProps) {
   return (
     <div className={`flex items-center justify-center p-8 ${className}`}>
       <div className="text-center">
-        <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-medium text-foreground mb-2">Access Denied</h3>
+        <img 
+          src="/404.png" 
+          alt="Access Denied"
+          className="mx-auto h-24 w-auto object-contain mb-6"
+        />
+        <h3 className="text-lg font-medium text-foreground mb-2">Acceso Denegado</h3>
         <p className="text-muted-foreground">{message}</p>
       </div>
     </div>

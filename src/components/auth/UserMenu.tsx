@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppStore } from '@/store/useAppStore';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { 
   User, 
@@ -17,17 +17,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export function UserMenu() {
   const router = useRouter();
-  const { getCurrentUser, logout } = useAppStore();
+  const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   
-  const currentUser = getCurrentUser();
+  if (!user) return null;
   
-  if (!currentUser) return null;
-  
-  const handleLogout = () => {
-    logout();
-    toast.success('Sesión cerrada exitosamente');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Sesión cerrada exitosamente');
+      // AuthProvider already handles redirect to /login
+    } catch (error) {
+      toast.error('Error al cerrar sesión');
+    }
   };
   
   const getRoleBadge = (rol: string) => {
@@ -57,15 +59,15 @@ export function UserMenu() {
       >
         <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
           <span className="text-white font-semibold text-sm">
-            {currentUser.nombre.charAt(0).toUpperCase()}
+            {user.nombre.charAt(0).toUpperCase()}
           </span>
         </div>
         <div className="hidden md:block text-left">
           <div className="text-sm font-medium text-gray-900">
-            {currentUser.nombre}
+            {user.nombre}
           </div>
           <div className="text-xs text-gray-500 capitalize">
-            {currentUser.rol}
+            {user.rol}
           </div>
         </div>
         <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -93,36 +95,29 @@ export function UserMenu() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-semibold text-lg">
-                      {currentUser.nombre.charAt(0).toUpperCase()}
+                      {user.nombre.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900">
-                      {currentUser.nombre}
+                      {user.nombre}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {currentUser.email}
+                      {user.email}
                     </div>
                     <div className="mt-1">
-                      {getRoleBadge(currentUser.rol)}
+                      {getRoleBadge(user.rol)}
                     </div>
                   </div>
                 </div>
               </div>
               
-              {/* Last Access */}
-              {currentUser.ultimoAcceso && (
-                <div className="px-4 py-2 border-b bg-gray-50">
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <Clock className="w-3 h-3" />
-                    Último acceso: {new Date(currentUser.ultimoAcceso).toLocaleString('es-PY')}
-                  </div>
-                </div>
-              )}
+              {/* Last Access - Comentado temporalmente ya que el JWT no incluye ultimoAcceso */}
+              {/* TODO: Implementar tracking de último acceso en JWT system */}
               
               {/* Menu Items */}
               <div className="p-2">
-                {currentUser.rol === 'admin' && (
+                {user.rol === 'super_admin' && (
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-left"
