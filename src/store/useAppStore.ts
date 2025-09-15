@@ -717,12 +717,23 @@ export const useAppStore = create<AppState>()(
 
         deleteCarga: async (cargaId: string) => {
           try {
+            // Optimistic update: remove from local state immediately
+            const prev = get().cargasMercaderia || [];
+            set({ cargasMercaderia: prev.filter((c) => c.id !== cargaId) });
+
             await deleteCargaMercaderia(cargaId);
+
+            // Refresh from server to ensure consistency
             const cargas = await getAllCargas();
             set({ cargasMercaderia: cargas });
             console.log("✅ Carga eliminada exitosamente");
           } catch (error) {
             console.error("❌ Error deleting carga:", error);
+            // On failure, reload from server to revert optimistic update
+            try {
+              const cargas = await getAllCargas();
+              set({ cargasMercaderia: cargas });
+            } catch {}
             throw error;
           }
         },

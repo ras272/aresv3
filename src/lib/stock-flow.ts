@@ -58,6 +58,15 @@ function determinarCarpetaYUbicacion(marca: string, tipoCarga: string): CarpetaI
         tipoDestino: 'reparacion'
       };
 
+    case 'repuestos':
+      // Para repuestos, no procesar en stock general, solo en el sistema de repuestos
+      return {
+        carpetaPrincipal: 'Repuestos',
+        ubicacionFisica: 'Inventario Técnico - Repuestos',
+        rutaCompleta: 'Repuestos',
+        tipoDestino: 'repuestos'
+      };
+
     default:
       return {
         carpetaPrincipal: marcaNormalizada,
@@ -97,6 +106,12 @@ function normalizarNombreMarca(marca: string): string {
 
 export async function procesarProductoParaStock(cargaId: string, producto: any, tipoCarga: string = 'stock') {
   const startTime = Date.now();
+
+  // 🎯 SI EL TIPO DE CARGA ES "REPUESTOS", NO PROCESAR EN STOCK GENERAL
+  if (tipoCarga === 'repuestos') {
+    console.log('⏭️ Producto tipo "repuestos" - no se procesa en stock general, solo en sistema de repuestos');
+    return;
+  }
 
   return await ejecutarConManejoErrores(async () => {
     console.log('🔄 Procesando producto para stock con organización automática...', {
