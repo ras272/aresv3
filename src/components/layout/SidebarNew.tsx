@@ -103,13 +103,6 @@ const navigationSections: NavigationSection[] = [
         permission: "productos",
       },
       {
-        name: "Definición de Precios",
-        href: "/definicion-precios",
-        icon: Zap,
-        permission: "productos",
-        badge: "new",
-      },
-      {
         name: "Stock General",
         href: "/stock",
         icon: Package,
@@ -156,7 +149,6 @@ const navigationSections: NavigationSection[] = [
         icon: History,
         permission: "transacciones-sortly",
         badge: "new",
-        blocked: true,
       },
     ],
   },
