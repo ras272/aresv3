@@ -1528,10 +1528,21 @@ export const useAppStore = create<AppState>()(
               permiteFraccionamiento: producto.permite_fraccionamiento || false,
               unidadesPorCaja: producto.unidades_por_caja || 1,
               
+              // 💰 CAMPOS DE DEFINICIÓN DE PRECIOS
+              precioBase: producto.precio_base || 0,
+              monedaBase: producto.moneda_base || 'USD',
+              factorConversion: producto.factor_conversion || 1,
+              costoFlete: producto.costo_flete || 0,
+              costoTransporte: producto.costo_transporte || 0,
+              otrosCostos: producto.otros_costos || 0,
+              margenUtilidad: producto.margen_utilidad || 0,
+              ivaPercent: producto.iva_percent || 0,
+              precioVentaNeto: producto.precio_venta_neto || 0,
+              precioFinalLista: producto.precio_final_lista || 0,
+              
               // 💸 CAMPOS EXISTENTES
               precioMinimo: producto.precio_minimo,
               precioMaximo: producto.precio_maximo,
-              margenUtilidad: producto.margen_utilidad,
               disponibleParaVenta: producto.disponible_para_venta,
               activo: producto.activo,
               createdAt: producto.created_at,
@@ -1569,10 +1580,21 @@ export const useAppStore = create<AppState>()(
                 permite_fraccionamiento: productoData.permiteFraccionamiento || false,
                 unidades_por_caja: productoData.unidadesPorCaja || 1,
                 
+                // 💰 CAMPOS DE DEFINICIÓN DE PRECIOS
+                precio_base: productoData.precioBase || 0,
+                moneda_base: productoData.monedaBase || 'USD',
+                factor_conversion: productoData.factorConversion || 1,
+                costo_flete: productoData.costoFlete || 0,
+                costo_transporte: productoData.costoTransporte || 0,
+                otros_costos: productoData.otrosCostos || 0,
+                margen_utilidad: productoData.margenUtilidad || 0,
+                iva_percent: productoData.ivaPercent || 0,
+                precio_venta_neto: productoData.precioVentaNeto || 0,
+                precio_final_lista: productoData.precioFinalLista || 0,
+                
                 // 💸 CAMPOS EXISTENTES
                 precio_minimo: productoData.precioMinimo,
                 precio_maximo: productoData.precioMaximo,
-                margen_utilidad: productoData.margenUtilidad,
                 disponible_para_venta: productoData.disponibleParaVenta,
                 activo: productoData.activo,
               })
@@ -1601,10 +1623,21 @@ export const useAppStore = create<AppState>()(
               permiteFraccionamiento: data.permite_fraccionamiento,
               unidadesPorCaja: data.unidades_por_caja,
               
+              // 💰 DEFINICIÓN DE PRECIOS
+              precioBase: data.precio_base,
+              monedaBase: data.moneda_base,
+              factorConversion: data.factor_conversion,
+              costoFlete: data.costo_flete,
+              costoTransporte: data.costo_transporte,
+              otrosCostos: data.otros_costos,
+              margenUtilidad: data.margen_utilidad,
+              ivaPercent: data.iva_percent,
+              precioVentaNeto: data.precio_venta_neto,
+              precioFinalLista: data.precio_final_lista,
+              
               // 💸 EXISTENTES
               precioMinimo: data.precio_minimo,
               precioMaximo: data.precio_maximo,
-              margenUtilidad: data.margen_utilidad,
               disponibleParaVenta: data.disponible_para_venta,
               activo: data.activo,
               createdAt: data.created_at,
@@ -1659,6 +1692,18 @@ export const useAppStore = create<AppState>()(
             // 📦 CAMPOS DE FRACCIONAMIENTO
             if (updates.permiteFraccionamiento !== undefined) updateData.permite_fraccionamiento = updates.permiteFraccionamiento;
             if (updates.unidadesPorCaja !== undefined) updateData.unidades_por_caja = updates.unidadesPorCaja;
+            
+            // 💰 CAMPOS DE DEFINICIÓN DE PRECIOS
+            if (updates.precioBase !== undefined) updateData.precio_base = updates.precioBase;
+            if (updates.monedaBase !== undefined) updateData.moneda_base = updates.monedaBase;
+            if (updates.factorConversion !== undefined) updateData.factor_conversion = updates.factorConversion;
+            if (updates.costoFlete !== undefined) updateData.costo_flete = updates.costoFlete;
+            if (updates.costoTransporte !== undefined) updateData.costo_transporte = updates.costoTransporte;
+            if (updates.otrosCostos !== undefined) updateData.otros_costos = updates.otrosCostos;
+            if (updates.margenUtilidad !== undefined) updateData.margen_utilidad = updates.margenUtilidad;
+            if (updates.ivaPercent !== undefined) updateData.iva_percent = updates.ivaPercent;
+            if (updates.precioVentaNeto !== undefined) updateData.precio_venta_neto = updates.precioVentaNeto;
+            if (updates.precioFinalLista !== undefined) updateData.precio_final_lista = updates.precioFinalLista;
             
             // Campos de rango de precios
             if (updates.precioMinimo !== undefined) updateData.precio_minimo = updates.precioMinimo;

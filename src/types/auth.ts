@@ -301,8 +301,9 @@ export const ROLE_PERMISSIONS = {
       "calendario.view", "calendario.create_event", "calendario.edit_event",
       "servtec.view", "servtec.create", "servtec.edit",
       "reportes.view", "reportes.technical",
+      "repuestos.view", "repuestos.assign", // Agregar permisos de repuestos
     ] as Permission[],
-    routes: ["/", "/equipos", "/inventario-tecnico", "/calendario", "/servtec", "/reportes"],
+    routes: ["/", "/equipos", "/inventario-tecnico", "/calendario", "/servtec", "/reportes", "/repuestos"], // Agregar ruta de repuestos
     features: {
       dashboard: { view: true },
       usuarios: { view: false, create: false, edit: false, delete: false, activate: false },

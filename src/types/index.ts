@@ -374,6 +374,18 @@ export interface CatalogoProducto {
   permiteFraccionamiento?: boolean;
   unidadesPorCaja?: number;
   
+  // 💰 CAMPOS DE DEFINICIÓN DE PRECIOS
+  precioBase?: number;
+  monedaBase?: string;
+  factorConversion?: number;
+  costoFlete?: number;
+  costoTransporte?: number;
+  otrosCostos?: number;
+  margenUtilidad?: number;
+  ivaPercent?: number;
+  precioVentaNeto?: number;
+  precioFinalLista?: number;
+  
   // 💸 RANGOS DE PRECIO Y UTILIDAD
   precioMinimo?: number;
   precioMaximo?: number;

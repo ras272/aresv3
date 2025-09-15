@@ -80,13 +80,6 @@ const navigationSections: NavigationSection[] = [
         permission: "equipos",
       },
       {
-        name: "Nuevo Equipo",
-        href: "/equipos/nuevo",
-        icon: Plus,
-        permission: "equipos",
-        requiresWrite: true,
-      },
-      {
         name: "Calendario",
         href: "/calendario",
         icon: Calendar,
@@ -108,6 +101,13 @@ const navigationSections: NavigationSection[] = [
         href: "/productos",
         icon: Package,
         permission: "productos",
+      },
+      {
+        name: "Definición de Precios",
+        href: "/definicion-precios",
+        icon: Zap,
+        permission: "productos",
+        badge: "new",
       },
       {
         name: "Stock General",
@@ -156,6 +156,7 @@ const navigationSections: NavigationSection[] = [
         icon: History,
         permission: "transacciones-sortly",
         badge: "new",
+        blocked: true,
       },
     ],
   },
@@ -223,7 +224,7 @@ export function SidebarNew() {
       productos: "productos.view",
       servtec: "servtec.view",
       repuestos: "repuestos.view",
-      "transacciones-sortly": "dashboard.view",
+      "transacciones-sortly": "transacciones-sortly.view",
     };
 
     const mappedPermission = permissionMap[permission] || permission;
