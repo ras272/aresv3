@@ -315,7 +315,7 @@ export interface Remision {
   direccionEntrega: string;      // Dirección específica
   contacto?: string;             // Persona de contacto
   telefono?: string;             // Teléfono de contacto
-  tipoRemision: 'Instalación' | 'Mantenimiento' | 'Reparación' | 'Entrega';
+  tipoRemision: 'Instalación' | 'Mantenimiento' | 'Reparación' | 'Entrega' | 'Random'; // 🆕 AGREGADO: Random
   tecnicoResponsable: string;    // Siempre "Javier Lopez"
   productos: ProductoRemision[];
   descripcionGeneral?: string;   // Observaciones generales

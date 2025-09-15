@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import ModalRemision from '@/components/remisiones/ModalRemision';
+import ModalRemisionRandom from '@/components/remisiones/ModalRemisionRandom';
 import ModalEliminarRemision from '@/components/remisiones/ModalEliminarRemision';
 
 import {
@@ -21,7 +22,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  Download
+  Download,
+  Shuffle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -37,13 +39,15 @@ export default function RemisionesPage() {
   } = useAppStore();
 
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalRandomAbierto, setModalRandomAbierto] = useState(false);
   const [modalVerRemision, setModalVerRemision] = useState(false);
   const [modalEditarRemision, setModalEditarRemision] = useState(false);
+  const [modalEditarRandomRemision, setModalEditarRandomRemision] = useState(false);
   const [modalEliminarRemision, setModalEliminarRemision] = useState(false);
   const [remisionSeleccionada, setRemisionSeleccionada] = useState<Remision | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
-  const [pestañaActiva, setPestañaActiva] = useState<'remisiones'>('remisiones');
+  const [pestañaActiva, setPestañaActiva] = useState<'remisiones' | 'random'>('remisiones');
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -52,6 +56,10 @@ export default function RemisionesPage() {
 
   // Filtrar remisiones
   const remisionesFiltradas = getRemisiones().filter(remision => {
+    // Filtrar por tipo de remisión según la pestaña activa
+    const esRemisionRandom = remision.tipoRemision === 'Random';
+    const coincideTipo = pestañaActiva === 'random' ? esRemisionRandom : !esRemisionRandom;
+    
     const coincideBusqueda =
       remision.numeroRemision.toLowerCase().includes(busqueda.toLowerCase()) ||
       remision.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -63,7 +71,7 @@ export default function RemisionesPage() {
 
     const coincideEstado = filtroEstado === 'todos' || remision.estado === filtroEstado;
 
-    return coincideBusqueda && coincideEstado;
+    return coincideTipo && coincideBusqueda && coincideEstado;
   });
 
   // Obtener color del badge según estado
@@ -87,7 +95,11 @@ export default function RemisionesPage() {
   // Editar remisión
   const handleEditarRemision = (remision: Remision) => {
     setRemisionSeleccionada(remision);
-    setModalEditarRemision(true);
+    if (remision.tipoRemision === 'Random') {
+      setModalEditarRandomRemision(true);
+    } else {
+      setModalEditarRemision(true);
+    }
   };
 
   // Descargar remisión como Word
@@ -168,8 +180,14 @@ export default function RemisionesPage() {
                 </p>
               </div>
               <Button
-                onClick={() => setModalAbierto(true)}
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => {
+                  if (pestañaActiva === 'random') {
+                    setModalRandomAbierto(true);
+                  } else {
+                    setModalAbierto(true);
+                  }
+                }}
+                className={pestañaActiva === 'random' ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-blue-600 text-white hover:bg-blue-700"}
               >
                 <Plus className="w-5 h-5 mr-2" />
                 Nueva Remisión
@@ -217,38 +235,58 @@ export default function RemisionesPage() {
                     <FileText className="h-4 w-4" />
                     <span>Remisiones Normales</span>
                   </button>
-
+                  <button
+                    onClick={() => setPestañaActiva('random')}
+                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      pestañaActiva === 'random'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Shuffle className="h-4 w-4" />
+                    <span>Remisiones Personalizadas</span>
+                  </button>
                 </nav>
               </div>
 
               {/* Contenido de pestañas */}
-              {pestañaActiva === 'remisiones' && (
-                <div className="p-6">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Buscar por número, cliente, contacto o productos..."
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <select
-                      value={filtroEstado}
-                      onChange={(e) => setFiltroEstado(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="todos">Todos los estados</option>
-                      <option value="Borrador">Borrador</option>
-                      <option value="Confirmada">Confirmada</option>
-                      <option value="En tránsito">En tránsito</option>
-                      <option value="Entregada">Entregada</option>
-                      <option value="Cancelada">Cancelada</option>
-                    </select>
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Buscar por número, cliente, contacto o productos..."
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
+                  <select
+                    value={filtroEstado}
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="todos">Todos los estados</option>
+                    <option value="Borrador">Borrador</option>
+                    <option value="Confirmada">Confirmada</option>
+                    <option value="En tránsito">En tránsito</option>
+                    <option value="Entregada">Entregada</option>
+                    <option value="Cancelada">Cancelada</option>
+                  </select>
                 </div>
-              )}
+                
+                {/* Banner informativo para remisiones random */}
+                {pestañaActiva === 'random' && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <div className="flex items-center">
+                      <Shuffle className="h-5 w-5 text-yellow-600 mr-2" />
+                      <p className="text-sm text-yellow-700">
+                        Las remisiones personalizadas no afectan el stock de la empresa y pueden incluir productos o servicios no relacionados directamente con el inventario.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -260,19 +298,31 @@ export default function RemisionesPage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {busqueda || filtroEstado !== 'todos'
                     ? 'No se encontraron remisiones'
-                    : 'No hay remisiones creadas'
+                    : pestañaActiva === 'random'
+                    ? 'No hay remisiones personalizadas creadas'
+                    : 'No hay remisiones normales creadas'
                   }
                 </h3>
                 <p className="text-gray-500 mb-6">
                   {busqueda || filtroEstado !== 'todos'
                     ? 'Intenta ajustar los filtros de búsqueda'
+                    : pestañaActiva === 'random'
+                    ? 'Crea tu primera remisión personalizada para comenzar'
                     : 'Crea tu primera remisión digital para comenzar'
                   }
                 </p>
-                {!busqueda && filtroEstado === 'todos' && (
-                  <Button onClick={() => setModalAbierto(true)}>
+                {!(busqueda || filtroEstado !== 'todos') && (
+                  <Button onClick={() => {
+                    if (pestañaActiva === 'random') {
+                      setModalRandomAbierto(true);
+                    } else {
+                      setModalAbierto(true);
+                    }
+                  }}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Crear Primera Remisión
+                    {pestañaActiva === 'random' 
+                      ? 'Crear Primera Remisión Personalizada' 
+                      : 'Crear Primera Remisión'}
                   </Button>
                 )}
               </CardContent>
@@ -296,6 +346,12 @@ export default function RemisionesPage() {
                             <Badge className={getEstadoColor(remision.estado)}>
                               {remision.estado}
                             </Badge>
+                            {remision.tipoRemision === 'Random' && (
+                              <Badge className="bg-purple-100 text-purple-800">
+                                <Shuffle className="w-3 h-3 mr-1" />
+                                Personalizada
+                              </Badge>
+                            )}
                           </CardTitle>
                           <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
@@ -412,10 +468,16 @@ export default function RemisionesPage() {
           )}
         </div>
 
-        {/* Modal de nueva remisión */}
+        {/* Modal de nueva remisión normal */}
         <ModalRemision
           isOpen={modalAbierto}
           onClose={() => setModalAbierto(false)}
+        />
+
+        {/* Modal de nueva remisión random */}
+        <ModalRemisionRandom
+          isOpen={modalRandomAbierto}
+          onClose={() => setModalRandomAbierto(false)}
         />
 
         {/* Modal para ver remisión */}
@@ -447,7 +509,15 @@ export default function RemisionesPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">Tipo:</span>
-                        <span>{remisionSeleccionada.tipoRemision}</span>
+                        <span className="flex items-center">
+                          {remisionSeleccionada.tipoRemision}
+                          {remisionSeleccionada.tipoRemision === 'Random' && (
+                            <Badge className="ml-2 bg-purple-100 text-purple-800">
+                              <Shuffle className="w-3 h-3 mr-1" />
+                              Personalizada
+                            </Badge>
+                          )}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">Estado:</span>
@@ -578,11 +648,21 @@ export default function RemisionesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal para editar remisión */}
+        {/* Modal para editar remisión normal */}
         <ModalRemision
           isOpen={modalEditarRemision}
           onClose={() => {
             setModalEditarRemision(false);
+            setRemisionSeleccionada(null);
+          }}
+          remisionParaEditar={remisionSeleccionada}
+        />
+
+        {/* Modal para editar remisión random */}
+        <ModalRemisionRandom
+          isOpen={modalEditarRandomRemision}
+          onClose={() => {
+            setModalEditarRandomRemision(false);
             setRemisionSeleccionada(null);
           }}
           remisionParaEditar={remisionSeleccionada}

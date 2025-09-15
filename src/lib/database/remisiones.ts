@@ -15,7 +15,7 @@ export interface RemisionInput {
   direccionEntrega: string;
   contacto?: string;
   telefono?: string;
-  tipoRemision: 'Instalación' | 'Mantenimiento' | 'Reparación' | 'Entrega';
+  tipoRemision: 'Instalación' | 'Mantenimiento' | 'Reparación' | 'Entrega' | 'Random';
   tecnicoResponsable: string;
   productos: Array<{
     componenteId: string;
@@ -49,7 +49,7 @@ export interface Remision {
   direccionEntrega: string;
   contacto?: string;
   telefono?: string;
-  tipoRemision: 'Instalación' | 'Mantenimiento' | 'Reparación' | 'Entrega';
+  tipoRemision: 'Instalación' | 'Mantenimiento' | 'Reparación' | 'Entrega' | 'Random';
   tecnicoResponsable: string;
   productos: Array<{
     id: string;
@@ -521,27 +521,62 @@ export async function generateNumeroRemision(): Promise<string> {
   try {
     logger.debug('Generating remision number', 'generateNumeroRemision');
 
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-
-    const todayPrefix = `REM-${year}${month}${day}`;
-
+    // Buscar el último número de remisión generado
     const { data, error } = await supabase
       .from('remisiones')
       .select('numero_remision')
-      .like('numero_remision', `${todayPrefix}%`)
       .order('numero_remision', { ascending: false })
       .limit(1);
 
     if (error) throw error;
 
-    const nextNumber = data.length > 0
-      ? parseInt(data[0].numero_remision.split('-')[2]) + 1
-      : 1;
+    let nextNumber: number;
+    
+    if (data.length > 0) {
+      // Extraer el número del último registro
+      const lastNumber = data[0].numero_remision;
+      const lastNumberMatch = lastNumber.match(/^REM-(\d+)$/);
+      
+      if (lastNumberMatch) {
+        // Si el formato es el nuevo (REM-XXXX)
+        nextNumber = parseInt(lastNumberMatch[1]) + 1;
+      } else {
+        // Si el formato es el antiguo (REM-YYYYMMDD-XXX), convertir al nuevo formato
+        // Buscar el número más alto entre todos los formatos
+        const { data: allData, error: allError } = await supabase
+          .from('remisiones')
+          .select('numero_remision');
+        
+        if (allError) throw allError;
+        
+        let maxNumber = 2753; // Comenzar desde 2754 según solicitud del usuario
+        for (const remision of allData) {
+          const numberMatch = remision.numero_remision.match(/^REM-(\d+)$/);
+          if (numberMatch) {
+            const num = parseInt(numberMatch[1]);
+            if (num > maxNumber) maxNumber = num;
+          } else {
+            // Formato antiguo REM-YYYYMMDD-XXX
+            const oldFormatMatch = remision.numero_remision.match(/^REM-\d{8}-(\d{3})$/);
+            if (oldFormatMatch) {
+              const num = parseInt(oldFormatMatch[1]);
+              if (num > maxNumber) maxNumber = num;
+            }
+          }
+        }
+        nextNumber = maxNumber + 1;
+      }
+    } else {
+      // Si no hay remisiones, comenzar desde 2754
+      nextNumber = 2754;
+    }
 
-    const numeroRemision = `${todayPrefix}-${String(nextNumber).padStart(3, '0')}`;
+    // Asegurarse de que el número no sea menor que 2754
+    if (nextNumber < 2754) {
+      nextNumber = 2754;
+    }
+
+    const numeroRemision = `REM-${nextNumber}`;
     
     logger.debug('Generated remision number', 'generateNumeroRemision', { numeroRemision });
     return numeroRemision;

@@ -18,6 +18,19 @@ export class WordRemisionService {
     // Formatear la fecha en español
     const fechaFormateada = this.formatearFecha(remision.fecha);
 
+    // Depuración: Mostrar información de la remisión
+    console.log('Generando documento para remisión:', {
+      tipo: remision.tipoRemision,
+      numero: remision.numeroRemision,
+      cliente: remision.cliente,
+      productos: remision.productos.map(p => ({
+        nombre: p.nombre,
+        cantidad: p.cantidadSolicitada,
+        marca: p.marca,
+        modelo: p.modelo
+      }))
+    });
+
     const doc = new Document({
       styles: {
         paragraphStyles: [
@@ -77,10 +90,10 @@ export class WordRemisionService {
           properties: {
             page: {
               margin: {
-                top: 1440, // 1 inch
-                right: 1440,
-                bottom: 1440,
-                left: 1440,
+                top: 720, // 0.5 inch
+                right: 720,
+                bottom: 720,
+                left: 720,
               },
             },
           },
@@ -91,14 +104,14 @@ export class WordRemisionService {
                 new ImageRun({
                   data: await this.cargarLogoAres(),
                   transformation: {
-                    width: 120,
-                    height: 60,
+                    width: 100,
+                    height: 50,
                   },
                   type: "png",
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { after: 180 },
+              spacing: { after: 120 },
             }),
 
             new Paragraph({
@@ -112,21 +125,21 @@ export class WordRemisionService {
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { after: 300 },
+              spacing: { after: 180 },
             }),
 
             // Título principal
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "REMISIÓN DIGITAL",
+                  text: "REMISIÓN",
                   font: "Calibri",
                   size: 32,
                   bold: true,
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { after: 240 },
+              spacing: { after: 180 },
             }),
 
             // Información básica de la remisión
@@ -163,7 +176,7 @@ export class WordRemisionService {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: remision.numeroRemision }),
+                            new TextRun({ text: remision.numeroRemision || "N/A" }),
                           ],
                         }),
                       ],
@@ -191,31 +204,6 @@ export class WordRemisionService {
                     }),
                   ],
                 }),
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({
-                              text: "Tipo de Remisión:",
-                              bold: true,
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: remision.tipoRemision }),
-                          ],
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
                 ...(remision.numeroFactura
                   ? [
                       new TableRow({
@@ -236,7 +224,7 @@ export class WordRemisionService {
                             children: [
                               new Paragraph({
                                 children: [
-                                  new TextRun({ text: remision.numeroFactura }),
+                                  new TextRun({ text: remision.numeroFactura || "" }),
                                 ],
                               }),
                             ],
@@ -251,116 +239,7 @@ export class WordRemisionService {
             // Espacio
             new Paragraph({
               children: [new TextRun({ text: "" })],
-              spacing: { after: 240 },
-            }),
-
-            // Información del cliente
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "INFORMACIÓN DEL CLIENTE",
-                  font: "Calibri",
-                  size: 24,
-                  bold: true,
-                }),
-              ],
               spacing: { after: 120 },
-            }),
-
-            new Table({
-              width: {
-                size: 100,
-                type: WidthType.PERCENTAGE,
-              },
-              borders: {
-                top: { style: BorderStyle.SINGLE, size: 1 },
-                bottom: { style: BorderStyle.SINGLE, size: 1 },
-                left: { style: BorderStyle.SINGLE, size: 1 },
-                right: { style: BorderStyle.SINGLE, size: 1 },
-                insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-                insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-              },
-              rows: [
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: "Cliente:", bold: true }),
-                          ],
-                        }),
-                      ],
-                      width: { size: 30, type: WidthType.PERCENTAGE },
-                    }),
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [new TextRun({ text: remision.cliente })],
-                        }),
-                      ],
-                      width: { size: 70, type: WidthType.PERCENTAGE },
-                    }),
-                  ],
-                }),
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({
-                              text: "Dirección de Entrega:",
-                              bold: true,
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: remision.direccionEntrega }),
-                          ],
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({
-                              text: "Técnico Responsable:",
-                              bold: true,
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                    new TableCell({
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: remision.tecnicoResponsable }),
-                          ],
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-
-            // Espacio
-            new Paragraph({
-              children: [new TextRun({ text: "" })],
-              spacing: { after: 240 },
             }),
 
             // Productos
@@ -459,7 +338,7 @@ export class WordRemisionService {
                             new Paragraph({
                               children: [
                                 new TextRun({
-                                  text: producto.cantidadSolicitada.toString(),
+                                  text: (producto.cantidadSolicitada || 1).toString(),
                                 }),
                               ],
                             }),
@@ -469,7 +348,7 @@ export class WordRemisionService {
                           children: [
                             new Paragraph({
                               children: [
-                                new TextRun({ text: producto.nombre }),
+                                new TextRun({ text: producto.nombre || "Producto sin nombre" }),
                               ],
                             }),
                           ],
@@ -479,7 +358,7 @@ export class WordRemisionService {
                             new Paragraph({
                               children: [
                                 new TextRun({
-                                  text: `${producto.marca} ${producto.modelo}`,
+                                  text: `${producto.marca || ""} ${producto.modelo || ""}`.trim() || "-",
                                 }),
                               ],
                             }),
@@ -520,7 +399,7 @@ export class WordRemisionService {
               ? [
                   new Paragraph({
                     children: [new TextRun({ text: "" })],
-                    spacing: { after: 240 },
+                    spacing: { after: 120 },
                   }),
                   new Paragraph({
                     children: [
@@ -536,13 +415,13 @@ export class WordRemisionService {
                   new Paragraph({
                     children: [
                       new TextRun({
-                        text: remision.descripcionGeneral,
+                        text: remision.descripcionGeneral || "",
                         font: "Calibri",
                         size: 22,
                       }),
                     ],
                     alignment: AlignmentType.JUSTIFIED,
-                    spacing: { after: 480 },
+                    spacing: { after: 240 },
                   }),
                 ]
               : []),
@@ -550,7 +429,7 @@ export class WordRemisionService {
             // Espacio para firmas
             new Paragraph({
               children: [new TextRun({ text: "" })],
-              spacing: { after: 960 },
+              spacing: { after: 480 },
             }),
 
             // Firmas
@@ -583,13 +462,17 @@ export class WordRemisionService {
                             new TextRun({
                               text: "Firma del Técnico",
                               bold: true,
+                              size: 20,
                             }),
                           ],
                           alignment: AlignmentType.CENTER,
                         }),
                         new Paragraph({
                           children: [
-                            new TextRun({ text: remision.tecnicoResponsable }),
+                            new TextRun({ 
+                              text: remision.tecnicoResponsable || "Técnico no especificado",
+                              size: 20,
+                            }),
                           ],
                           alignment: AlignmentType.CENTER,
                         }),
@@ -609,12 +492,16 @@ export class WordRemisionService {
                             new TextRun({
                               text: "Firma del Cliente",
                               bold: true,
+                              size: 20,
                             }),
                           ],
                           alignment: AlignmentType.CENTER,
                         }),
                         new Paragraph({
-                          children: [new TextRun({ text: remision.cliente })],
+                          children: [new TextRun({ 
+                            text: remision.cliente || "Cliente no especificado",
+                            size: 20,
+                          })],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
@@ -628,14 +515,14 @@ export class WordRemisionService {
             // Footer simple
             new Paragraph({
               children: [new TextRun({ text: "" })],
-              spacing: { after: 240 },
+              spacing: { after: 120 },
             }),
 
             new Paragraph({
               children: [
                 new TextRun({
                   text: `Estado: ${
-                    remision.estado
+                    remision.estado || "Confirmada"
                   } | Generado el ${new Date().toLocaleDateString("es-PY")}`,
                   font: "Calibri",
                   size: 18,
@@ -658,27 +545,32 @@ export class WordRemisionService {
   }
 
   private static formatearFecha(fechaISO: string): string {
-    const meses = [
-      "enero",
-      "febrero",
-      "marzo",
-      "abril",
-      "mayo",
-      "junio",
-      "julio",
-      "agosto",
-      "septiembre",
-      "octubre",
-      "noviembre",
-      "diciembre",
-    ];
+    try {
+      const meses = [
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre",
+      ];
 
-    const fecha = new Date(fechaISO);
-    const dia = fecha.getDate();
-    const mes = meses[fecha.getMonth()];
-    const año = fecha.getFullYear();
+      const fecha = new Date(fechaISO);
+      const dia = fecha.getDate();
+      const mes = meses[fecha.getMonth()];
+      const año = fecha.getFullYear();
 
-    return `Asunción, ${dia.toString().padStart(2, "0")} de ${mes} del ${año}`;
+      return `Asunción, ${dia.toString().padStart(2, "0")} de ${mes} del ${año}`;
+    } catch (error) {
+      console.warn('Error formateando fecha:', error);
+      return `Asunción, ${new Date().toLocaleDateString('es-PY')}`;
+    }
   }
 
   private static async cargarLogoAres(): Promise<Uint8Array> {

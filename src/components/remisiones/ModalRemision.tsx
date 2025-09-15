@@ -558,7 +558,7 @@ export default function ModalRemision({
     updateRemision,
     generateNumeroRemision,
     getClinicasActivas,
-    procesarSalidaStock,
+    loadClinicas, // 🆕 Agregar loadClinicas
   } = useAppStore();
 
   // Estados del formulario
@@ -579,10 +579,11 @@ export default function ModalRemision({
   // Obtener clínicas activas
   const clinicasActivas = getClinicasActivas();
 
-  // Cargar stock al abrir modal
+  // Cargar stock y clínicas al abrir modal
   useEffect(() => {
     if (isOpen) {
       loadStock(); // Solo cargar el stock general
+      loadClinicas(); // 🆕 Cargar clínicas cuando se abre el modal
 
       // Si hay remisión para editar, cargar sus datos
       if (remisionParaEditar) {
@@ -639,7 +640,7 @@ export default function ModalRemision({
         }
       }
     }
-  }, [isOpen, componentePreseleccionado, remisionParaEditar, loadStock]);
+  }, [isOpen, componentePreseleccionado, remisionParaEditar, loadStock, loadClinicas]);
 
   // Solo usar productos del stock general
   const todosLosProductos = React.useMemo(() => {
